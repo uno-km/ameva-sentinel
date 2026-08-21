@@ -8,8 +8,8 @@ import {
   SentinelAction,
   MemoryCounterStore,
   MemoryRiskEventStore
-} from '../packages/sentinel/src/index.js';
-import { createBrowserTelemetry } from '../packages/browser-sdk/src/index.js';
+} from '../packages/sentinel/dist/index.js';
+import { createBrowserTelemetry } from '../packages/browser-sdk/dist/index.js';
 
 console.log('\n🧪 Running AMEVA Sentinel Facade & Integration Test Suite...\n');
 

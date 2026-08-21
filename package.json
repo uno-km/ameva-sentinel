@@ -31,5 +31,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/uno-km/AMEVA-Sentinel.git"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.2"
   }
 }

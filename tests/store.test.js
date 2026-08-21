@@ -2,7 +2,13 @@
  * AMEVA Sentinel - RiskEventStore Unit & Edge Case Test Suite
  */
 import assert from 'node:assert';
-import { MemoryRiskEventStore, SentinelAction } from '../packages/risk-core/src/index.js';
+import {
+  MemoryRiskEventStore,
+  LocalStorageRiskEventStore,
+  SentinelAction,
+  evaluate,
+  toStoredRiskEvent
+} from '../packages/risk-core/dist/index.js';
 
 console.log('\n🧪 Running AMEVA Sentinel RiskEventStore Test Suite...\n');
 

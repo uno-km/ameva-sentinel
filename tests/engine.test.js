@@ -2,7 +2,7 @@
  * AMEVA Sentinel - Core Engine Quality Gate & Boundary Test Suite
  */
 import assert from 'node:assert';
-import { evaluate, calculateConfidence, createPolicy, rules, SentinelAction } from '../packages/risk-core/src/index.js';
+import { evaluate, calculateConfidence, createPolicy, rules, SentinelAction } from '../packages/risk-core/dist/index.js';
 
 console.log('\n🧪 Running AMEVA Sentinel Quality Gate Test Suite...\n');
 

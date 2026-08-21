@@ -2,7 +2,7 @@
  * @ameva/sentinel-browser Unit Test Suite
  */
 import assert from 'node:assert';
-import { createBrowserTelemetry } from '../packages/browser-sdk/src/index.js';
+import { createBrowserTelemetry } from '../packages/browser-sdk/dist/index.js';
 
 console.log('\n🧪 Running @ameva/sentinel-browser Unit Test Suite...\n');
 

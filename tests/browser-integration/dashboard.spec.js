@@ -42,4 +42,41 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
     await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
   });
 
+  test('destroy() stops active telemetry collection and listener observation', async ({ page }) => {
+    await page.goto('/sdk/sentinel/telemetry-test.html');
+
+    const before = await page.evaluate(() => {
+      window.testTelemetry.start();
+      return window.testTelemetry.snapshot();
+    });
+
+    await page.mouse.move(100, 100);
+    await page.mouse.move(300, 300);
+
+    const during = await page.evaluate(() => {
+      return window.testTelemetry.snapshot();
+    });
+
+    expect(during.pointerEventCount).toBeGreaterThanOrEqual(before.pointerEventCount);
+
+    // Destroy telemetry collector
+    await page.evaluate(() => {
+      window.testTelemetry.destroy();
+    });
+
+    const stoppedAt = await page.evaluate(() => {
+      return window.testTelemetry.snapshot();
+    });
+
+    await page.mouse.move(500, 500);
+    await page.mouse.move(700, 700);
+
+    const after = await page.evaluate(() => {
+      return window.testTelemetry.snapshot();
+    });
+
+    // Pointer event counter must not increase after destroy()
+    expect(after.pointerEventCount).toBe(stoppedAt.pointerEventCount);
+  });
+
 });

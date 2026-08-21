@@ -1,0 +1,149 @@
+// src/index.ts
+import {
+  SentinelAction,
+  defaultPolicy,
+  evaluate,
+  createPolicy,
+  rules,
+  MemoryFixedWindowCounterStore,
+  MemoryCounterStore,
+  MemoryRiskEventStore,
+  LocalStorageRiskEventStore,
+  toStoredRiskEvent,
+  sanitizeSignals,
+  createTraceId
+} from "@ameva/sentinel-risk-core";
+var Sentinel = class {
+  policy;
+  mode;
+  counterStore;
+  eventStore;
+  rateKeyProvider;
+  constructor(options = {}) {
+    this.policy = options.policy || defaultPolicy;
+    this.mode = options.mode || "shadow";
+    this.counterStore = options.counterStore || new MemoryFixedWindowCounterStore();
+    this.eventStore = options.eventStore || null;
+    this.rateKeyProvider = options.rateKeyProvider;
+  }
+  async score(req) {
+    const rawSignals = await this.collect(req);
+    let burstCount10s = rawSignals.burstCount10s ?? 1;
+    const rateKey = this.deriveRateKey(req);
+    if (rateKey) {
+      try {
+        const rate = await this.counterStore.increment(rateKey, { windowMs: 1e4 });
+        burstCount10s = rate.count;
+      } catch (e) {
+      }
+    }
+    const enrichedSignals = {
+      ...rawSignals,
+      burstCount10s
+    };
+    const verified = await this.verify(enrichedSignals);
+    const report = evaluate(verified, {
+      policy: this.policy,
+      enforcementMode: this.mode === "enforce" ? "ENFORCE" : "SHADOW"
+    });
+    if (this.eventStore && typeof this.eventStore.append === "function") {
+      try {
+        await this.eventStore.append(report);
+      } catch (e) {
+      }
+    }
+    return report;
+  }
+  deriveRateKey(req) {
+    if (this.rateKeyProvider) {
+      return this.rateKeyProvider(req);
+    }
+    if (!req) return null;
+    if (req.sessionId) return `sess_${req.sessionId}`;
+    if (req.testClientId) return `test_${req.testClientId}`;
+    if (typeof sessionStorage !== "undefined") {
+      try {
+        const key = "ameva:sentinel:session-id";
+        const existing = sessionStorage.getItem(key);
+        if (existing) return existing;
+        const newId = "sess_" + Math.random().toString(36).substring(2, 10);
+        sessionStorage.setItem(key, newId);
+        return newId;
+      } catch (e) {
+      }
+    }
+    return null;
+  }
+  async collect(req) {
+    if (!req) return {};
+    if (req.signals && typeof req.signals === "object") {
+      const s = req.signals;
+      return {
+        webdriver: !!s.webdriverObserved || !!s.webdriver,
+        telemetryObserved: !!s.telemetryObserved,
+        observationDurationMs: typeof s.observationDurationMs === "number" ? s.observationDurationMs : 6e3,
+        isTrustedEventsCount: typeof s.trustedInputCount === "number" ? s.trustedInputCount : typeof s.isTrustedEventsCount === "number" ? s.isTrustedEventsCount : 0,
+        touchMismatch: !!s.touchMismatch,
+        suspiciousUA: !!s.suspiciousUA,
+        tokenPresented: Boolean(s.token),
+        tokenVerified: false,
+        tokenFreshnessMs: typeof s.tokenFreshnessMs === "number" ? s.tokenFreshnessMs : 100
+      };
+    }
+    const headers = req.headers || {};
+    const getHeader = (name) => {
+      if (typeof headers.get === "function") return headers.get(name) || "";
+      return headers[name.toLowerCase()] || headers[name] || "";
+    };
+    const ua = getHeader("user-agent");
+    const secChUaMobile = getHeader("sec-ch-ua-mobile");
+    let body = {};
+    if (typeof req.json === "function") {
+      try {
+        body = await req.json();
+      } catch (e) {
+      }
+    } else if (req.body) {
+      body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    }
+    const isWebdriver = !!body.webdriver || /HeadlessChrome|PhantomJS|Selenium|Playwright/i.test(ua);
+    const isTouchMismatch = secChUaMobile === "?1" && body.is_touch === false;
+    const isSuspiciousUA = ua.length === 0 || /python-requests|curl|wget|scrapy|aiohttp/i.test(ua);
+    return {
+      webdriver: isWebdriver,
+      telemetryObserved: body.telemetry_observed !== void 0 ? !!body.telemetry_observed : body.trusted_events !== void 0,
+      observationDurationMs: typeof body.observation_duration_ms === "number" ? body.observation_duration_ms : 6e3,
+      isTrustedEventsCount: typeof body.trusted_events === "number" ? body.trusted_events : 0,
+      touchMismatch: isTouchMismatch,
+      suspiciousUA: isSuspiciousUA,
+      claimedBot: body.claimed_bot || (ua.includes("Bot") ? "claimed_bot" : void 0),
+      tokenPresented: Boolean(body.token),
+      tokenVerified: false,
+      tokenFreshnessMs: body.timestamp ? Date.now() - body.timestamp : 100
+    };
+  }
+  async verify(signals) {
+    return signals;
+  }
+};
+function createSentinel(options = {}) {
+  return new Sentinel(options);
+}
+var sentinel = new Sentinel();
+export {
+  LocalStorageRiskEventStore,
+  MemoryCounterStore,
+  MemoryFixedWindowCounterStore,
+  MemoryRiskEventStore,
+  Sentinel,
+  SentinelAction,
+  createPolicy,
+  createSentinel,
+  createTraceId,
+  defaultPolicy,
+  evaluate,
+  rules,
+  sanitizeSignals,
+  sentinel,
+  toStoredRiskEvent
+};
