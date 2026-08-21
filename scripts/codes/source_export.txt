@@ -91,9 +91,9 @@
 Project: AMEVA-Sentinel
 Snapshot Date: 2026-08-21
 Branch: release-0.6
-Commit: 8c201db16f2331d7d98a95d1210a76a4d857b8ab
+Commit: 73029483c4865f5d52072622fd9719f0ae2ed78a
 Working Tree: CLEAN
-Snapshot State: HEAD snapshot
+Snapshot State: HEAD snapshot (Git commit blob-bound)
 Operating System: win32
 Python Version: 3.12.0
 Node Version: v24.16.0
@@ -8810,6 +8810,18 @@ def generate_tree(path: Path, prefix="") -> str:
                 lines.append(child_tree)
     return "\n".join(lines)
 
+def get_file_content(root: Path, rel_posix: str) -> str:
+    try:
+        res = subprocess.run(["git", "show", f"HEAD:{rel_posix}"], cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if res.returncode == 0:
+            return res.stdout
+    except Exception:
+        pass
+    try:
+        return (root / rel_posix).read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        return f"<에러 발생 또는 바이너리 파일: {e}>"
+
 def main():
     root = Path(__file__).resolve().parent.parent
     now = datetime.now()
@@ -8842,7 +8854,7 @@ def main():
     header = (
         f"# 프로젝트 디렉터리\n#root\n{generate_tree(root)}\n\n\n"
         f"# PROJECT_METADATA\nProject: AMEVA-Sentinel\nSnapshot Date: {now:%Y-%m-%d}\nBranch: {branch}\nCommit: {commit}\n"
-        f"Working Tree: {working_tree_state}\nSnapshot State: {'HEAD snapshot' if is_clean else 'HEAD + working tree snapshot'}\n"
+        f"Working Tree: {working_tree_state}\nSnapshot State: {'HEAD snapshot (Git commit blob-bound)' if is_clean else 'HEAD + working tree snapshot'}\n"
         f"Operating System: {sys.platform}\nPython Version: {sys.version.split()[0]}\nNode Version: {cmd(['node', '-v']) or 'Unknown'}\n"
         f"Package Manager: npm\nCurrent Stage: v0.6.0-alpha.1 Target Discrimination & Trust Boundary\nTarget Release: 1.0.0 OSS Release\n\n\n"
     )
@@ -8868,10 +8880,7 @@ def main():
             if any(p.match(pat) for pat in EXCLUDE_FILES):
                 continue
             lang = LANG_MAP.get(p.suffix.lower(), "text")
-            try:
-                content = p.read_text(encoding="utf-8")
-            except Exception as e:
-                content = f"<에러 발생 또는 바이너리 파일: {e}>"
+            content = get_file_content(root, rel_posix)
             out.write(
                 f"{sep}\nFILE_BEGIN\n{sep}\nFILE_NAME: {p.name}\nFILE_PATH: {rel_posix}\n"
                 f"FILE_LANGUAGE: {lang}\n{sep}\nFILE_CONTENT_BEGIN\n{sep}\n\n"
@@ -9214,15 +9223,15 @@ const provenanceData = {
 // Generate Unified All-in-One Markdown Master Report
 let md = `# 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Unified Master Verification & Audit Report
 
-> **Release Target**: \`v0.6.0-alpha.1\`  
-> **Generated Timestamp**: \`${summaryData.generatedAt}\`  
-> **Git Branch**: [\`${gitBranch}\`](https://github.com/uno-km/ameva-sentinel/tree/${gitBranch})  
-> **Implementation Commit**: \`${gitCommit}\`  
-> **Source Snapshot SHA-256**: \`${exportSha256 || 'Calculated at Export'}\`  
-> **Working Tree State**: \`${summaryData.workingTreeAtExport}\`  
-> **Overall Gate Status**: \`${overallStatus}\`  
-> **Final Score**: \`${finalScore.toFixed(1)} / ${maxTotalScore} pts (Grade ${grade})\`  
-> **Total Release Checks**: \`${totalPassed} Executable Gates + ${packagingPassedCount} Monorepo Packaging Gates = ${releasePassed} / ${releaseTotal} Release Checks (100% ALL PASS)\`  
+- **Release Target**: \`v0.6.0-alpha.1\`
+- **Generated Timestamp**: \`${summaryData.generatedAt}\`
+- **Git Branch**: [\`${gitBranch}\`](https://github.com/uno-km/ameva-sentinel/tree/${gitBranch})
+- **Implementation Commit**: \`${gitCommit}\`
+- **Source Snapshot SHA-256**: \`${exportSha256 || 'Calculated at Export'}\`
+- **Working Tree State**: \`${summaryData.workingTreeAtExport}\`
+- **Overall Gate Status**: \`${overallStatus}\`
+- **Final Score**: \`${finalScore.toFixed(1)} / ${maxTotalScore} pts (Grade ${grade})\`
+- **Total Release Checks**: \`${totalPassed} Executable Gates + ${packagingPassedCount} Monorepo Packaging Gates = ${releasePassed} / ${releaseTotal} Release Checks (100% ALL PASS)\`
 
 ---
 
@@ -9418,6 +9427,7 @@ FILE_CONTENT_BEGIN
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -9434,10 +9444,32 @@ const EXPECTED_ARTIFACT = 'scripts/codes/source_export.txt';
 const EXPECTED_TOTAL_CHECKS = 86;
 const GIT_SHA_RE = /^[a-f0-9]{40}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
+const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+const EXPECTED_KEYS = [
+  'artifactPath',
+  'branch',
+  'passedChecks',
+  'schemaVersion',
+  'sha256',
+  'sourceCommit',
+  'status',
+  'timestamp',
+  'totalChecks',
+  'workingTreeAtExport'
+].sort();
 
 function fail(message) {
   console.error(`❌ FAIL: ${message}`);
   process.exit(1);
+}
+
+function git(args) {
+  return execFileSync('git', args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  }).trim();
 }
 
 console.log('🔒 Verifying AMEVA Sentinel Provenance Certificate & Artifact Integrity...');
@@ -9463,6 +9495,12 @@ try {
   prov = JSON.parse(reportProvBytes.toString('utf8'));
 } catch (e) {
   fail(`Malformed JSON in provenance certificate: ${e.message}`);
+}
+
+// 3.1 Closed Schema Keys Validation
+const actualKeys = Object.keys(prov).sort();
+if (JSON.stringify(actualKeys) !== JSON.stringify(EXPECTED_KEYS)) {
+  fail(`Unexpected provenance schema keys: ${actualKeys.join(', ')}`);
 }
 
 if (prov.schemaVersion !== EXPECTED_SCHEMA) {
@@ -9491,6 +9529,20 @@ if (typeof prov.sourceCommit !== 'string' || !GIT_SHA_RE.test(prov.sourceCommit)
   fail(`Invalid sourceCommit: "${prov.sourceCommit}" (must be 40-character lowercase hexadecimal Git SHA)`);
 }
 
+// Validate against live repository HEAD and branch
+try {
+  const actualHead = git(['rev-parse', 'HEAD']);
+  if (actualHead && prov.sourceCommit !== actualHead) {
+    fail(`sourceCommit does not match current repository HEAD: certificate=${prov.sourceCommit}, HEAD=${actualHead}`);
+  }
+  const actualBranch = git(['branch', '--show-current']);
+  if (actualBranch && prov.branch !== actualBranch) {
+    fail(`branch does not match current checkout: certificate=${prov.branch}, actual=${actualBranch}`);
+  }
+} catch (e) {
+  // If git command fails (e.g. tarball environment without .git), rely on SHA format check
+}
+
 // Validate SHA-256 hash existence and format
 if (typeof prov.sha256 !== 'string' || !SHA256_RE.test(prov.sha256)) {
   fail(`Missing or invalid provenance SHA-256 string: "${prov.sha256}"`);
@@ -9514,9 +9566,13 @@ if (prov.status !== 'PASS') {
   fail(`Provenance certificate status is not PASS: "${prov.status}"`);
 }
 
-// Validate timestamp
-if (typeof prov.timestamp !== 'string' || !Number.isFinite(Date.parse(prov.timestamp))) {
-  fail(`Invalid ISO-8601 timestamp: "${prov.timestamp}"`);
+// Validate strict ISO-8601 UTC timestamp
+if (
+  typeof prov.timestamp !== 'string' ||
+  !ISO_UTC_RE.test(prov.timestamp) ||
+  new Date(prov.timestamp).toISOString() !== prov.timestamp
+) {
+  fail(`Invalid canonical UTC timestamp: "${prov.timestamp}"`);
 }
 
 // 4. Compute and compare SHA-256 hash using crypto.timingSafeEqual
@@ -9532,12 +9588,12 @@ if (expectedHashBuf.length !== computedHashBuf.length || !crypto.timingSafeEqual
 
 console.log('✅ Provenance Certificate Fully Verified (Fail-Closed Validated):');
 console.log(`   Schema Version     : ${prov.schemaVersion}`);
-console.log(`   Source Commit      : ${prov.sourceCommit}`);
+console.log(`   Source Commit (HEAD): ${prov.sourceCommit}`);
 console.log(`   Artifact Path      : ${prov.artifactPath}`);
 console.log(`   Artifact SHA-256   : ${computedHash}`);
 console.log(`   Working Tree State : ${prov.workingTreeAtExport}`);
 console.log(`   Release Quality    : ${prov.passedChecks}/${prov.totalChecks} Quality Gates (STATUS: ${prov.status})`);
-console.log(`   Timestamp          : ${prov.timestamp}`);
+console.log(`   Timestamp (UTC)    : ${prov.timestamp}`);
 console.log('🎉 Provenance verification successfully passed.');
 
 ================================================================================
@@ -9752,10 +9808,11 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
     expect(firstTraceId).toBeTruthy();
 
     // Reload page
-    await page.reload();
+    await page.reload({ waitUntil: 'domcontentloaded' });
 
     // Verify same report traceId is restored and visible
     await expect(page.locator(`[data-trace-id="${firstTraceId}"]`)).toBeVisible();
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('risk event is synchronized in real-time across tabs', async ({ browser }) => {
