@@ -1,0 +1,3240 @@
+# 프로젝트 디렉터리
+#root
+├── packages
+│   ├── browser-sdk
+│   │   ├── src
+│   │   │   ㄴ-- index.ts
+│   │   ㄴ-- package.json
+│   ├── dashboard
+│   │   ㄴ-- index.html
+│   ├── risk-core
+│   │   ├── src
+│   │   │   ├── confidence.ts
+│   │   │   ├── counter.ts
+│   │   │   ├── engine.ts
+│   │   │   ├── index.ts
+│   │   │   ├── policy.ts
+│   │   │   ├── rules.ts
+│   │   │   ├── store.ts
+│   │   │   ㄴ-- types.ts
+│   │   ㄴ-- package.json
+│   ㄴ-- sentinel
+│       ├── src
+│       │   ㄴ-- index.ts
+│       ㄴ-- package.json
+├── scripts
+│   ㄴ-- export_source_code.py
+├── tests
+│   ├── browser-integration
+│   │   ㄴ-- dashboard.spec.js
+│   ├── browser.test.js
+│   ├── engine.test.js
+│   ├── sentinel.test.js
+│   ㄴ-- store.test.js
+├── .gitignore
+├── package.json
+├── playwright.config.js
+ㄴ-- README.md
+
+
+# PROJECT_METADATA
+Project: AMEVA-Sentinel
+Snapshot Date: 2026-08-21
+Branch: main
+Commit: 078246ea5bc28f2837266bc7f23edc1a742829f9
+Working Tree: CLEAN
+Snapshot State: HEAD snapshot
+Operating System: win32
+Python Version: 3.12.0
+Node Version: v24.16.0
+Package Manager: npm
+Current Stage: v0.5 Browser-Local Shadow Mode Prototype
+Target Release: 1.0.0 OSS Release
+
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: .gitignore
+FILE_PATH: .gitignore
+FILE_LANGUAGE: text
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+# ==============================================================================
+# 🛡️ AMEVA-Sentinel — Official .gitignore
+# ==============================================================================
+
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build Artifacts & Distributions
+dist/
+build/
+out/
+.tsbuildinfo
+
+# Logs & Diagnostics
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Testing & Code Coverage
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Environment Variables, Secrets & API Tokens
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.token
+*.credentials
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+*.whl
+*.tar.gz
+*.egg-info/
+
+# Operating System & Editor Artifacts
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+# Local Temporary & AI Scratchpads
+.gemini/
+.claude/
+.cursor/
+scratch/
+tmp/
+temp/
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: .gitignore
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: README.md
+FILE_PATH: README.md
+FILE_LANGUAGE: markdown
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+# 🛡️ AMEVA Sentinel
+
+> **Privacy-first Security Observability Layer for Web Applications**  
+> *AMEVA Sentinel v0.5.0-alpha.1 — Browser-Local Shadow Mode Prototype*
+
+![Tests](https://img.shields.io/badge/internal%20tests-16%20passing-16a34a?style=flat-square)
+![Stage](https://img.shields.io/badge/stage-v0.5.0--alpha.1-blue?style=flat-square)
+![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)
+![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)
+
+---
+
+## 🎯 Canonical Mission
+
+> **"웹 서비스에 들어오는 트래픽을 관측하고, 측정하고, 설명하고, 점수화한다."**  
+> *(Observe, Measure, Explain, and Score incoming web traffic with privacy-by-design.)*
+
+---
+
+## 🏗️ Architecture & Single Source of Truth
+
+```text
+[Browser Interaction]
+       │
+       ▼
+[@ameva/sentinel-browser] ──► Software-observed signals (isTrusted count, duration, webdriver flag)
+       │                      (Throttled 100ms pointermove, discrete click/touch unthrottled)
+       ▼
+[sentinel.score(request)] ──► Session-scoped fixed-window counter + Policy-as-Code evaluation
+       │                      (Deterministic 0~100 clamp, strict UUID traceIds, tokenVerified gate)
+       ▼
+[StoredRiskEventV1] ───────► Explicit schema conversion (zero raw cookies/auth/headers/PII)
+       │
+       ▼
+[Shadow Mode Dashboard] ───► Single Risk Core engine import (100% DOM XSS Immune via DOM API)
+```
+
+---
+
+## 📦 10-Second Quickstart
+
+### 1. Client Browser Telemetry (`@ameva/sentinel-browser`)
+```javascript
+import { createBrowserTelemetry } from '@ameva/sentinel-browser';
+
+const telemetry = createBrowserTelemetry({ autoStart: true });
+const signals = telemetry.snapshot();
+```
+
+### 2. Risk Evaluation & Storage (`@ameva/sentinel`)
+```javascript
+import {
+  createSentinel,
+  MemoryFixedWindowCounterStore,
+  LocalStorageRiskEventStore
+} from '@ameva/sentinel';
+
+const sentinel = createSentinel({
+  mode: 'shadow',
+  counterStore: new MemoryFixedWindowCounterStore(), // Single-process/local use
+  eventStore: new LocalStorageRiskEventStore()
+});
+
+const report = await sentinel.score({ signals });
+
+console.log(report);
+/* Output:
+{
+  "traceId": "trc_8fdc1a92e4b34455",
+  "score": 75,
+  "evidenceConfidence": 0.82,
+  "action": "OBSERVE",
+  "recommendedAction": "REQUIRE_APP_VERIFICATION",
+  "enforcementMode": "SHADOW",
+  "policyVersion": "2026-08-21.1",
+  "evidence": [
+    {
+      "rule": "automation.webdriver",
+      "score": 25,
+      "attributes": { "observed": true, "property": "navigator.webdriver" },
+      "message": "navigator.webdriver automation flag is active"
+    }
+  ]
+}
+*/
+```
+
+---
+
+## 🔬 Honest Product Scope & Limitations (v0.5.0-alpha.1 Disclosure)
+
+- **Browser-Local Prototype**: Current events are stored in the browser's `LocalStorage`. Multi-tenant central traffic aggregation is not yet supported.
+- **CounterStore**: `MemoryFixedWindowCounterStore` is intended for local testing and single-instance Node runtimes. Serverless/distributed edge deployments require external state engines (e.g. Redis / Durable Objects).
+- **Software-Observed Signals**: Interaction metrics (`isTrusted`, `webdriver`) represent browser-reported software signals, not unforgeable hardware biometric proofs.
+- **Token Verification**: In v0.5, client tokens are marked `tokenPresented: true, tokenVerified: false`. Cryptographic HMAC signature verification will be enforced in the server-side Collector (v0.6).
+
+---
+
+## 🗺️ Next Roadmap
+
+1. **Automated Browser E2E Tests**: Playwright automated suite for multi-tab sync, reload recovery, and listener disposal across Chromium, Firefox, WebKit.
+2. **Server Collector API**: Central `/api/v1/sentinel/collect` endpoint with HMAC signed token verification and replay protection.
+3. **Distributed State Adapters**: `RedisCounterStore` and `PostgresRiskEventStore`.
+
+---
+
+## 📄 License
+
+Apache-2.0 © 2026 AMEVA Open Source Ecosystem.
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: README.md
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: package.json
+FILE_PATH: package.json
+FILE_LANGUAGE: json
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+{
+  "name": "ameva-sentinel-monorepo",
+  "version": "0.5.0-alpha.1",
+  "description": "Privacy-first Security Observability Layer for Web Applications",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test:unit": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js",
+    "test": "npm run test:unit",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:unit && npm run test:e2e",
+    "build": "npm run --workspaces build",
+    "export": "py scripts/export_source_code.py"
+  },
+  "keywords": [
+    "security",
+    "observability",
+    "bot-detection",
+    "risk-scoring",
+    "privacy-first",
+    "telemetry",
+    "edge-native",
+    "self-hosted",
+    "policy-as-code"
+  ],
+  "author": "Eunho Kim (@uno-km) <zhflick014745@naver.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uno-km/AMEVA-Sentinel.git"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.2"
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: package.json
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: playwright.config.js
+FILE_PATH: playwright.config.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests/browser-integration',
+  timeout: 30000,
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'list',
+  use: {
+    baseURL: 'http://127.0.0.1:4173',
+    trace: 'on-first-retry',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+  ],
+  webServer: {
+    command: 'npx http-server c:/Users/GAME/Desktop/uno-km/dev/uno-km -p 4173',
+    port: 4173,
+    reuseExistingServer: !process.env.CI,
+  },
+});
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: playwright.config.js
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: package.json
+FILE_PATH: packages/browser-sdk/package.json
+FILE_LANGUAGE: json
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+{
+  "name": "@ameva/sentinel-browser",
+  "version": "0.5.0-alpha.1",
+  "description": "Privacy-first client-side interaction and environment telemetry collector",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --clean && tsc --emitDeclarationOnly --declaration --outDir dist src/index.ts"
+  },
+  "keywords": [
+    "telemetry",
+    "browser-sdk",
+    "bot-defense",
+    "privacy-first"
+  ],
+  "license": "Apache-2.0"
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/browser-sdk/package.json
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: index.ts
+FILE_PATH: packages/browser-sdk/src/index.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+/**
+ * @ameva/sentinel-browser
+ * Privacy-first browser environment & user interaction telemetry collector
+ * 
+ * Guarantees:
+ * - Throttled pointermove sampling (100ms interval) to protect 60fps main-thread
+ * - Discrete click/touch/keyboard interactions recorded un-throttled
+ * - ZERO raw mouse coordinates collected
+ * - ZERO keystroke contents or form values collected
+ * - Non-persistent per-tab ephemeral session identifier
+ * - Clean lifecycle management with start() and destroy()
+ */
+
+export interface BrowserTelemetryOptions {
+  samplingWindowMs?: number;
+  maxEventsCap?: number;
+  pointerSampleIntervalMs?: number;
+  autoStart?: boolean;
+}
+
+export interface BrowserTelemetrySnapshot {
+  telemetryObserved: boolean;
+  sampleComplete: boolean;
+  observationDurationMs: number;
+  webdriverObserved: boolean;
+  trustedInputCount: number;
+  pointerEventCount: number;
+  touchEventCount: number;
+  keyboardEventCount: number;
+  touchMismatch: boolean;
+  suspiciousUA: boolean;
+  collectedAt: string;
+}
+
+export function getLocalSessionId(): string {
+  if (typeof sessionStorage === 'undefined') return 'ephemeral_local_session';
+  const key = 'ameva:sentinel:session-id';
+  try {
+    const existing = sessionStorage.getItem(key);
+    if (existing) return existing;
+    const newId = 'sess_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+    sessionStorage.setItem(key, newId);
+    return newId;
+  } catch (e) {
+    return 'ephemeral_local_session';
+  }
+}
+
+export class BrowserTelemetryCollector {
+  private startTime = Date.now();
+  private isListening = false;
+  private maxEventsCap: number;
+  private pointerIntervalMs: number;
+  private samplingWindowMs: number;
+  private lastPointerSampleAt = 0;
+  private abortController: AbortController | null = null;
+
+  // Interaction Counters
+  private trustedEvents = 0;
+  private pointerEvents = 0;
+  private touchEvents = 0;
+  private keyboardEvents = 0;
+
+  constructor(options: BrowserTelemetryOptions = {}) {
+    this.maxEventsCap = options.maxEventsCap ?? 500;
+    this.pointerIntervalMs = options.pointerSampleIntervalMs ?? 100;
+    this.samplingWindowMs = options.samplingWindowMs ?? 5000;
+    if (options.autoStart !== false) {
+      this.start();
+    }
+  }
+
+  private recordInteraction(type: 'pointer' | 'touch' | 'keyboard', isTrusted: boolean): void {
+    if (type === 'pointer' && this.pointerEvents < this.maxEventsCap) this.pointerEvents++;
+    if (type === 'touch' && this.touchEvents < this.maxEventsCap) this.touchEvents++;
+    if (type === 'keyboard' && this.keyboardEvents < this.maxEventsCap) this.keyboardEvents++;
+
+    if (isTrusted && this.trustedEvents < this.maxEventsCap) {
+      this.trustedEvents++;
+    }
+  }
+
+  start(): void {
+    if (this.isListening || typeof window === 'undefined') return;
+    this.isListening = true;
+    this.abortController = new AbortController();
+    const { signal } = this.abortController;
+
+    // 1. Throttled Pointer Movement (100ms interval)
+    const onPointerMove = (e: PointerEvent | MouseEvent) => {
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      if (now - this.lastPointerSampleAt < this.pointerIntervalMs) {
+        return; // Throttled to prevent main-thread overhead
+      }
+      this.lastPointerSampleAt = now;
+      this.recordInteraction('pointer', e.isTrusted === true);
+    };
+
+    // 2. Discrete User Click (Never throttled)
+    const onClick = (e: MouseEvent) => {
+      this.recordInteraction('pointer', e.isTrusted === true);
+    };
+
+    // 3. Discrete Touch Interactions (Never throttled)
+    const onTouch = (e: TouchEvent) => {
+      this.recordInteraction('touch', e.isTrusted === true);
+    };
+
+    // 4. Discrete Keyboard Interactions (Never throttled)
+    const onKey = (e: KeyboardEvent) => {
+      this.recordInteraction('keyboard', e.isTrusted === true);
+    };
+
+    window.addEventListener('pointermove', onPointerMove as EventListener, { passive: true, signal });
+    window.addEventListener('click', onClick as EventListener, { passive: true, signal });
+    window.addEventListener('touchstart', onTouch as EventListener, { passive: true, signal });
+    window.addEventListener('keydown', onKey as EventListener, { passive: true, signal });
+  }
+
+  snapshot(): BrowserTelemetrySnapshot {
+    const isBrowser = typeof window !== 'undefined' && typeof navigator !== 'undefined';
+    if (!isBrowser) {
+      return {
+        telemetryObserved: false,
+        sampleComplete: false,
+        observationDurationMs: 0,
+        webdriverObserved: false,
+        trustedInputCount: 0,
+        pointerEventCount: 0,
+        touchEventCount: 0,
+        keyboardEventCount: 0,
+        touchMismatch: false,
+        suspiciousUA: false,
+        collectedAt: new Date().toISOString()
+      };
+    }
+
+    const elapsed = Math.max(0, Date.now() - this.startTime);
+    const nav = navigator as any;
+    const isWebdriver = !!nav.webdriver;
+    const hasTouch = 'ontouchstart' in window || (nav.maxTouchPoints || 0) > 0;
+    const isMobileUA = /Android|iPhone|iPad|iPod/i.test(nav.userAgent || '');
+    const isTouchMismatch = isMobileUA && !hasTouch;
+    const isSuspiciousUA = !nav.userAgent || /HeadlessChrome|PhantomJS|Selenium|Playwright|curl|wget|python-requests/i.test(nav.userAgent);
+
+    return {
+      telemetryObserved: this.isListening,
+      sampleComplete: elapsed >= this.samplingWindowMs,
+      observationDurationMs: elapsed,
+      webdriverObserved: isWebdriver,
+      trustedInputCount: this.trustedEvents,
+      pointerEventCount: this.pointerEvents,
+      touchEventCount: this.touchEvents,
+      keyboardEventCount: this.keyboardEvents,
+      touchMismatch: isTouchMismatch,
+      suspiciousUA: isSuspiciousUA,
+      collectedAt: new Date().toISOString()
+    };
+  }
+
+  reset(): void {
+    this.startTime = Date.now();
+    this.trustedEvents = 0;
+    this.pointerEvents = 0;
+    this.touchEvents = 0;
+    this.keyboardEvents = 0;
+    this.lastPointerSampleAt = 0;
+  }
+
+  destroy(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+    this.isListening = false;
+  }
+}
+
+export function createBrowserTelemetry(options?: BrowserTelemetryOptions): BrowserTelemetryCollector {
+  return new BrowserTelemetryCollector(options);
+}
+
+export const browserTelemetry = new BrowserTelemetryCollector();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/browser-sdk/src/index.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: index.html
+FILE_PATH: packages/dashboard/index.html
+FILE_LANGUAGE: html
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMEVA-Sentinel Status &amp; Observability Manager (v0.5-alpha.1 Prototype)</title>
+    <link rel="icon" type="image/svg+xml" href="https://uno-km.vercel.app/shared/brand/favicon.svg">
+    <style>
+        :root {
+            --primary-color: #004499;
+            --primary-dark: #002b66;
+            --primary-light: #e8f0fe;
+            --border-color: #cbd5e1;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --font-mono: "JetBrains Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #f8fafc;
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        header {
+            background-color: #ffffff;
+            border-bottom: 2px solid var(--primary-color);
+            padding: 0 24px;
+            height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .header-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .header-brand img { width: 26px; height: 26px; }
+        .header-brand h1 { margin: 0; color: var(--primary-color); font-size: 1.2em; font-weight: 700; }
+        .header-controls { display: flex; align-items: center; gap: 8px; }
+        .header-btn {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 5px 10px;
+            font-size: 0.85em;
+            font-weight: 600;
+            border-radius: 3px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .header-btn:hover { background: #f1f5f9; color: var(--primary-color); border-color: var(--primary-color); }
+        .header-btn.primary { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+
+        .tomcat-container {
+            max-width: 1380px;
+            margin: 20px auto 40px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .status-header-box {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--primary-color);
+            padding: 12px 18px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+
+        .status-title { font-size: 1.15em; font-weight: 800; color: var(--primary-color); display: flex; align-items: center; gap: 8px; }
+        .tomcat-badge { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; font-family: monospace; }
+        .badge-shadow { background: #e8f0fe; color: var(--primary-color); border: 1px solid #bfdbfe; }
+        .badge-demo { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .badge-live { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+
+        .control-panel {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn-tomcat {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            border-radius: 3px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.1s ease;
+        }
+        .btn-tomcat:hover { background: #f1f5f9; border-color: var(--primary-color); color: var(--primary-color); }
+        .btn-tomcat.primary { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+        .btn-tomcat.danger { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+
+        .tomcat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        .tomcat-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .card-label { font-size: 0.8em; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-value { font-size: 1.6em; font-weight: 800; color: var(--primary-color); font-family: var(--font-mono); margin: 4px 0; }
+        .card-sub { font-size: 0.8em; color: #64748b; }
+
+        .management-split { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+        @media (max-width: 1024px) { .management-split { grid-template-columns: 1fr; } }
+
+        .tomcat-section {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .section-header {
+            font-size: 1em;
+            font-weight: 800;
+            color: var(--primary-color);
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        table.tomcat-table { width: 100%; border-collapse: collapse; font-size: 0.88em; text-align: left; border: 1px solid var(--border-color); }
+        table.tomcat-table th { background: #f1f5f9; color: var(--primary-color); font-weight: 700; padding: 8px 10px; border: 1px solid var(--border-color); font-size: 0.85em; }
+        table.tomcat-table td { padding: 8px 10px; border: 1px solid var(--border-color); color: var(--text-main); }
+        table.tomcat-table tr:nth-child(even) td { background: #f8fafc; }
+        table.tomcat-table tr:hover td { background: #e8f0fe; cursor: pointer; }
+
+        .pill-action { font-size: 0.75em; font-weight: 700; padding: 2px 6px; border-radius: 3px; font-family: var(--font-mono); display: inline-block; }
+        .pill-allow { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .pill-observe { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .pill-verify { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+        .pill-deny { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+        .score-box { font-weight: 800; font-family: var(--font-mono); padding: 2px 6px; border-radius: 3px; display: inline-block; }
+        .score-low { background: #dcfce7; color: #15803d; }
+        .score-med { background: #fef3c7; color: #b45309; }
+        .score-high { background: #fee2e2; color: #b91c1c; }
+
+        .dist-bar { height: 14px; background: #e2e8f0; border-radius: 2px; overflow: hidden; display: flex; border: 1px solid var(--border-color); }
+        .dist-low { background: #16a34a; }
+        .dist-med { background: #f59e0b; }
+        .dist-high { background: #dc2626; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); display: none; justify-content: center; align-items: center; z-index: 200; }
+        .modal-box { background: #ffffff; border: 2px solid var(--primary-color); border-radius: 4px; width: 90%; max-width: 680px; max-height: 85vh; overflow-y: auto; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; }
+        .evidence-item { background: #f8fafc; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-brand">
+            <img src="https://uno-km.vercel.app/shared/brand/favicon.svg" alt="Logo">
+            <h1>AMEVA-Sentinel</h1>
+        </div>
+        <div class="header-controls">
+            <span class="tomcat-badge badge-shadow">v0.5.0-alpha.1</span>
+            <a href="https://github.com/uno-km/AMEVA-Sentinel" target="_blank" class="header-btn primary">🐙 GitHub</a>
+        </div>
+    </header>
+
+    <div class="tomcat-container">
+        <div class="status-header-box">
+            <div>
+                <div class="status-title">
+                    <span>🛡️ Security Observability Manager</span>
+                    <span class="tomcat-badge badge-shadow">Shadow Mode</span>
+                    <span class="tomcat-badge badge-demo">LocalStorage (v0.5 Prototype)</span>
+                </div>
+                <div style="font-size: 0.85em; color: var(--text-muted); margin-top: 4px;">
+                    Policy: <strong>v2026-08-21.1</strong> &bull; 
+                    Storage: <span id="banner-events-count"><strong>0 Events</strong></span> &bull; 
+                    Multi-Tab Sync: <span class="tomcat-badge badge-live">Active</span> &bull;
+                    Last Evaluation: <span id="banner-last-event">None</span>
+                </div>
+            </div>
+            <div>
+                <button class="btn-tomcat" id="btn-refresh">🔄 Refresh Status</button>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div style="font-weight: 700; color: var(--primary-color);">
+                ⚡ Live Ingestion Controls:
+                <span style="font-size:0.85em; font-weight:normal; color:#64748b;">수집된 소프트웨어 관측 신호를 단일 Risk Core 엔진으로 평가하고 브라우저에 안전하게 저장합니다.</span>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn-tomcat primary" id="btn-eval-browser">📡 Evaluate Real Browser (Live SDK)</button>
+                <button class="btn-tomcat" style="color:#b91c1c; border-color:#fca5a5;" id="btn-sim-bot">🤖 Simulate Headless Bot</button>
+                <button class="btn-tomcat" style="color:#b91c1c; border-color:#fca5a5;" id="btn-sim-burst">💥 Simulate Burst Attack</button>
+                <button class="btn-tomcat danger" id="btn-clear">🗑️ Clear Store</button>
+            </div>
+        </div>
+
+        <div class="tomcat-grid">
+            <div class="tomcat-card">
+                <div class="card-label">Observed Sessions</div>
+                <div class="card-value" id="stat-total" data-testid="event-count">0</div>
+                <div class="card-sub">LocalStorage events (deduplicated)</div>
+            </div>
+            <div class="tomcat-card">
+                <div class="card-label">High Risk Sessions</div>
+                <div class="card-value" id="stat-high" style="color:#b91c1c;">0</div>
+                <div class="card-sub" id="stat-high-pct">0% of observed traffic</div>
+            </div>
+            <div class="tomcat-card">
+                <div class="card-label">Average Risk Score</div>
+                <div class="card-value" id="stat-avg-score">0 / 100</div>
+                <div class="card-sub">Threshold: &gt;=70 (High)</div>
+            </div>
+            <div class="tomcat-card">
+                <div class="card-label">Evidence Confidence Index</div>
+                <div class="card-value" id="stat-avg-conf" style="color:#15803d;">0.00</div>
+                <div class="card-sub">Completeness Index (Q*C*F*S)</div>
+            </div>
+            <div class="tomcat-card">
+                <div class="card-label">Enforcement Mode</div>
+                <div class="card-value" style="font-size:1.3em; color:#b45309; margin-top:6px;">SHADOW</div>
+                <div class="card-sub">Non-blocking evaluation</div>
+            </div>
+        </div>
+
+        <div class="management-split">
+            <div class="tomcat-section">
+                <div class="section-header">
+                    <span>📊 Traffic Risk Distribution</span>
+                    <span style="font-size:0.8em; font-weight:normal; color:#64748b;" id="dist-count-label">0 events</span>
+                </div>
+
+                <div class="dist-bar">
+                    <div class="dist-low" id="dist-bar-low" style="width:100%;"></div>
+                    <div class="dist-med" id="dist-bar-med" style="width:0%;"></div>
+                    <div class="dist-high" id="dist-bar-high" style="width:0%;"></div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; font-size:0.82em; color:var(--text-muted);">
+                    <span>🟢 0~29 Low Risk: <strong id="legend-low-pct">0% (0)</strong></span>
+                    <span>🟡 30~69 Suspicious: <strong id="legend-med-pct">0% (0)</strong></span>
+                    <span>🔴 70+ High Risk: <strong id="legend-high-pct">0% (0)</strong></span>
+                </div>
+
+                <div style="margin-top:10px;">
+                    <div style="font-size:0.9em; font-weight:700; color:var(--primary-color); margin-bottom:6px;">Triggered Policy Rules Breakdown</div>
+                    <div id="top-rules-container" style="display:flex; flex-direction:column; gap:6px; font-size:0.85em;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="tomcat-section">
+                <div class="section-header">
+                    <span>🎛️ Policy-as-Code Re-Evaluation</span>
+                </div>
+                <p style="font-size:0.82em; color:#64748b;">
+                    가중치 변경 시 로컬에 저장된 실제 이벤트를 즉시 재평가하여 재분류 영향도를 산출합니다.
+                </p>
+
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.82em; font-weight:600;">
+                            <span><code>automation.webdriver</code> Weight:</span>
+                            <span id="val-webdriver" style="color:var(--primary-color); font-family:monospace;">25</span>
+                        </div>
+                        <input type="range" id="slider-webdriver" min="5" max="50" value="25" style="width:100%;">
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.82em; font-weight:600;">
+                            <span><code>rate.burst_request</code> Weight:</span>
+                            <span id="val-burst" style="color:var(--primary-color); font-family:monospace;">30</span>
+                        </div>
+                        <input type="range" id="slider-burst" min="10" max="60" value="30" style="width:100%;">
+                    </div>
+                </div>
+
+                <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:3px; padding:10px; margin-top:6px;">
+                    <div style="font-size:0.82em; font-weight:700; color:var(--primary-color); margin-bottom:4px;">Simulation Summary</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.82em;">
+                        <div>Original High Risk: <strong id="sim-orig-high">0</strong></div>
+                        <div>Simulated High Risk: <strong id="sim-new-high" style="color:#b45309;">0 (+0)</strong></div>
+                    </div>
+                    <div style="margin-top:4px; font-size:0.78em; color:#64748b;" id="sim-reclassified-ids">Reclassified: None</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tomcat-section">
+            <div class="section-header">
+                <span>📋 Recent Evaluated Sessions Stream</span>
+                <span style="font-size:0.8em; font-weight:normal; color:#64748b;" id="table-count-label">0 total entries</span>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table class="tomcat-table">
+                    <thead>
+                        <tr>
+                            <th style="width:140px;">Trace ID</th>
+                            <th style="width:80px;">Score</th>
+                            <th style="width:90px;">Evidence Conf</th>
+                            <th style="width:110px;">Action (Shadow)</th>
+                            <th style="width:140px;">Recommended</th>
+                            <th>Triggered Evidence</th>
+                            <th style="width:90px;">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessions-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="session-modal">
+        <div class="modal-box" id="modal-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+                <div style="font-weight:800; font-size:1.1em; color:var(--primary-color);" id="modal-trace-id">Session Detail</div>
+                <button class="btn-tomcat" id="btn-close-modal">✕ Close</button>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                <div style="background:#f8fafc; border:1px solid var(--border-color); padding:8px; border-radius:3px;">
+                    <div style="font-size:0.75em; color:#64748b; font-weight:700;">SCORE</div>
+                    <div style="font-size:1.3em; font-weight:800; font-family:monospace;" id="modal-score">0</div>
+                </div>
+                <div style="background:#f8fafc; border:1px solid var(--border-color); padding:8px; border-radius:3px;">
+                    <div style="font-size:0.75em; color:#64748b; font-weight:700;">EVIDENCE CONF</div>
+                    <div style="font-size:1.3em; font-weight:800; font-family:monospace;" id="modal-confidence">0.00</div>
+                </div>
+                <div style="background:#f8fafc; border:1px solid var(--border-color); padding:8px; border-radius:3px;">
+                    <div style="font-size:0.75em; color:#64748b; font-weight:700;">RECOMMENDED</div>
+                    <div style="font-size:0.95em; font-weight:800; margin-top:4px;" id="modal-action">ALLOW</div>
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size:0.88em; font-weight:700; color:var(--primary-color); margin-bottom:6px;">🔬 Triggered Evidence Attributes</div>
+                <div id="modal-evidence-list" style="display:flex; flex-direction:column; gap:6px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import {
+            evaluate,
+            createPolicy,
+            rules,
+            LocalStorageRiskEventStore
+        } from '../risk-core/dist/index.js';
+
+        import {
+            browserTelemetry
+        } from '../browser-sdk/dist/index.js';
+
+        const store = new LocalStorageRiskEventStore();
+
+        function createTextCell(row, text, className = '') {
+            const cell = row.insertCell();
+            cell.textContent = String(text ?? '');
+            if (className) cell.className = className;
+            return cell;
+        }
+
+        function formatTimeAgo(date) {
+            const sec = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+            if (sec < 60) return `${sec}s ago`;
+            if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
+            return date.toLocaleTimeString();
+        }
+
+        async function renderDashboard() {
+            const reports = await store.list();
+            const total = reports.length;
+
+            const low = reports.filter(r => r.score < 30).length;
+            const med = reports.filter(r => r.score >= 30 && r.score < 70).length;
+            const high = reports.filter(r => r.score >= 70).length;
+
+            const avgScore = total === 0 ? 0 : Math.round(reports.reduce((s, r) => s + r.score, 0) / total);
+            const avgConf = total === 0 ? 0 : (reports.reduce((s, r) => s + (r.evidenceConfidence || 0.8), 0) / total).toFixed(2);
+
+            document.getElementById('stat-total').textContent = total.toLocaleString();
+            document.getElementById('stat-high').textContent = high.toLocaleString();
+            document.getElementById('stat-high-pct').textContent = total === 0 ? '0%' : `${Math.round((high / total) * 100)}% of traffic`;
+            document.getElementById('stat-avg-score').textContent = `${avgScore} / 100`;
+            document.getElementById('stat-avg-conf').textContent = String(avgConf);
+
+            document.getElementById('banner-events-count').textContent = `${total} Events`;
+            document.getElementById('banner-last-event').textContent = total > 0 ? new Date(reports[0].evaluatedAt).toLocaleTimeString() : 'None';
+            document.getElementById('dist-count-label').textContent = `${total} events`;
+            document.getElementById('table-count-label').textContent = `${total} total entries`;
+
+            const lowPct = total === 0 ? 100 : Math.round((low / total) * 100);
+            const medPct = total === 0 ? 0 : Math.round((med / total) * 100);
+            const highPct = total === 0 ? 0 : Math.round((high / total) * 100);
+
+            document.getElementById('dist-bar-low').style.width = `${lowPct}%`;
+            document.getElementById('dist-bar-med').style.width = `${medPct}%`;
+            document.getElementById('dist-bar-high').style.width = `${highPct}%`;
+
+            document.getElementById('legend-low-pct').textContent = `${lowPct}% (${low})`;
+            document.getElementById('legend-med-pct').textContent = `${medPct}% (${med})`;
+            document.getElementById('legend-high-pct').textContent = `${highPct}% (${high})`;
+
+            const ruleCounts = {};
+            reports.forEach(r => {
+                (r.evidence || []).forEach(e => {
+                    ruleCounts[e.rule] = (ruleCounts[e.rule] || 0) + 1;
+                });
+            });
+
+            const topRulesContainer = document.getElementById('top-rules-container');
+            topRulesContainer.textContent = '';
+
+            const sortedRules = Object.entries(ruleCounts).sort((a, b) => b[1] - a[1]);
+            if (sortedRules.length === 0) {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.style.color = '#64748b';
+                emptyMsg.textContent = 'No rules triggered in stored events.';
+                topRulesContainer.appendChild(emptyMsg);
+            } else {
+                sortedRules.forEach(([rule, count]) => {
+                    const pct = total === 0 ? 0 : Math.round((count / total) * 100);
+                    const itemBox = document.createElement('div');
+                    itemBox.style.cssText = 'background:#f8fafc; border:1px solid #cbd5e1; padding:6px 10px; border-radius:3px;';
+
+                    const rowFlex = document.createElement('div');
+                    rowFlex.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:2px;';
+
+                    const codeElem = document.createElement('code');
+                    codeElem.textContent = rule;
+
+                    const strongElem = document.createElement('strong');
+                    strongElem.textContent = `${count} (${pct}%)`;
+
+                    rowFlex.appendChild(codeElem);
+                    rowFlex.appendChild(strongElem);
+                    itemBox.appendChild(rowFlex);
+                    topRulesContainer.appendChild(itemBox);
+                });
+            }
+
+            const tbody = document.getElementById('sessions-tbody');
+            tbody.textContent = '';
+
+            if (reports.length === 0) {
+                const emptyRow = tbody.insertRow();
+                const cell = emptyRow.insertCell();
+                cell.colSpan = 7;
+                cell.style.cssText = 'text-align:center; color:#64748b; padding:20px;';
+                cell.textContent = 'No events in store. Click buttons above to generate real events!';
+            } else {
+                reports.forEach((r, idx) => {
+                    const row = tbody.insertRow();
+                    row.setAttribute('data-trace-id', r.traceId);
+                    row.onclick = () => showReportDetail(r);
+
+                    const traceCell = row.insertCell();
+                    const code = document.createElement('code');
+                    code.textContent = r.traceId;
+                    if (idx === 0) code.setAttribute('data-testid', 'latest-trace-id');
+                    traceCell.appendChild(code);
+
+                    const scoreCell = row.insertCell();
+                    const scoreBox = document.createElement('span');
+                    scoreBox.className = 'score-box ' + (r.score >= 70 ? 'score-high' : r.score >= 30 ? 'score-med' : 'score-low');
+                    scoreBox.textContent = String(r.score);
+                    scoreCell.appendChild(scoreBox);
+
+                    const confCell = createTextCell(row, r.evidenceConfidence || 0.85);
+                    confCell.style.fontFamily = 'monospace';
+
+                    const actionCell = row.insertCell();
+                    const actionPill = document.createElement('span');
+                    actionPill.className = 'pill-action pill-observe';
+                    actionPill.textContent = r.action;
+                    actionCell.appendChild(actionPill);
+
+                    const recCell = row.insertCell();
+                    const recPill = document.createElement('span');
+                    const pillCls = r.recommendedAction === 'ALLOW' ? 'pill-allow' : r.recommendedAction === 'RATE_LIMIT' ? 'pill-deny' : r.recommendedAction === 'REQUIRE_APP_VERIFICATION' ? 'pill-verify' : 'pill-observe';
+                    recPill.className = `pill-action ${pillCls}`;
+                    recPill.textContent = r.recommendedAction;
+                    recCell.appendChild(recPill);
+
+                    const evidenceCell = row.insertCell();
+                    if (!r.evidence || r.evidence.length === 0) {
+                        const cleanSpan = document.createElement('span');
+                        cleanSpan.style.color = '#16a34a';
+                        cleanSpan.textContent = 'Clean';
+                        evidenceCell.appendChild(cleanSpan);
+                    } else {
+                        r.evidence.forEach((e, i) => {
+                            if (i > 0) evidenceCell.appendChild(document.createTextNode(', '));
+                            const ruleCode = document.createElement('code');
+                            ruleCode.textContent = `${e.rule.split('.')[1] || e.rule} (+${e.score})`;
+                            evidenceCell.appendChild(ruleCode);
+                        });
+                    }
+
+                    const timeCell = createTextCell(row, formatTimeAgo(new Date(r.evaluatedAt)));
+                    timeCell.style.color = '#64748b';
+                });
+            }
+
+            runPolicySimulation();
+        }
+
+        function showReportDetail(r) {
+            if (!r) return;
+            document.getElementById('modal-trace-id').textContent = `Session Trace: ${r.traceId}`;
+            document.getElementById('modal-score').textContent = String(r.score);
+            document.getElementById('modal-confidence').textContent = String(r.evidenceConfidence || 0.85);
+            document.getElementById('modal-action').textContent = r.recommendedAction;
+
+            const modalEvidenceList = document.getElementById('modal-evidence-list');
+            modalEvidenceList.textContent = '';
+
+            if (!r.evidence || r.evidence.length === 0) {
+                const cleanMsg = document.createElement('div');
+                cleanMsg.style.cssText = 'color:#15803d; padding:10px;';
+                cleanMsg.textContent = '✅ Clean session. Zero suspicious evidence rules triggered.';
+                modalEvidenceList.appendChild(cleanMsg);
+            } else {
+                r.evidence.forEach((e, i) => {
+                    const itemBox = document.createElement('div');
+                    itemBox.className = 'evidence-item';
+
+                    const headerFlex = document.createElement('div');
+                    headerFlex.style.cssText = 'display:flex; justify-content:space-between; font-weight:700; color:#004499;';
+                    
+                    const ruleName = document.createElement('span');
+                    ruleName.textContent = `${i + 1}. ${e.rule}`;
+
+                    const scoreVal = document.createElement('span');
+                    scoreVal.style.color = '#b91c1c';
+                    scoreVal.textContent = `+${e.score}`;
+
+                    headerFlex.appendChild(ruleName);
+                    headerFlex.appendChild(scoreVal);
+
+                    const messageElem = document.createElement('div');
+                    messageElem.style.cssText = 'font-size:0.85em; color:#0f172a; margin:2px 0;';
+                    messageElem.textContent = e.message;
+
+                    const attrBox = document.createElement('pre');
+                    attrBox.style.cssText = 'font-size:0.8em; color:#64748b; font-family:monospace; background:#ffffff; padding:4px 6px; border:1px solid #cbd5e1; border-radius:2px;';
+                    attrBox.textContent = JSON.stringify(e.attributes, null, 2);
+
+                    itemBox.appendChild(headerFlex);
+                    itemBox.appendChild(messageElem);
+                    itemBox.appendChild(attrBox);
+                    modalEvidenceList.appendChild(itemBox);
+                });
+            }
+
+            document.getElementById('session-modal').style.display = 'flex';
+        }
+
+        async function runPolicySimulation() {
+            const w1 = parseInt(document.getElementById('slider-webdriver').value, 10);
+            const w2 = parseInt(document.getElementById('slider-burst').value, 10);
+
+            document.getElementById('val-webdriver').textContent = String(w1);
+            document.getElementById('val-burst').textContent = String(w2);
+
+            const customPolicy = createPolicy({
+                rules: [
+                    rules.webdriver({ weight: w1 }),
+                    rules.burst({ weight: w2 }),
+                    rules.trustedInputAbsent(),
+                    rules.touchMismatch(),
+                    rules.suspiciousUA()
+                ]
+            });
+
+            const reports = await store.list();
+            const origHigh = reports.filter(r => r.score >= 70).length;
+
+            let reclassifiedHigh = 0;
+            const reclassifiedIds = [];
+
+            reports.forEach(r => {
+                const simSignals = {
+                    webdriver: r.minimalDerivedSignals?.webdriverObserved,
+                    telemetryObserved: r.minimalDerivedSignals?.telemetryObserved,
+                    observationDurationMs: r.minimalDerivedSignals?.observationDurationMs,
+                    isTrustedEventsCount: r.minimalDerivedSignals?.trustedInputCount,
+                    burstCount10s: r.minimalDerivedSignals?.burstCount10s,
+                    touchMismatch: r.minimalDerivedSignals?.touchMismatch,
+                    suspiciousUA: r.minimalDerivedSignals?.suspiciousUA
+                };
+
+                const simReport = evaluate(simSignals, { policy: customPolicy, enforcementMode: 'SHADOW' });
+                if (simReport.score >= 70) {
+                    reclassifiedHigh++;
+                    if (r.score < 70) reclassifiedIds.push(r.traceId);
+                }
+            });
+
+            const diff = reclassifiedHigh - origHigh;
+            document.getElementById('sim-orig-high').textContent = String(origHigh);
+            document.getElementById('sim-new-high').textContent = `${reclassifiedHigh} (${diff >= 0 ? '+' : ''}${diff})`;
+
+            const idLabel = reclassifiedIds.length > 0
+                ? `Reclassified: ${reclassifiedIds.slice(0, 3).join(', ')}${reclassifiedIds.length > 3 ? '...' : ''}`
+                : 'Reclassified: None';
+            document.getElementById('sim-reclassified-ids').textContent = idLabel;
+        }
+
+        async function evaluateRealBrowser() {
+            const snap = browserTelemetry.snapshot();
+            const signals = {
+                webdriver: snap.webdriverObserved,
+                telemetryObserved: snap.telemetryObserved,
+                observationDurationMs: snap.observationDurationMs,
+                isTrustedEventsCount: snap.trustedInputCount,
+                touchMismatch: snap.touchMismatch,
+                suspiciousUA: snap.suspiciousUA,
+                tokenPresented: false,
+                tokenVerified: false,
+                burstCount10s: 1
+            };
+
+            const report = evaluate(signals, { enforcementMode: 'SHADOW' });
+            await store.append(report);
+            renderDashboard();
+        }
+
+        async function simulateEvent(type) {
+            let signals = {};
+            if (type === 'webdriver') {
+                signals = { webdriver: true, burstCount10s: 45, telemetryObserved: true, observationDurationMs: 10000, isTrustedEventsCount: 0 };
+            } else if (type === 'burst') {
+                signals = { webdriver: false, burstCount10s: 65, telemetryObserved: true, observationDurationMs: 6000, isTrustedEventsCount: 0, touchMismatch: true };
+            }
+            const report = evaluate(signals, { enforcementMode: 'SHADOW' });
+            await store.append(report);
+            renderDashboard();
+        }
+
+        document.getElementById('btn-refresh').onclick = renderDashboard;
+        document.getElementById('btn-eval-browser').onclick = evaluateRealBrowser;
+        document.getElementById('btn-sim-bot').onclick = () => simulateEvent('webdriver');
+        document.getElementById('btn-sim-burst').onclick = () => simulateEvent('burst');
+        document.getElementById('btn-clear').onclick = async () => {
+            await store.clear();
+            renderDashboard();
+        };
+
+        document.getElementById('slider-webdriver').oninput = runPolicySimulation;
+        document.getElementById('slider-burst').oninput = runPolicySimulation;
+        document.getElementById('btn-close-modal').onclick = () => {
+            document.getElementById('session-modal').style.display = 'none';
+        };
+        document.getElementById('session-modal').onclick = (e) => {
+            if (e.target === document.getElementById('session-modal')) {
+                document.getElementById('session-modal').style.display = 'none';
+            }
+        };
+
+        window.addEventListener('storage', () => renderDashboard());
+        window.addEventListener('sentinel:risk-event-appended', () => renderDashboard());
+
+        renderDashboard();
+    </script>
+</body>
+</html>
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/dashboard/index.html
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: package.json
+FILE_PATH: packages/risk-core/package.json
+FILE_LANGUAGE: json
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+{
+  "name": "@ameva/sentinel-risk-core",
+  "version": "0.5.0-alpha.1",
+  "description": "Deterministic rule evaluation engine and policy compiler for AMEVA Sentinel",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --clean && tsc --emitDeclarationOnly --declaration --outDir dist src/index.ts"
+  },
+  "keywords": [
+    "security",
+    "risk-engine",
+    "policy-as-code",
+    "bot-detection"
+  ],
+  "license": "Apache-2.0"
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/package.json
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: confidence.ts
+FILE_PATH: packages/risk-core/src/confidence.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import { TelemetrySignals } from './types.js';
+
+/**
+ * Calculates Evidence Completeness Index (0.00 ~ 1.00)
+ * Evaluates signal quality, rule coverage, freshness, and interaction presence.
+ * 
+ * Note: This index represents evidence completeness and rule coverage, NOT a calibrated Bayesian posterior probability.
+ */
+export function calculateConfidence(signals: TelemetrySignals = {}): number {
+  if (!signals || typeof signals !== 'object') {
+    return 0.10;
+  }
+
+  // 1. Signal Verification Factor (Requires verified cryptographic signature)
+  const qSignal = signals.tokenVerified === true ? 1.0 : 0.5;
+
+  // 2. Rule Coverage Factor (Number of evaluated signal attributes)
+  const validSignalKeys: (keyof TelemetrySignals)[] = [
+    'webdriver',
+    'burstCount10s',
+    'isTrustedEventsCount',
+    'touchMismatch',
+    'suspiciousUA'
+  ];
+  const presentCount = validSignalKeys.filter(k => signals[k] !== undefined).length;
+  const cRules = Math.min(1.0, Math.max(0.4, presentCount / 4));
+
+  // 3. Freshness Factor (Signal latency decay)
+  const latency = typeof signals.tokenFreshnessMs === 'number' ? signals.tokenFreshnessMs : 0;
+  let fFreshness = 1.0;
+  if (latency > 30000) {
+    fFreshness = 0.5;
+  } else if (latency > 10000) {
+    fFreshness = 0.75;
+  } else if (latency > 5000) {
+    fFreshness = 0.9;
+  }
+
+  // 4. Sample Completeness Factor (Active physical interaction observed)
+  const sCompleteness = (signals.telemetryObserved === true && signals.isTrustedEventsCount !== undefined)
+    ? 1.0
+    : 0.6;
+
+  const raw = qSignal * cRules * fFreshness * sCompleteness;
+  return Math.min(1.0, Math.max(0.05, Math.round(raw * 100) / 100));
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/confidence.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: counter.ts
+FILE_PATH: packages/risk-core/src/counter.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+export interface CounterIncrementResult {
+  count: number;
+  resetAt: number;
+}
+
+export interface CounterStore {
+  increment(key: string, options: { windowMs: number; amount?: number }): Promise<CounterIncrementResult>;
+  get(key: string): Promise<number>;
+  reset(key: string): Promise<void>;
+}
+
+interface WindowBucket {
+  count: number;
+  expiresAt: number;
+}
+
+/**
+ * Fixed-Window Memory Counter Store
+ * 
+ * Scope & Limitations:
+ * - Fixed-window counter suitable for local development, testing, and single-instance Node runtimes.
+ * - For multi-tenant, serverless, or distributed edge deployments, use an external atomic store (e.g. Redis / Cloudflare Durable Objects).
+ */
+export class MemoryFixedWindowCounterStore implements CounterStore {
+  private store = new Map<string, WindowBucket>();
+
+  async increment(key: string, options: { windowMs: number; amount?: number }): Promise<CounterIncrementResult> {
+    const now = Date.now();
+    const amount = options.amount ?? 1;
+    const existing = this.store.get(key);
+
+    if (!existing || existing.expiresAt <= now) {
+      const resetAt = now + options.windowMs;
+      this.store.set(key, { count: amount, expiresAt: resetAt });
+      return { count: amount, resetAt };
+    }
+
+    existing.count += amount;
+    return { count: existing.count, resetAt: existing.expiresAt };
+  }
+
+  async get(key: string): Promise<number> {
+    const now = Date.now();
+    const existing = this.store.get(key);
+    if (!existing || existing.expiresAt <= now) {
+      this.store.delete(key);
+      return 0;
+    }
+    return existing.count;
+  }
+
+  async reset(key: string): Promise<void> {
+    this.store.delete(key);
+  }
+}
+
+// Backwards-compatible alias
+export const MemoryCounterStore = MemoryFixedWindowCounterStore;
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/counter.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: engine.ts
+FILE_PATH: packages/risk-core/src/engine.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import {
+  SentinelAction,
+  SentinelRiskReport,
+  TelemetrySignals,
+  EvidenceItem,
+  EnforcementMode,
+  createTraceId
+} from './types.js';
+import { calculateConfidence } from './confidence.js';
+import { SentinelPolicy, defaultPolicy } from './policy.js';
+
+export interface EvaluateOptions {
+  policy?: SentinelPolicy;
+  traceId?: string;
+  enforcementMode?: EnforcementMode;
+}
+
+/**
+ * Pure risk evaluation engine.
+ * Evaluates telemetry signals against the configured SentinelPolicy.
+ * Guaranteed input immutability and deterministic 0~100 score clamping.
+ */
+export function evaluate(
+  signals: TelemetrySignals = {},
+  optionsOrPolicy: EvaluateOptions | SentinelPolicy = defaultPolicy
+): SentinelRiskReport {
+  let policy: SentinelPolicy = defaultPolicy;
+  let traceId: string | undefined;
+  let enforcementMode: EnforcementMode = 'SHADOW';
+
+  if ('rules' in optionsOrPolicy && Array.isArray(optionsOrPolicy.rules)) {
+    policy = optionsOrPolicy;
+  } else {
+    const opts = optionsOrPolicy as EvaluateOptions;
+    if (opts.policy) policy = opts.policy;
+    if (opts.traceId) traceId = opts.traceId;
+    if (opts.enforcementMode) enforcementMode = opts.enforcementMode;
+  }
+
+  const currentTraceId = traceId || createTraceId();
+  const evidence: EvidenceItem[] = [];
+  let calculatedScore = 0;
+
+  // Defensive copy to guarantee input immutability
+  const safeSignals: TelemetrySignals = { ...signals };
+
+  for (const rule of policy.rules) {
+    const result = rule.evaluate(safeSignals);
+    if (result.triggered) {
+      calculatedScore += result.score;
+      evidence.push({
+        rule: rule.id,
+        score: result.score,
+        attributes: { ...result.attributes },
+        message: result.message
+      });
+    }
+  }
+
+  // Strict Clamping: Must be finite and clamped strictly between 0 and 100
+  const finalScore = Number.isFinite(calculatedScore)
+    ? Math.min(100, Math.max(0, calculatedScore))
+    : 0;
+
+  const evidenceConfidence = calculateConfidence(safeSignals);
+
+  // Determine Evaluated Recommendation based on Policy Thresholds
+  let recommendedAction = SentinelAction.ALLOW;
+  if (finalScore >= policy.thresholds.deny) {
+    recommendedAction = SentinelAction.TEMPORARY_DENY;
+  } else if (finalScore >= policy.thresholds.appVerification) {
+    recommendedAction = SentinelAction.REQUIRE_APP_VERIFICATION;
+  } else if (finalScore >= policy.thresholds.rateLimit) {
+    recommendedAction = SentinelAction.RATE_LIMIT;
+  } else if (finalScore > 20) {
+    recommendedAction = SentinelAction.OBSERVE;
+  }
+
+  // In Shadow Mode, never enforce blocking actions directly
+  let action = recommendedAction;
+  if (enforcementMode === 'SHADOW') {
+    action = recommendedAction === SentinelAction.ALLOW ? SentinelAction.ALLOW : SentinelAction.OBSERVE;
+  }
+
+  return {
+    traceId: currentTraceId,
+    score: finalScore,
+    evidenceConfidence,
+    action,
+    recommendedAction,
+    enforcementMode,
+    policyVersion: policy.version,
+    evidence,
+    evaluatedAt: new Date().toISOString(),
+    signals: safeSignals
+  };
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/engine.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: index.ts
+FILE_PATH: packages/risk-core/src/index.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+export * from './types.js';
+export * from './confidence.js';
+export * from './counter.js';
+export * from './rules.js';
+export * from './policy.js';
+export * from './engine.js';
+export * from './store.js';
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/index.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: policy.ts
+FILE_PATH: packages/risk-core/src/policy.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import { RuleDefinition, rules } from './rules.js';
+
+export interface SentinelThresholds {
+  rateLimit: number;
+  appVerification: number;
+  deny: number;
+}
+
+export interface SentinelPolicy {
+  version: string;
+  thresholds: SentinelThresholds;
+  rules: RuleDefinition[];
+}
+
+export interface CreatePolicyOptions {
+  version?: string;
+  thresholds?: Partial<SentinelThresholds>;
+  rules?: RuleDefinition[];
+}
+
+export function createPolicy(options: CreatePolicyOptions = {}): SentinelPolicy {
+  return {
+    version: options.version || '2026-08-21.1',
+    thresholds: {
+      rateLimit: options.thresholds?.rateLimit ?? 50,
+      appVerification: options.thresholds?.appVerification ?? 70,
+      deny: options.thresholds?.deny ?? 85
+    },
+    rules: options.rules || [
+      rules.webdriver({ weight: 25 }),
+      rules.burst({ weight: 30, threshold: 30 }),
+      rules.trustedInputAbsent({ weight: 20 }),
+      rules.touchMismatch({ weight: 15 }),
+      rules.suspiciousUA({ weight: 15 })
+    ]
+  };
+}
+
+export const defaultPolicy = createPolicy();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/policy.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: rules.ts
+FILE_PATH: packages/risk-core/src/rules.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import { TelemetrySignals, RuleAttributes } from './types.js';
+
+export interface RuleEvaluationResult {
+  triggered: boolean;
+  score: number;
+  attributes: RuleAttributes;
+  message: string;
+}
+
+export interface RuleDefinition {
+  id: string;
+  weight: number;
+  evaluate: (signals: TelemetrySignals) => RuleEvaluationResult;
+}
+
+export const rules = {
+  /**
+   * Evaluates navigator.webdriver automation flag
+   */
+  webdriver: (options: { weight?: number } = {}): RuleDefinition => {
+    const weight = options.weight ?? 25;
+    return {
+      id: 'automation.webdriver',
+      weight,
+      evaluate: (signals) => {
+        const isTriggered = !!signals.webdriver;
+        return {
+          triggered: isTriggered,
+          score: isTriggered ? weight : 0,
+          attributes: {
+            observed: isTriggered,
+            property: 'navigator.webdriver'
+          },
+          message: isTriggered
+            ? 'navigator.webdriver automation flag is active'
+            : 'navigator.webdriver is clean'
+        };
+      }
+    };
+  },
+
+  /**
+   * Evaluates high frequency request burst within sliding window
+   */
+  burst: (options: { weight?: number; threshold?: number; windowMs?: number } = {}): RuleDefinition => {
+    const weight = options.weight ?? 30;
+    const threshold = options.threshold ?? 30;
+    const windowMs = options.windowMs ?? 10000;
+    return {
+      id: 'rate.burst_request',
+      weight,
+      evaluate: (signals) => {
+        const count = signals.burstCount10s ?? 1;
+        const isTriggered = count >= threshold;
+        return {
+          triggered: isTriggered,
+          score: isTriggered ? weight : 0,
+          attributes: {
+            window: `${windowMs / 1000}s`,
+            count,
+            threshold
+          },
+          message: isTriggered
+            ? `Request frequency exceeded the configured threshold (${count} req / ${windowMs / 1000}s)`
+            : `Request rate is within limits (${count} req / ${windowMs / 1000}s)`
+        };
+      }
+    };
+  },
+
+  /**
+   * Evaluates absence of trusted human interaction ONLY when telemetry was genuinely observed
+   * Guards against false positives when client telemetry is uninitialized or JS is disabled.
+   */
+  trustedInputAbsent: (options: { weight?: number; minDurationMs?: number; minBurst?: number } = {}): RuleDefinition => {
+    const weight = options.weight ?? 20;
+    const minDuration = options.minDurationMs ?? 5000;
+    const minBurst = options.minBurst ?? 5;
+
+    return {
+      id: 'interaction.trusted_input_absent',
+      weight,
+      evaluate: (signals) => {
+        // Crucial Guard: If telemetry was never observed, we lack evidence -> DO NOT TRIGGER
+        if (!signals.telemetryObserved) {
+          return {
+            triggered: false,
+            score: 0,
+            attributes: { telemetry_observed: false },
+            message: 'Client interaction telemetry not observed (insufficient evidence)'
+          };
+        }
+
+        const duration = signals.observationDurationMs ?? 0;
+        const trustedCount = signals.isTrustedEventsCount ?? 0;
+        const burstCount = signals.burstCount10s ?? 1;
+
+        const isTriggered = duration >= minDuration && trustedCount === 0 && burstCount >= minBurst;
+
+        return {
+          triggered: isTriggered,
+          score: isTriggered ? weight : 0,
+          attributes: {
+            telemetry_observed: true,
+            observation_duration_ms: duration,
+            is_trusted_count: trustedCount,
+            burst_count: burstCount
+          },
+          message: isTriggered
+            ? 'No trusted interaction events were observed during the active sampling window'
+            : 'Interaction signals are consistent'
+        };
+      }
+    };
+  },
+
+  /**
+   * Evaluates touch and mobile platform capability mismatch
+   */
+  touchMismatch: (options: { weight?: number } = {}): RuleDefinition => {
+    const weight = options.weight ?? 15;
+    return {
+      id: 'environment.touch_mismatch',
+      weight,
+      evaluate: (signals) => {
+        const isTriggered = !!signals.touchMismatch;
+        return {
+          triggered: isTriggered,
+          score: isTriggered ? weight : 0,
+          attributes: {
+            touch_mismatch: isTriggered
+          },
+          message: isTriggered
+            ? 'Mobile platform Client-Hints and touch capability mismatch detected'
+            : 'Platform attributes are consistent'
+        };
+      }
+    };
+  },
+
+  /**
+   * Evaluates known automated bot signatures in User-Agent header
+   */
+  suspiciousUA: (options: { weight?: number } = {}): RuleDefinition => {
+    const weight = options.weight ?? 15;
+    return {
+      id: 'header.suspicious_ua',
+      weight,
+      evaluate: (signals) => {
+        const isTriggered = !!signals.suspiciousUA;
+        return {
+          triggered: isTriggered,
+          score: isTriggered ? weight : 0,
+          attributes: {
+            suspicious_ua: isTriggered,
+            claimed_bot: signals.claimedBot || null
+          },
+          message: isTriggered
+            ? `Suspicious or automated scraper signature detected (${signals.claimedBot || 'headless'})`
+            : 'User-Agent header format is standard'
+        };
+      }
+    };
+  }
+};
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/rules.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: store.ts
+FILE_PATH: packages/risk-core/src/store.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import { SentinelAction, SentinelRiskReport, EnforcementMode, EvidenceItem } from './types.js';
+
+export interface SanitizedEvidence {
+  rule: string;
+  score: number;
+  attributes: Record<string, string | number | boolean | null>;
+  message: string;
+}
+
+export interface MinimalDerivedSignals {
+  webdriverObserved?: boolean;
+  telemetryObserved?: boolean;
+  observationDurationMs?: number;
+  trustedInputCount?: number;
+  burstCount10s?: number;
+  touchMismatch?: boolean;
+  suspiciousUA?: boolean;
+}
+
+/**
+ * Strict Stored Event Schema (v1.0)
+ * Strictly isolates runtime internal state from persistent browser storage.
+ */
+export interface StoredRiskEventV1 {
+  schemaVersion: '1.0';
+  traceId: string;
+  evaluatedAt: string;
+  score: number;
+  evidenceConfidence: number;
+  action: SentinelAction;
+  recommendedAction: SentinelAction;
+  enforcementMode: EnforcementMode;
+  policyVersion: string;
+  minimalDerivedSignals: MinimalDerivedSignals;
+  evidence: SanitizedEvidence[];
+  storedAt: string;
+}
+
+export function isStoredRiskEventV1(value: unknown): value is StoredRiskEventV1 {
+  if (value === null || typeof value !== 'object') return false;
+  const item = value as Record<string, unknown>;
+  return (
+    item.schemaVersion === '1.0' &&
+    typeof item.traceId === 'string' &&
+    typeof item.score === 'number' &&
+    Number.isFinite(item.score) &&
+    item.score >= 0 &&
+    item.score <= 100 &&
+    typeof item.evaluatedAt === 'string' &&
+    Array.isArray(item.evidence)
+  );
+}
+
+export function sanitizeSignals(signals: any = {}): MinimalDerivedSignals {
+  return {
+    webdriverObserved: !!signals.webdriver || !!signals.webdriverObserved,
+    telemetryObserved: !!signals.telemetryObserved,
+    observationDurationMs: typeof signals.observationDurationMs === 'number' ? signals.observationDurationMs : 0,
+    trustedInputCount: typeof signals.isTrustedEventsCount === 'number' ? signals.isTrustedEventsCount : (typeof signals.trustedInputCount === 'number' ? signals.trustedInputCount : 0),
+    burstCount10s: typeof signals.burstCount10s === 'number' ? signals.burstCount10s : 1,
+    touchMismatch: !!signals.touchMismatch,
+    suspiciousUA: !!signals.suspiciousUA
+  };
+}
+
+export function sanitizeEvidence(item: EvidenceItem): SanitizedEvidence {
+  const safeAttrs: Record<string, string | number | boolean | null> = {};
+  if (item.attributes && typeof item.attributes === 'object') {
+    for (const [k, v] of Object.entries(item.attributes)) {
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null) {
+        safeAttrs[k] = v;
+      }
+    }
+  }
+  return {
+    rule: String(item.rule || 'unknown'),
+    score: Number(item.score || 0),
+    attributes: safeAttrs,
+    message: String(item.message || '')
+  };
+}
+
+export function toStoredRiskEvent(report: SentinelRiskReport & { signals?: any }): StoredRiskEventV1 {
+  const now = Date.now();
+  return {
+    schemaVersion: '1.0',
+    traceId: report.traceId,
+    evaluatedAt: report.evaluatedAt || new Date(now).toISOString(),
+    score: report.score,
+    evidenceConfidence: report.evidenceConfidence,
+    action: report.action,
+    recommendedAction: report.recommendedAction,
+    enforcementMode: report.enforcementMode,
+    policyVersion: report.policyVersion,
+    minimalDerivedSignals: sanitizeSignals(report.signals),
+    evidence: (report.evidence || []).map(sanitizeEvidence),
+    storedAt: new Date(now).toISOString()
+  };
+}
+
+export interface RiskEventStoreOptions {
+  key?: string;
+  maxItems?: number;
+  maxAgeMs?: number; // Default: 24 hours
+}
+
+export interface RiskEventStore {
+  append(report: SentinelRiskReport): Promise<void>;
+  list(options?: { limit?: number; includeExpired?: boolean }): Promise<StoredRiskEventV1[]>;
+  clear(): Promise<void>;
+}
+
+export class MemoryRiskEventStore implements RiskEventStore {
+  private events: StoredRiskEventV1[] = [];
+  private readonly maxItems: number;
+  private readonly maxAgeMs: number;
+
+  constructor(options: RiskEventStoreOptions = {}) {
+    this.maxItems = options.maxItems ?? 500;
+    this.maxAgeMs = options.maxAgeMs ?? 24 * 60 * 60 * 1000;
+  }
+
+  async append(report: SentinelRiskReport): Promise<void> {
+    if (!report || !report.traceId) return;
+    const now = Date.now();
+    const storedItem = toStoredRiskEvent(report);
+
+    this.events = this.events.filter(e => e.traceId !== report.traceId);
+    this.events.unshift(storedItem);
+    this.prune(now);
+  }
+
+  async list(options: { limit?: number; includeExpired?: boolean } = {}): Promise<StoredRiskEventV1[]> {
+    const now = Date.now();
+    if (!options.includeExpired) {
+      this.prune(now);
+    }
+    const limit = options.limit ?? this.maxItems;
+    return this.events.slice(0, limit);
+  }
+
+  async clear(): Promise<void> {
+    this.events = [];
+  }
+
+  private prune(now: number): void {
+    this.events = this.events.filter(e => {
+      const itemTime = new Date(e.evaluatedAt).getTime();
+      return (now - itemTime) <= this.maxAgeMs;
+    });
+
+    if (this.events.length > this.maxItems) {
+      this.events = this.events.slice(0, this.maxItems);
+    }
+  }
+}
+
+export class LocalStorageRiskEventStore implements RiskEventStore {
+  private readonly key: string;
+  private readonly maxItems: number;
+  private readonly maxAgeMs: number;
+
+  constructor(options: RiskEventStoreOptions = {}) {
+    this.key = options.key || 'ameva:sentinel:risk-events';
+    this.maxItems = options.maxItems ?? 500;
+    this.maxAgeMs = options.maxAgeMs ?? 24 * 60 * 60 * 1000;
+  }
+
+  async append(report: SentinelRiskReport): Promise<void> {
+    if (typeof localStorage === 'undefined' || !report || !report.traceId) return;
+
+    const current = await this.list({ limit: this.maxItems, includeExpired: false });
+    const storedItem = toStoredRiskEvent(report);
+
+    const filtered = current.filter(e => e.traceId !== report.traceId);
+    const next = [storedItem, ...filtered].slice(0, this.maxItems);
+
+    try {
+      localStorage.setItem(this.key, JSON.stringify(next));
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        try {
+          window.dispatchEvent(new CustomEvent('sentinel:risk-event-appended', { detail: storedItem }));
+        } catch (e) {}
+      }
+    } catch (err) {
+      try {
+        const halved = next.slice(0, Math.floor(this.maxItems / 2));
+        localStorage.setItem(this.key, JSON.stringify(halved));
+      } catch (e) {}
+    }
+  }
+
+  async list(options: { limit?: number; includeExpired?: boolean } = {}): Promise<StoredRiskEventV1[]> {
+    if (typeof localStorage === 'undefined') return [];
+    const raw = localStorage.getItem(this.key);
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+
+      const now = Date.now();
+      const valid = parsed.filter(isStoredRiskEventV1);
+
+      const unexpired = options.includeExpired
+        ? valid
+        : valid.filter(item => {
+            const time = new Date(item.evaluatedAt).getTime();
+            return (now - time) <= this.maxAgeMs;
+          });
+
+      return unexpired.slice(0, options.limit ?? this.maxItems);
+    } catch (e) {
+      try { localStorage.removeItem(this.key); } catch (err) {}
+      return [];
+    }
+  }
+
+  async clear(): Promise<void> {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.removeItem(this.key);
+    } catch (e) {}
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/store.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: types.ts
+FILE_PATH: packages/risk-core/src/types.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+export enum SentinelAction {
+  ALLOW = 'ALLOW',
+  OBSERVE = 'OBSERVE',
+  RATE_LIMIT = 'RATE_LIMIT',
+  REQUIRE_APP_VERIFICATION = 'REQUIRE_APP_VERIFICATION',
+  TEMPORARY_DENY = 'TEMPORARY_DENY'
+}
+
+export type EnforcementMode = 'SHADOW' | 'ENFORCE';
+
+export interface RuleAttributes {
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export interface EvidenceItem {
+  rule: string;
+  score: number;
+  attributes: RuleAttributes;
+  message: string;
+}
+
+export interface TelemetrySignals {
+  webdriver?: boolean;
+  telemetryObserved?: boolean;
+  observationDurationMs?: number;
+  isTrustedEventsCount?: number;
+  burstCount10s?: number;
+  touchMismatch?: boolean;
+  suspiciousUA?: boolean;
+  claimedBot?: string;
+  verifiedBot?: boolean;
+  tokenPresented?: boolean;
+  tokenVerified?: boolean;
+  tokenFreshnessMs?: number;
+  customSignals?: Record<string, any>;
+}
+
+export interface SentinelRiskReport {
+  traceId: string;
+  score: number;                       // 0 ~ 100 (Clamped)
+  evidenceConfidence: number;          // 0.00 ~ 1.00 (Signal Completeness Index)
+  action: SentinelAction;              // Actual action executed (OBSERVE in shadow mode)
+  recommendedAction: SentinelAction;   // Evaluated policy recommendation
+  enforcementMode: EnforcementMode;    // 'SHADOW' | 'ENFORCE'
+  policyVersion: string;
+  evidence: EvidenceItem[];
+  evaluatedAt: string;
+  signals?: TelemetrySignals;
+}
+
+export function createTraceId(): string {
+  const uuid = typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  return `trc_${uuid.replace(/-/g, '').slice(0, 16)}`;
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/types.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: package.json
+FILE_PATH: packages/sentinel/package.json
+FILE_LANGUAGE: json
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+{
+  "name": "@ameva/sentinel",
+  "version": "0.5.0-alpha.1",
+  "description": "Privacy-first Security Observability Layer for Web Applications",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --clean && tsc --emitDeclarationOnly --declaration --outDir dist src/index.ts"
+  },
+  "dependencies": {
+    "@ameva/sentinel-risk-core": "^0.5.0-alpha.1"
+  },
+  "keywords": [
+    "security",
+    "observability",
+    "shadow-mode",
+    "bot-defense",
+    "fraud-detection"
+  ],
+  "license": "Apache-2.0"
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/sentinel/package.json
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: index.ts
+FILE_PATH: packages/sentinel/src/index.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import {
+  SentinelAction,
+  defaultPolicy,
+  evaluate,
+  createPolicy,
+  rules,
+  MemoryFixedWindowCounterStore,
+  MemoryCounterStore,
+  MemoryRiskEventStore,
+  LocalStorageRiskEventStore,
+  toStoredRiskEvent,
+  sanitizeSignals,
+  createTraceId
+} from '@ameva/sentinel-risk-core';
+
+import type {
+  SentinelRiskReport,
+  TelemetrySignals,
+  SentinelPolicy,
+  StoredRiskEventV1,
+  CounterStore,
+  RiskEventStore
+} from '@ameva/sentinel-risk-core';
+
+export {
+  SentinelAction,
+  defaultPolicy,
+  createPolicy,
+  rules,
+  evaluate,
+  MemoryFixedWindowCounterStore,
+  MemoryCounterStore,
+  MemoryRiskEventStore,
+  LocalStorageRiskEventStore,
+  toStoredRiskEvent,
+  sanitizeSignals,
+  createTraceId
+};
+
+export type {
+  SentinelRiskReport,
+  TelemetrySignals,
+  SentinelPolicy,
+  StoredRiskEventV1,
+  CounterStore,
+  RiskEventStore
+};
+
+export interface SentinelOptions {
+  policy?: SentinelPolicy;
+  mode?: 'shadow' | 'enforce';
+  counterStore?: CounterStore;
+  eventStore?: RiskEventStore | null;
+  rateKeyProvider?: (req: any) => string | null;
+}
+
+export class Sentinel {
+  private policy: SentinelPolicy;
+  private mode: 'shadow' | 'enforce';
+  private counterStore: CounterStore;
+  private eventStore: RiskEventStore | null;
+  private rateKeyProvider?: (req: any) => string | null;
+
+  constructor(options: SentinelOptions = {}) {
+    this.policy = options.policy || defaultPolicy;
+    this.mode = options.mode || 'shadow';
+    this.counterStore = options.counterStore || new MemoryFixedWindowCounterStore();
+    this.eventStore = options.eventStore || null;
+    this.rateKeyProvider = options.rateKeyProvider;
+  }
+
+  async score(req: any): Promise<SentinelRiskReport> {
+    const rawSignals = await this.collect(req);
+
+    let burstCount10s = rawSignals.burstCount10s ?? 1;
+    const rateKey = this.deriveRateKey(req);
+    if (rateKey) {
+      try {
+        const rate = await this.counterStore.increment(rateKey, { windowMs: 10000 });
+        burstCount10s = rate.count;
+      } catch (e) {}
+    }
+
+    const enrichedSignals: TelemetrySignals = {
+      ...rawSignals,
+      burstCount10s
+    };
+
+    const verified = await this.verify(enrichedSignals);
+    const report = evaluate(verified, {
+      policy: this.policy,
+      enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW'
+    });
+
+    if (this.eventStore && typeof this.eventStore.append === 'function') {
+      try {
+        await this.eventStore.append(report);
+      } catch (e) {}
+    }
+
+    return report;
+  }
+
+  deriveRateKey(req: any): string | null {
+    if (this.rateKeyProvider) {
+      return this.rateKeyProvider(req);
+    }
+    if (!req) return null;
+    if (req.sessionId) return `sess_${req.sessionId}`;
+    if (req.testClientId) return `test_${req.testClientId}`;
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        const key = 'ameva:sentinel:session-id';
+        const existing = sessionStorage.getItem(key);
+        if (existing) return existing;
+        const newId = 'sess_' + Math.random().toString(36).substring(2, 10);
+        sessionStorage.setItem(key, newId);
+        return newId;
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  async collect(req: any): Promise<TelemetrySignals> {
+    if (!req) return {};
+
+    if (req.signals && typeof req.signals === 'object') {
+      const s = req.signals;
+      return {
+        webdriver: !!s.webdriverObserved || !!s.webdriver,
+        telemetryObserved: !!s.telemetryObserved,
+        observationDurationMs: typeof s.observationDurationMs === 'number' ? s.observationDurationMs : 6000,
+        isTrustedEventsCount: typeof s.trustedInputCount === 'number' ? s.trustedInputCount : (typeof s.isTrustedEventsCount === 'number' ? s.isTrustedEventsCount : 0),
+        touchMismatch: !!s.touchMismatch,
+        suspiciousUA: !!s.suspiciousUA,
+        tokenPresented: Boolean(s.token),
+        tokenVerified: false,
+        tokenFreshnessMs: typeof s.tokenFreshnessMs === 'number' ? s.tokenFreshnessMs : 100
+      };
+    }
+
+    const headers = req.headers || {};
+    const getHeader = (name: string): string => {
+      if (typeof headers.get === 'function') return headers.get(name) || '';
+      return headers[name.toLowerCase()] || headers[name] || '';
+    };
+
+    const ua = getHeader('user-agent');
+    const secChUaMobile = getHeader('sec-ch-ua-mobile');
+
+    let body: any = {};
+    if (typeof req.json === 'function') {
+      try { body = await req.json(); } catch (e) {}
+    } else if (req.body) {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    }
+
+    const isWebdriver = !!body.webdriver || /HeadlessChrome|PhantomJS|Selenium|Playwright/i.test(ua);
+    const isTouchMismatch = secChUaMobile === '?1' && body.is_touch === false;
+    const isSuspiciousUA = ua.length === 0 || /python-requests|curl|wget|scrapy|aiohttp/i.test(ua);
+
+    return {
+      webdriver: isWebdriver,
+      telemetryObserved: body.telemetry_observed !== undefined ? !!body.telemetry_observed : (body.trusted_events !== undefined),
+      observationDurationMs: typeof body.observation_duration_ms === 'number' ? body.observation_duration_ms : 6000,
+      isTrustedEventsCount: typeof body.trusted_events === 'number' ? body.trusted_events : 0,
+      touchMismatch: isTouchMismatch,
+      suspiciousUA: isSuspiciousUA,
+      claimedBot: body.claimed_bot || (ua.includes('Bot') ? 'claimed_bot' : undefined),
+      tokenPresented: Boolean(body.token),
+      tokenVerified: false,
+      tokenFreshnessMs: body.timestamp ? Date.now() - body.timestamp : 100
+    };
+  }
+
+  async verify(signals: TelemetrySignals): Promise<TelemetrySignals> {
+    return signals;
+  }
+}
+
+export function createSentinel(options: SentinelOptions = {}): Sentinel {
+  return new Sentinel(options);
+}
+
+export const sentinel = new Sentinel();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/sentinel/src/index.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: export_source_code.py
+FILE_PATH: scripts/export_source_code.py
+FILE_LANGUAGE: python
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import os
+import sys
+import subprocess
+from datetime import datetime
+from pathlib import Path
+
+EXCLUDE_DIRS = {'.git', '.venv', 'node_modules', 'dist', 'build', 'coverage', '__pycache__', 'releases', 'tools', 'codes'}
+EXCLUDE_FILES = {'package-lock.json', 'pnpm-lock.yaml', '*.whl', '*.tar.gz', '*.tgz', '*.png', '*.jpg', '*.jpeg', '*.gif', '*.mp4', '*.mp3', '.env*', '*.pem', '*.key', '*.cert', 'API token', '비밀번호', '개인키', '인증서'}
+LANG_MAP = {'.py': 'python', '.ts': 'typescript', '.js': 'javascript', '.md': 'markdown', '.json': 'json', '.html': 'html', '.css': 'css', '.wgsl': 'wgsl'}
+
+def cmd(args: list[str]) -> str:
+    try:
+        return subprocess.run(args, capture_output=True, text=True, encoding='utf-8').stdout.strip()
+    except Exception:
+        return ""
+
+def generate_tree(path: Path, prefix="") -> str:
+    try:
+        entries = sorted([p for p in path.iterdir() if p.name not in EXCLUDE_DIRS and not any(p.match(pat) for pat in EXCLUDE_FILES)], key=lambda p: (not p.is_dir(), p.name.lower()))
+    except PermissionError:
+        return ""
+    lines = []
+    for i, p in enumerate(entries):
+        is_last = (i == len(entries) - 1)
+        conn = "ㄴ-- " if is_last else "├── "
+        lines.append(f"{prefix}{conn}{p.name}")
+        if p.is_dir():
+            child_prefix = prefix + ("    " if is_last else "│   ")
+            child_tree = generate_tree(p, child_prefix)
+            if child_tree:
+                lines.append(child_tree)
+    return "\n".join(lines)
+
+def main():
+    root = Path(__file__).resolve().parent.parent
+    now = datetime.now()
+    out_dir = root / 'scripts' / 'codes'
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_file = out_dir / f"{now:%Y%m%d_%H%M%S}_{now.microsecond // 1000:03d}_export.txt"
+
+    branch, commit, porcelain = cmd(["git", "branch", "--show-current"]) or "master", cmd(["git", "rev-parse", "HEAD"]) or "HEAD", cmd(["git", "status", "--porcelain"])
+    sep = "=" * 80
+
+    header = (
+        f"# 프로젝트 디렉터리\n#root\n{generate_tree(root)}\n\n\n"
+        f"# PROJECT_METADATA\nProject: AMEVA-Sentinel\nSnapshot Date: {now:%Y-%m-%d}\nBranch: {branch}\nCommit: {commit}\n"
+        f"Working Tree: {'DIRTY' if porcelain else 'CLEAN'}\nSnapshot State: {'HEAD + working tree snapshot' if porcelain else 'HEAD snapshot'}\n"
+        f"Operating System: {sys.platform}\nPython Version: {sys.version.split()[0]}\nNode Version: {cmd(['node', '-v']) or 'Unknown'}\n"
+        f"Package Manager: npm\nCurrent Stage: v0.5 Browser-Local Shadow Mode Prototype\nTarget Release: 1.0.0 OSS Release\n\n\n"
+    )
+
+    with open(out_file, "w", encoding="utf-8") as out:
+        out.write(header)
+        for root_dir, dirnames, filenames in os.walk(root):
+            dirnames[:] = sorted([d for d in dirnames if d not in EXCLUDE_DIRS])
+            for f in sorted(filenames):
+                p = Path(root_dir) / f
+                if any(p.match(pat) for pat in EXCLUDE_FILES) or f.endswith("_export.txt"):
+                    continue
+                rel_path = p.relative_to(root).as_posix()
+                lang = LANG_MAP.get(p.suffix.lower(), "text")
+                try:
+                    content = p.read_text(encoding="utf-8")
+                except Exception as e:
+                    content = f"<에러 발생 또는 바이너리 파일: {e}>"
+                out.write(
+                    f"{sep}\nFILE_BEGIN\n{sep}\nFILE_NAME: {f}\nFILE_PATH: {rel_path}\n"
+                    f"FILE_LANGUAGE: {lang}\n{sep}\nFILE_CONTENT_BEGIN\n{sep}\n\n"
+                    f"{content}{'' if content.endswith(chr(10)) else chr(10)}\n"
+                    f"{sep}\nFILE_CONTENT_END\n{sep}\nFILE_END: {rel_path}\n{sep}\n\n"
+                )
+
+    print(f"소스코드 추출이 완료되었습니다: {out_file}")
+
+if __name__ == "__main__":
+    main()
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: scripts/export_source_code.py
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: browser.test.js
+FILE_PATH: tests/browser.test.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+/**
+ * @ameva/sentinel-browser Unit Test Suite
+ */
+import assert from 'node:assert';
+import { createBrowserTelemetry } from '../packages/browser-sdk/dist/index.js';
+
+console.log('\n🧪 Running @ameva/sentinel-browser Unit Test Suite...\n');
+
+let passedTests = 0;
+let failedTests = 0;
+
+function it(name, fn) {
+  return (async () => {
+    try {
+      await fn();
+      console.log(`  ✅ PASS: ${name}`);
+      passedTests++;
+    } catch (err) {
+      console.error(`  ❌ FAIL: ${name}`);
+      console.error(`     Error: ${err.message}`);
+      failedTests++;
+    }
+  })();
+}
+
+async function run() {
+  // 1. Snapshot returns expected fields even in non-browser Node runtime
+  await it('telemetry.snapshot() should return schema-compliant signals in Node fallback', async () => {
+    const telemetry = createBrowserTelemetry({ autoStart: false });
+    const snapshot = telemetry.snapshot();
+
+    assert.strictEqual(typeof snapshot.telemetryObserved, 'boolean');
+    assert.strictEqual(typeof snapshot.observationDurationMs, 'number');
+    assert.strictEqual(typeof snapshot.trustedInputCount, 'number');
+    assert.strictEqual(typeof snapshot.collectedAt, 'string');
+  });
+
+  // 2. Lifecycle management (start, reset, destroy)
+  await it('telemetry lifecycle should manage start and destroy without throwing', async () => {
+    const telemetry = createBrowserTelemetry({ maxEventsCap: 100 });
+    telemetry.start();
+    telemetry.start(); // Idempotent start
+
+    telemetry.reset();
+    const snapAfterReset = telemetry.snapshot();
+    assert.strictEqual(snapAfterReset.trustedInputCount, 0);
+
+    telemetry.destroy();
+  });
+
+  console.log('\n------------------------------------------------');
+  console.log(`Total Browser Tests: ${passedTests + failedTests}`);
+  console.log(`Passed:              ${passedTests}`);
+  console.log(`Failed:              ${failedTests}`);
+  console.log('------------------------------------------------\n');
+
+  if (failedTests > 0) {
+    process.exitCode = 1;
+    console.error(`🚨 BROWSER SDK TEST SUITE FAILED: ${failedTests} test(s) failed.`);
+    process.exit(1);
+  }
+}
+
+run();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: tests/browser.test.js
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: engine.test.js
+FILE_PATH: tests/engine.test.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+/**
+ * AMEVA Sentinel - Core Engine Quality Gate & Boundary Test Suite
+ */
+import assert from 'node:assert';
+import { evaluate, calculateConfidence, createPolicy, rules, SentinelAction } from '../packages/risk-core/dist/index.js';
+
+console.log('\n🧪 Running AMEVA Sentinel Quality Gate Test Suite...\n');
+
+let passedTests = 0;
+let failedTests = 0;
+
+function it(name, fn) {
+  try {
+    fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passedTests++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(`     Error: ${err.message}`);
+    failedTests++;
+  }
+}
+
+// ==============================================================================
+// 1. Clean Human Baseline (Synthetic Baseline)
+// ==============================================================================
+it('should classify clean synthetic baseline session as ALLOW with 0 score', () => {
+  const signals = {
+    webdriver: false,
+    burstCount10s: 2,
+    telemetryObserved: true,
+    observationDurationMs: 10000,
+    isTrustedEventsCount: 8,
+    tokenVerified: true,
+    tokenFreshnessMs: 500
+  };
+
+  const report = evaluate(signals, { enforcementMode: 'SHADOW' });
+  
+  assert.strictEqual(report.score, 0, 'Clean baseline session should have 0 score');
+  assert.strictEqual(report.action, SentinelAction.ALLOW, 'Action should be ALLOW');
+  assert.strictEqual(report.recommendedAction, SentinelAction.ALLOW);
+  assert.strictEqual(report.evidence.length, 0, 'Evidence should be empty for clean user');
+  assert.ok(report.evidenceConfidence >= 0.70, `Confidence should be high, got ${report.evidenceConfidence}`);
+  assert.ok(report.traceId.startsWith('trc_'), 'TraceId should start with trc_');
+});
+
+// ==============================================================================
+// 2. Guarded Telemetry Test (Absence of Telemetry != Zero Interaction)
+// ==============================================================================
+it('missing telemetry must not be treated as zero interaction (Guard against false positives)', () => {
+  const report = evaluate({
+    telemetryObserved: false, // Client telemetry uninitialized or reader just opened page
+    isTrustedEventsCount: 0,
+    burstCount10s: 1
+  });
+
+  const hasNoPhysicsRule = report.evidence.some(e => e.rule === 'interaction.trusted_input_absent');
+  assert.strictEqual(hasNoPhysicsRule, false, 'Should not trigger trusted_input_absent when telemetry was never observed');
+  assert.strictEqual(report.score, 0);
+});
+
+// ==============================================================================
+// 3. Shadow Mode Semantics Test (Never Enforces Denial in Shadow Mode)
+// ==============================================================================
+it('shadow mode never enforces a denial action directly (returns OBSERVE with recommendation)', () => {
+  const highRiskSignals = {
+    webdriver: true,              // +25
+    burstCount10s: 50,           // +30
+    telemetryObserved: true,
+    observationDurationMs: 10000,
+    isTrustedEventsCount: 0,     // +20
+    touchMismatch: true,         // +15
+    hasSignedToken: true
+  };
+
+  // Shadow Mode (Default)
+  const shadowReport = evaluate(highRiskSignals, { enforcementMode: 'SHADOW' });
+  assert.strictEqual(shadowReport.score, 90);
+  assert.strictEqual(shadowReport.action, SentinelAction.OBSERVE, 'In Shadow Mode, action must remain OBSERVE');
+  assert.strictEqual(shadowReport.recommendedAction, SentinelAction.TEMPORARY_DENY, 'Recommended action should be TEMPORARY_DENY');
+  assert.strictEqual(shadowReport.enforcementMode, 'SHADOW');
+
+  // Enforce Mode
+  const enforceReport = evaluate(highRiskSignals, { enforcementMode: 'ENFORCE' });
+  assert.strictEqual(enforceReport.action, SentinelAction.TEMPORARY_DENY, 'In Enforce Mode, action must match recommendation');
+  assert.strictEqual(enforceReport.enforcementMode, 'ENFORCE');
+});
+
+// ==============================================================================
+// 4. Strict Clamping & Boundary Tests
+// ==============================================================================
+it('score must be clamped strictly to 100 on excessive cumulative rule weights', () => {
+  const extremePolicy = createPolicy({
+    rules: [
+      rules.webdriver({ weight: 80 }),
+      rules.burst({ weight: 70, threshold: 5 })
+    ]
+  });
+
+  const report = evaluate({ webdriver: true, burstCount10s: 10 }, { policy: extremePolicy });
+  assert.strictEqual(report.score, 100, 'Score 150 must be clamped to 100');
+});
+
+it('score must be clamped to 0 on negative weights or empty inputs', () => {
+  const negativePolicy = createPolicy({
+    rules: [
+      {
+        id: 'test.negative',
+        weight: -50,
+        evaluate: () => ({ triggered: true, score: -50, attributes: {}, message: 'Negative' })
+      }
+    ]
+  });
+
+  const report = evaluate({}, { policy: negativePolicy });
+  assert.strictEqual(report.score, 0, 'Negative score must be clamped to 0');
+});
+
+// ==============================================================================
+// 5. Input Immutability Test (Deep Object.freeze)
+// ==============================================================================
+it('evaluation does not mutate its inputs (Object.freeze guarantee)', () => {
+  const rawSignals = {
+    webdriver: true,
+    burstCount10s: 42,
+    customKey: 'original_val'
+  };
+  Object.freeze(rawSignals);
+
+  // Must not throw mutation errors
+  const report = evaluate(rawSignals);
+  assert.strictEqual(report.score, 55);
+  assert.strictEqual(rawSignals.customKey, 'original_val');
+});
+
+// ==============================================================================
+// 6. Safe Baseline for Undefined / NaN / Null Inputs
+// ==============================================================================
+it('should gracefully handle undefined, null, and NaN signals without throwing', () => {
+  const reportNull = evaluate(null);
+  assert.strictEqual(reportNull.score, 0);
+  assert.strictEqual(reportNull.action, SentinelAction.ALLOW);
+
+  const reportNaN = evaluate({ burstCount10s: NaN, isTrustedEventsCount: undefined });
+  assert.strictEqual(reportNaN.score, 0);
+  assert.strictEqual(reportNaN.action, SentinelAction.ALLOW);
+});
+
+// ==============================================================================
+// Summary & Non-Zero Exit Code Quality Gate
+// ==============================================================================
+console.log('\n------------------------------------------------');
+console.log(`Total Engine Gate Tests: ${passedTests + failedTests}`);
+console.log(`Passed:                  ${passedTests}`);
+console.log(`Failed:                  ${failedTests}`);
+console.log('------------------------------------------------\n');
+
+if (failedTests > 0) {
+  process.exitCode = 1;
+  console.error(`🚨 QUALITY GATE FAILED: ${failedTests} test(s) did not pass.`);
+  process.exit(1);
+} else {
+  console.log('🎉 ALL ENGINE QUALITY GATES PASSED!\n');
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: tests/engine.test.js
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: sentinel.test.js
+FILE_PATH: tests/sentinel.test.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+/**
+ * AMEVA Sentinel - Facade & Stateful Rate Test Suite
+ */
+import assert from 'node:assert';
+import {
+  sentinel,
+  createSentinel,
+  SentinelAction,
+  MemoryCounterStore,
+  MemoryRiskEventStore
+} from '../packages/sentinel/dist/index.js';
+import { createBrowserTelemetry } from '../packages/browser-sdk/dist/index.js';
+
+console.log('\n🧪 Running AMEVA Sentinel Facade & Integration Test Suite...\n');
+
+let passedTests = 0;
+let failedTests = 0;
+
+function it(name, fn) {
+  return (async () => {
+    try {
+      await fn();
+      console.log(`  ✅ PASS: ${name}`);
+      passedTests++;
+    } catch (err) {
+      console.error(`  ❌ FAIL: ${name}`);
+      console.error(`     Error: ${err.message}`);
+      failedTests++;
+    }
+  })();
+}
+
+async function run() {
+  // 1. Ingest from browser-sdk snapshot
+  await it('sentinel.score({ signals }) should score directly from browser-sdk snapshot', async () => {
+    const telemetry = createBrowserTelemetry({ autoStart: false });
+    const snapshot = telemetry.snapshot();
+
+    const report = await sentinel.score({ signals: snapshot });
+
+    assert.strictEqual(typeof report.score, 'number');
+    assert.strictEqual(report.action, SentinelAction.ALLOW);
+    assert.strictEqual(report.enforcementMode, 'SHADOW');
+    assert.strictEqual(report.schemaVersion, undefined);
+    assert.ok(report.signals !== undefined, 'Report must contain signals');
+    assert.strictEqual(report.signals.webdriver, false);
+  });
+
+  // 2. Stateful Fixed-Window Request Burst Counter Test
+  await it('should automatically track request rates and trigger burst rules on high frequency', async () => {
+    const counterStore = new MemoryCounterStore();
+    const rateSentinel = createSentinel({
+      mode: 'shadow',
+      counterStore
+    });
+
+    const attackerReq = {
+      sessionId: 'attacker_test_session_99',
+      headers: {
+        'user-agent': 'python-requests/2.31.0'
+      },
+      body: {}
+    };
+
+    // Simulate 35 rapid requests in 1 second
+    let lastReport;
+    for (let i = 0; i < 35; i++) {
+      lastReport = await rateSentinel.score(attackerReq);
+    }
+
+    // 35 requests exceeds threshold (30) -> triggers rate.burst_request (30) + suspicious_ua (15) = 45 score
+    assert.ok(lastReport.score >= 45, `Expected score >= 45, got ${lastReport.score}`);
+    assert.strictEqual(lastReport.recommendedAction, SentinelAction.OBSERVE);
+
+    const rulesTriggered = lastReport.evidence.map(e => e.rule);
+    assert.ok(rulesTriggered.includes('rate.burst_request'));
+    assert.ok(rulesTriggered.includes('header.suspicious_ua'));
+  });
+
+  // 3. Genuine Enforce Mode Test: High-Risk Request triggers TEMPORARY_DENY
+  await it('createSentinel({ mode: "enforce", eventStore }) should enforce TEMPORARY_DENY on high-risk payload', async () => {
+    const eventStore = new MemoryRiskEventStore();
+    const enforcingSentinel = createSentinel({
+      mode: 'enforce',
+      eventStore
+    });
+
+    const highRiskReq = {
+      testClientId: 'high_risk_bot_client',
+      headers: {
+        'user-agent': 'HeadlessChrome/128.0',
+        'sec-ch-ua-mobile': '?1'
+      },
+      body: {
+        webdriver: true,
+        telemetry_observed: true,
+        observation_duration_ms: 10000,
+        trusted_events: 0,
+        is_touch: false
+      }
+    };
+
+    // Send 35 requests to trigger burst (30) + webdriver (25) + suspicious_ua (15) + trusted_absent (20) = 90 score
+    let risk;
+    for (let i = 0; i < 35; i++) {
+      risk = await enforcingSentinel.score(highRiskReq);
+    }
+
+    assert.strictEqual(risk.enforcementMode, 'ENFORCE');
+    assert.ok(risk.score >= 85, `Score should be >= 85, got ${risk.score}`);
+    assert.strictEqual(risk.recommendedAction, SentinelAction.TEMPORARY_DENY);
+    assert.strictEqual(risk.action, SentinelAction.TEMPORARY_DENY, 'In ENFORCE mode, high-risk session must be directly blocked');
+
+    const stored = await eventStore.list();
+    assert.strictEqual(stored.length, 35);
+    assert.strictEqual(stored[0].traceId, risk.traceId);
+    assert.strictEqual(stored[0].action, SentinelAction.TEMPORARY_DENY);
+  });
+
+  console.log('\n------------------------------------------------');
+  console.log(`Total Facade Tests: ${passedTests + failedTests}`);
+  console.log(`Passed:             ${passedTests}`);
+  console.log(`Failed:             ${failedTests}`);
+  console.log('------------------------------------------------\n');
+
+  if (failedTests > 0) {
+    process.exitCode = 1;
+    console.error(`🚨 QUALITY GATE FAILED: ${failedTests} test(s) did not pass.`);
+    process.exit(1);
+  }
+}
+
+run();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: tests/sentinel.test.js
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: store.test.js
+FILE_PATH: tests/store.test.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+/**
+ * AMEVA Sentinel - RiskEventStore Unit & Edge Case Test Suite
+ */
+import assert from 'node:assert';
+import {
+  MemoryRiskEventStore,
+  LocalStorageRiskEventStore,
+  SentinelAction,
+  evaluate,
+  toStoredRiskEvent
+} from '../packages/risk-core/dist/index.js';
+
+console.log('\n🧪 Running AMEVA Sentinel RiskEventStore Test Suite...\n');
+
+let passedTests = 0;
+let failedTests = 0;
+
+function it(name, fn) {
+  return (async () => {
+    try {
+      await fn();
+      console.log(`  ✅ PASS: ${name}`);
+      passedTests++;
+    } catch (err) {
+      console.error(`  ❌ FAIL: ${name}`);
+      console.error(`     Error: ${err.message}`);
+      failedTests++;
+    }
+  })();
+}
+
+async function run() {
+  // 1. Basic Append and List Retrieval
+  await it('should append and list reports with schemaVersion 1.0', async () => {
+    const store = new MemoryRiskEventStore();
+    const mockReport = {
+      traceId: 'trc_001',
+      score: 25,
+      evidenceConfidence: 0.88,
+      action: SentinelAction.OBSERVE,
+      recommendedAction: SentinelAction.OBSERVE,
+      enforcementMode: 'SHADOW',
+      policyVersion: '2026-08-21.1',
+      evidence: [],
+      evaluatedAt: new Date().toISOString()
+    };
+
+    await store.append(mockReport);
+    const list = await store.list();
+
+    assert.strictEqual(list.length, 1);
+    assert.strictEqual(list[0].traceId, 'trc_001');
+    assert.strictEqual(list[0].schemaVersion, '1.0');
+  });
+
+  // 2. Idempotency (Deduplication on identical traceId)
+  await it('should be idempotent and deduplicate appends with identical traceId', async () => {
+    const store = new MemoryRiskEventStore();
+    const report = {
+      traceId: 'trc_dup_999',
+      score: 30,
+      evidenceConfidence: 0.85,
+      action: SentinelAction.OBSERVE,
+      recommendedAction: SentinelAction.RATE_LIMIT,
+      enforcementMode: 'SHADOW',
+      policyVersion: '2026-08-21.1',
+      evidence: [],
+      evaluatedAt: new Date().toISOString()
+    };
+
+    await store.append(report);
+    await store.append(report); // Duplicate append
+    await store.append(report); // Duplicate append
+
+    const list = await store.list();
+    assert.strictEqual(list.length, 1, 'Store must contain exactly 1 entry for duplicate traceId');
+  });
+
+  // 3. FIFO Capacity Limit Eviction
+  await it('should evict oldest items in FIFO order when exceeding maxItems', async () => {
+    const store = new MemoryRiskEventStore({ maxItems: 3 });
+
+    for (let i = 1; i <= 5; i++) {
+      await store.append({
+        traceId: `trc_${i}`,
+        score: i * 10,
+        evidenceConfidence: 0.9,
+        action: SentinelAction.ALLOW,
+        recommendedAction: SentinelAction.ALLOW,
+        enforcementMode: 'SHADOW',
+        policyVersion: '2026-08-21.1',
+        evidence: [],
+        evaluatedAt: new Date().toISOString()
+      });
+    }
+
+    const list = await store.list();
+    assert.strictEqual(list.length, 3, 'Store must clamp to maxItems (3)');
+    assert.strictEqual(list[0].traceId, 'trc_5', 'Most recent item must be at index 0');
+    assert.strictEqual(list[1].traceId, 'trc_4');
+    assert.strictEqual(list[2].traceId, 'trc_3');
+  });
+
+  // 4. TTL Expired Event Pruning
+  await it('should prune expired events beyond maxAgeMs', async () => {
+    const store = new MemoryRiskEventStore({ maxAgeMs: 1000 }); // 1 second TTL
+
+    const oldReport = {
+      traceId: 'trc_old',
+      score: 10,
+      evidenceConfidence: 0.8,
+      action: SentinelAction.ALLOW,
+      recommendedAction: SentinelAction.ALLOW,
+      enforcementMode: 'SHADOW',
+      policyVersion: '2026-08-21.1',
+      evidence: [],
+      evaluatedAt: new Date(Date.now() - 5000).toISOString() // 5 seconds ago
+    };
+
+    await store.append(oldReport);
+
+    const list = await store.list();
+    assert.strictEqual(list.length, 0, 'Expired event must be pruned on list()');
+  });
+
+  console.log('\n------------------------------------------------');
+  console.log(`Total Store Tests: ${passedTests + failedTests}`);
+  console.log(`Passed:            ${passedTests}`);
+  console.log(`Failed:            ${failedTests}`);
+  console.log('------------------------------------------------\n');
+
+  if (failedTests > 0) {
+    process.exitCode = 1;
+    console.error(`🚨 STORE TEST SUITE FAILED: ${failedTests} test(s) failed.`);
+    process.exit(1);
+  }
+}
+
+run();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: tests/store.test.js
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: dashboard.spec.js
+FILE_PATH: tests/browser-integration/dashboard.spec.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+/**
+ * AMEVA Sentinel - Playwright Real-Browser Integration Test Suite
+ * Validates:
+ * 1. Stored report persistence and reload recovery
+ * 2. Real-time multi-tab LocalStorage synchronization
+ * 3. Telemetry collector lifecycle and listener destruction
+ */
+import { test, expect } from '@playwright/test';
+
+test.describe('AMEVA Sentinel Real-Browser Integration', () => {
+
+  test('stored report survives page reload with identical traceId', async ({ page }) => {
+    await page.goto('/sdk/sentinel/dashboard.html');
+
+    // Click "Evaluate Real Browser" button
+    await page.getByRole('button', { name: /evaluate real browser/i }).click();
+
+    // Read generated latest traceId
+    const firstTraceId = await page.locator('[data-testid="latest-trace-id"]').textContent();
+    expect(firstTraceId).toBeTruthy();
+
+    // Reload page
+    await page.reload();
+
+    // Verify same report traceId is restored and visible
+    await expect(page.locator(`[data-trace-id="${firstTraceId}"]`)).toBeVisible();
+  });
+
+  test('risk event is synchronized in real-time across tabs', async ({ context }) => {
+    const producer = await context.newPage();
+    const dashboard = await context.newPage();
+
+    await producer.goto('/sdk/sentinel/dashboard.html');
+    await dashboard.goto('/sdk/sentinel/dashboard.html');
+
+    const before = Number(await dashboard.locator('[data-testid="event-count"]').textContent());
+
+    // Generate event on producer tab
+    await producer.getByRole('button', { name: /simulate headless bot/i }).click();
+
+    // Verify dashboard tab updates count dynamically without reload
+    await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+  });
+
+  test('destroy() stops active telemetry collection and listener observation', async ({ page }) => {
+    await page.goto('/sdk/sentinel/telemetry-test.html');
+
+    const before = await page.evaluate(() => {
+      window.testTelemetry.start();
+      return window.testTelemetry.snapshot();
+    });
+
+    await page.mouse.move(100, 100);
+    await page.mouse.move(300, 300);
+
+    const during = await page.evaluate(() => {
+      return window.testTelemetry.snapshot();
+    });
+
+    expect(during.pointerEventCount).toBeGreaterThanOrEqual(before.pointerEventCount);
+
+    // Destroy telemetry collector
+    await page.evaluate(() => {
+      window.testTelemetry.destroy();
+    });
+
+    const stoppedAt = await page.evaluate(() => {
+      return window.testTelemetry.snapshot();
+    });
+
+    await page.mouse.move(500, 500);
+    await page.mouse.move(700, 700);
+
+    const after = await page.evaluate(() => {
+      return window.testTelemetry.snapshot();
+    });
+
+    // Pointer event counter must not increase after destroy()
+    expect(after.pointerEventCount).toBe(stoppedAt.pointerEventCount);
+  });
+
+});
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: tests/browser-integration/dashboard.spec.js
+================================================================================
+
