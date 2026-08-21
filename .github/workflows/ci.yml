@@ -1,38 +1,56 @@
-name: CI Release Gate
+﻿name: AMEVA Sentinel CI Quality Gate
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'release-*'
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - 'release-*'
   workflow_dispatch:
 
 jobs:
   verify:
-    name: Verify & Cross-Browser E2E Gate (Ubuntu Linux)
+    name: Verify 80 Quality Gates & Packaging
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js (v22 LTS)
+      - name: Set up Node.js runtime
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
 
-      - name: Install Clean Dependencies (npm ci)
+      - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright Browsers with OS Dependencies
-        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Install Playwright browser binaries
+        run: npx playwright install --with-deps
 
-      - name: Run Full Quality Gate (Build + 19 Node Tests + 9 Cross-Browser E2E)
-        run: npm run verify
+      - name: Compile and build monorepo packages
+        run: npm run build
 
-      - name: Verify Monorepo Workspace Distribution Packages (npm pack --dry-run)
-        run: |
-          npm pack --dry-run --workspace @ameva/sentinel-risk-core
-          npm pack --dry-run --workspace @ameva/sentinel-browser
-          npm pack --dry-run --workspace @ameva/sentinel
+      - name: Execute TypeScript contract tests
+        run: npm run test:types
+
+      - name: Execute unit and integration tests
+        run: npm run test:unit
+
+      - name: Execute Playwright cross-browser test suite
+        run: npx playwright test
+
+      - name: Run Fail-Closed Release Verification Report Generator
+        run: node scripts/generate_test_report.js
+
+      - name: Upload Verification Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinel-test-reports
+          path: |
+            reports/TEST_SUITE_AND_RESULTS.md
+            scripts/codes/*_test_report.txt

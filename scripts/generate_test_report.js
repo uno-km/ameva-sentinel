@@ -95,12 +95,12 @@ const testSuites = [
   },
   {
     id: 'sentinel',
-    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (12 Gates)',
+    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (14 Gates)',
     file: 'tests/sentinel.test.js',
     category: 'Facade & State Enforcement',
     command: 'node tests/sentinel.test.js',
-    expectedPasses: 12,
-    pointsPerTest: 10 / 12,
+    expectedPasses: 14,
+    pointsPerTest: 10 / 14,
     maxPoints: 10
   },
   {
@@ -271,7 +271,8 @@ let md = `# 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Comprehensive Test Suite & Ver
 `;
 
 for (const res of resultsData) {
-  const pts = res.maxPoints > 0 ? `${(res.passedCount * res.pointsPerTest).toFixed(1)} / ${res.maxPoints} pts` : 'E2E Verified';
+  const earnedPts = res.maxPoints > 0 ? Math.min(res.maxPoints, Math.round(res.passedCount * (res.pointsPerTest ?? res.maxPoints) * 10) / 10) : 0;
+  const pts = res.maxPoints > 0 ? `${earnedPts.toFixed(1)} / ${res.maxPoints} pts` : 'E2E Verified';
   const icon = res.status === 'PASS' ? '🟢 PASS' : '🔴 FAIL';
   md += `| ${res.category} | ${res.passedCount} / ${res.passedCount + res.failedCount} | ${res.durationMs}ms | ${pts} | ${icon} |\n`;
 }
@@ -280,14 +281,15 @@ md += `| **TOTAL EXECUTABLE AUDIT SCORE** | **${totalPassed} Passed / ${totalFai
 
 ---
 
-## 📦 2. Monorepo Distribution Packaging Dry-Run (${packageOutputs.length} Packages Verified)
+## 📦 2. Monorepo Distribution Packaging Dry-Run (${packagingPassedCount} / ${packages.length} Packages Valid)
 
 | Package Path | Real Package Name | Status | Verified Format |
 | :--- | :--- | :---: | :--- |
 `;
 
 for (const pkg of packageOutputs) {
-  md += `| \`${pkg.pkg}\` | \`${pkg.packageName}\` | \`🟢 ${pkg.status}\` | Pure ESM & Declarations | \n`;
+  const icon = pkg.status === 'VALID' ? '🟢' : '🔴';
+  md += `| \`${pkg.pkg}\` | \`${pkg.packageName}\` | \`${icon} ${pkg.status}\` | Pure ESM & Declarations | \n`;
 }
 
 md += `

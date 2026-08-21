@@ -284,6 +284,7 @@ async function run() {
       () => s.score({ body: hugeBody }),
       {
         name: 'CollectorVerificationError',
+        code: 'REQUEST_BODY_TOO_LARGE',
         httpStatus: 413
       }
     );
@@ -298,6 +299,45 @@ async function run() {
     assert.notStrictEqual(report.classification?.identityState, 'VERIFIED');
     assert.strictEqual(report.classification?.identityState, 'CLAIMED');
     assert.strictEqual(report.verification.state, 'NONE');
+  });
+
+  // 13. [P0-3 Regression] Sentinel.score rejects oversized pre-parsed object body exceeding 64KB
+  await it('Sentinel.score rejects oversized pre-parsed object body exceeding 64KB', async () => {
+    const s = createSentinel({ mode: 'shadow' });
+    await assert.rejects(
+      () => s.score({
+        body: { data: '한'.repeat(25000) }
+      }),
+      {
+        name: 'CollectorVerificationError',
+        code: 'REQUEST_BODY_TOO_LARGE',
+        httpStatus: 413
+      }
+    );
+  });
+
+  // 14. [P1 Regression] readJsonBodyLimited fail-closed on malformed JSON and request.json error
+  await it('readJsonBodyLimited throws MALFORMED_REQUEST_BODY on invalid JSON and request.json failure', async () => {
+    await assert.rejects(
+      () => readJsonBodyLimited({ body: '{ invalid_json ' }, 65536),
+      {
+        name: 'CollectorVerificationError',
+        code: 'MALFORMED_REQUEST_BODY',
+        httpStatus: 400
+      }
+    );
+
+    const failingMockRequest = {
+      json: async () => { throw new SyntaxError('Unexpected token in JSON'); }
+    };
+    await assert.rejects(
+      () => readJsonBodyLimited(failingMockRequest, 65536),
+      {
+        name: 'CollectorVerificationError',
+        code: 'MALFORMED_REQUEST_BODY',
+        httpStatus: 400
+      }
+    );
   });
 
   if (failedTests > 0) {

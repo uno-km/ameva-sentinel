@@ -1,33 +1,33 @@
 # 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Comprehensive Test Suite & Verification Results
 > **Release Target**: `v0.6.0-alpha.1`  
-> **Generated Timestamp**: `2026-08-21T05:02:42.026Z`  
+> **Generated Timestamp**: `2026-08-21T05:13:33.342Z`  
 > **Target Mode, Smart Bot Classifier & Trust Boundary Engine**: 100% Verified  
 > **Overall Gate Status**: `PASSED (100% SUCCESS)`  
 > **Final Score**: `100.0 / 100 pts (Grade A+)`  
-> **Total Checks**: `75 Executable Checks + 3 Packaging Checks = 78 / 78 Release Checks`  
+> **Total Checks**: `77 Executable Checks + 3 Packaging Checks = 80 / 80 Release Checks`  
 
 ---
 
-## 📊 1. Executive Test Scorecard (78 / 78 Release Checks: 75 Executable Gates + 3 Package Dry-Runs)
+## 📊 1. Executive Test Scorecard (80 / 80 Release Checks: 77 Executable Gates + 3 Package Dry-Runs)
 
 | Test Category | Tests Passed | Execution Time | Score Points | Gate Status |
 | :--- | :---: | :---: | :---: | :---: |
-| TypeScript Static Contract | 1 / 1 | 2925ms | 10.0 / 10 pts | 🟢 PASS |
-| TypeScript Runtime Contract | 1 / 1 | 99ms | 5.0 / 5 pts | 🟢 PASS |
-| Trust Boundary & Collector Crypto | 15 / 15 | 105ms | 15.0 / 15 pts | 🟢 PASS |
-| Redirect Security & Injection Defense | 6 / 6 | 79ms | 10.0 / 10 pts | 🟢 PASS |
-| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 78ms | 15.0 / 15 pts | 🟢 PASS |
-| Target Mode & Decision Engine | 6 / 6 | 88ms | 15.0 / 15 pts | 🟢 PASS |
-| Risk Engine Quality Gates | 7 / 7 | 81ms | 10.0 / 10 pts | 🟢 PASS |
-| Facade & State Enforcement | 12 / 12 | 134ms | 10.0 / 10 pts | 🟢 PASS |
-| Persistence & Schema V1/V2 Bounds | 8 / 8 | 120ms | 10.0 / 10 pts | 🟢 PASS |
-| Browser SDK Unit Verification | 2 / 2 | 88ms | 5.0 / 5 pts | 🟢 PASS |
-| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 14259ms | E2E Verified | 🟢 PASS |
-| **TOTAL EXECUTABLE AUDIT SCORE** | **75 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
+| TypeScript Static Contract | 1 / 1 | 2709ms | 10.0 / 10 pts | 🟢 PASS |
+| TypeScript Runtime Contract | 1 / 1 | 96ms | 5.0 / 5 pts | 🟢 PASS |
+| Trust Boundary & Collector Crypto | 15 / 15 | 104ms | 15.0 / 15 pts | 🟢 PASS |
+| Redirect Security & Injection Defense | 6 / 6 | 82ms | 10.0 / 10 pts | 🟢 PASS |
+| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 89ms | 15.0 / 15 pts | 🟢 PASS |
+| Target Mode & Decision Engine | 6 / 6 | 85ms | 15.0 / 15 pts | 🟢 PASS |
+| Risk Engine Quality Gates | 7 / 7 | 86ms | 10.0 / 10 pts | 🟢 PASS |
+| Facade & State Enforcement | 14 / 14 | 89ms | 10.0 / 10 pts | 🟢 PASS |
+| Persistence & Schema V1/V2 Bounds | 8 / 8 | 77ms | 10.0 / 10 pts | 🟢 PASS |
+| Browser SDK Unit Verification | 2 / 2 | 69ms | 5.0 / 5 pts | 🟢 PASS |
+| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 15464ms | E2E Verified | 🟢 PASS |
+| **TOTAL EXECUTABLE AUDIT SCORE** | **77 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
 
 ---
 
-## 📦 2. Monorepo Distribution Packaging Dry-Run (3 Packages Verified)
+## 📦 2. Monorepo Distribution Packaging Dry-Run (3 / 3 Packages Valid)
 
 | Package Path | Real Package Name | Status | Verified Format |
 | :--- | :--- | :---: | :--- |
@@ -41,7 +41,7 @@
 
 ### 1. TypeScript Static Consumer Contract Gate (32+ Types, Guards, Interfaces)
 * **Target File**: [`tests/typecheck.ts`](../../tests/typecheck.ts)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 2925ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 2709ms)
 
 #### Execution Console Output:
 ```text
@@ -323,14 +323,14 @@ runFullStaticTypeCheck();
 
 ### 2. TypeScript Runtime Consumer Contract Gate (Live Execution & Assertion)
 * **Target File**: [`tests/typecheck.runtime.js`](../../tests/typecheck.runtime.js)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 99ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 96ms)
 
 #### Execution Console Output:
 ```text
 🔍 Running TypeScript Consumer API Runtime Contract Gate...
 
 [TypeScript v0.6.0 Contract Gate] ALL 32+ SDK Types & Runtime Interfaces 100% Verified.
-  - TraceId: trc_a0f817b4c4684139
+  - TraceId: trc_1a27cd78a5cd4e01
   - Decision Action: ALLOW (BOT_ALLOWLIST_PASSED)
   - Bot Classification: SEARCH_ENGINE (Googlebot)
   - SessionId: ephemeral_local_session
@@ -494,7 +494,7 @@ runRuntimeContract().catch(err => {
 
 ### 3. Trust Boundary Collector HMAC, RFC 4231 Vectors, Freshness, Replay Attack & 100-Race Suite (15 Gates)
 * **Target File**: [`tests/collector-crypto.test.js`](../../tests/collector-crypto.test.js)
-* **Execution Status**: `PASS` (15 passed, 0 failed in 105ms)
+* **Execution Status**: `PASS` (15 passed, 0 failed in 104ms)
 
 #### Execution Console Output:
 ```text
@@ -796,7 +796,7 @@ main();
 
 ### 4. Redirect Security & Closed-Destination Injection Defense Suite (6 Gates)
 * **Target File**: [`tests/redirect-security.test.js`](../../tests/redirect-security.test.js)
-* **Execution Status**: `PASS` (6 passed, 0 failed in 79ms)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 82ms)
 
 #### Execution Console Output:
 ```text
@@ -905,7 +905,7 @@ console.log(`\n{"suite":"redirect_security","passed":${passedTests},"failed":${f
 
 ### 5. Smart Bot Classifier & ReDoS Safety Suite (7 Taxonomies, 8 Gates)
 * **Target File**: [`tests/bot-classifier.test.js`](../../tests/bot-classifier.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 78ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 89ms)
 
 #### Execution Console Output:
 ```text
@@ -1089,7 +1089,7 @@ console.log(`\n{"suite":"bot_classifier","passed":${passedTests},"failed":${fail
 
 ### 6. Target Mode & Decision Engine Suite (Closed-Destination Routing, 6 Gates)
 * **Target File**: [`tests/decision.test.js`](../../tests/decision.test.js)
-* **Execution Status**: `PASS` (6 passed, 0 failed in 88ms)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 85ms)
 
 #### Execution Console Output:
 ```text
@@ -1328,7 +1328,7 @@ main();
 
 ### 7. Risk Core Pure Engine & Clamping Quality Gates (7 Gates)
 * **Target File**: [`tests/engine.test.js`](../../tests/engine.test.js)
-* **Execution Status**: `PASS` (7 passed, 0 failed in 81ms)
+* **Execution Status**: `PASS` (7 passed, 0 failed in 86ms)
 
 #### Execution Console Output:
 ```text
@@ -1492,9 +1492,9 @@ console.log(`\n{"suite":"engine","passed":${passedTests},"failed":${failedTests}
 
 ---
 
-### 8. Sentinel Facade & Stateful Rate Enforcement Tests (12 Gates)
+### 8. Sentinel Facade & Stateful Rate Enforcement Tests (14 Gates)
 * **Target File**: [`tests/sentinel.test.js`](../../tests/sentinel.test.js)
-* **Execution Status**: `PASS` (12 passed, 0 failed in 134ms)
+* **Execution Status**: `PASS` (14 passed, 0 failed in 89ms)
 
 #### Execution Console Output:
 ```text
@@ -1512,8 +1512,10 @@ console.log(`\n{"suite":"engine","passed":${passedTests},"failed":${failedTests}
   ✅ PASS: signals boolean values remain authoritative when body fields are absent
   ✅ PASS: Sentinel.score rejects oversized request regardless of stateFailureMode
   ✅ PASS: untrusted verifiedBot cannot elevate classification identityState or verification state
+  ✅ PASS: Sentinel.score rejects oversized pre-parsed object body exceeding 64KB
+  ✅ PASS: readJsonBodyLimited throws MALFORMED_REQUEST_BODY on invalid JSON and request.json failure
 
-{"suite":"sentinel","passed":12,"failed":0,"total":12}
+{"suite":"sentinel","passed":14,"failed":0,"total":14}
 ```
 
 #### Source Code Verification (`tests/sentinel.test.js`):
@@ -1804,6 +1806,7 @@ async function run() {
       () => s.score({ body: hugeBody }),
       {
         name: 'CollectorVerificationError',
+        code: 'REQUEST_BODY_TOO_LARGE',
         httpStatus: 413
       }
     );
@@ -1820,6 +1823,45 @@ async function run() {
     assert.strictEqual(report.verification.state, 'NONE');
   });
 
+  // 13. [P0-3 Regression] Sentinel.score rejects oversized pre-parsed object body exceeding 64KB
+  await it('Sentinel.score rejects oversized pre-parsed object body exceeding 64KB', async () => {
+    const s = createSentinel({ mode: 'shadow' });
+    await assert.rejects(
+      () => s.score({
+        body: { data: '한'.repeat(25000) }
+      }),
+      {
+        name: 'CollectorVerificationError',
+        code: 'REQUEST_BODY_TOO_LARGE',
+        httpStatus: 413
+      }
+    );
+  });
+
+  // 14. [P1 Regression] readJsonBodyLimited fail-closed on malformed JSON and request.json error
+  await it('readJsonBodyLimited throws MALFORMED_REQUEST_BODY on invalid JSON and request.json failure', async () => {
+    await assert.rejects(
+      () => readJsonBodyLimited({ body: '{ invalid_json ' }, 65536),
+      {
+        name: 'CollectorVerificationError',
+        code: 'MALFORMED_REQUEST_BODY',
+        httpStatus: 400
+      }
+    );
+
+    const failingMockRequest = {
+      json: async () => { throw new SyntaxError('Unexpected token in JSON'); }
+    };
+    await assert.rejects(
+      () => readJsonBodyLimited(failingMockRequest, 65536),
+      {
+        name: 'CollectorVerificationError',
+        code: 'MALFORMED_REQUEST_BODY',
+        httpStatus: 400
+      }
+    );
+  });
+
   if (failedTests > 0) {
     process.exit(1);
   }
@@ -1834,7 +1876,7 @@ run();
 
 ### 9. RiskEventStore V1 & V2 Schema Validation & Migration Suite (8 Gates)
 * **Target File**: [`tests/store.test.js`](../../tests/store.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 120ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 77ms)
 
 #### Execution Console Output:
 ```text
@@ -2017,7 +2059,7 @@ console.log(`\n{"suite":"store","passed":${passedTests},"failed":${failedTests},
 
 ### 10. @ameva/sentinel-browser Client Telemetry Unit Tests (2 Gates)
 * **Target File**: [`tests/browser.test.js`](../../tests/browser.test.js)
-* **Execution Status**: `PASS` (2 passed, 0 failed in 88ms)
+* **Execution Status**: `PASS` (2 passed, 0 failed in 69ms)
 
 #### Execution Console Output:
 ```text
@@ -2083,23 +2125,23 @@ console.log(`\n{"suite":"browser","passed":${passedTests},"failed":${failedTests
 
 ### 11. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)
 * **Target File**: [`tests/browser-integration/dashboard.spec.js`](../../tests/browser-integration/dashboard.spec.js)
-* **Execution Status**: `PASS` (9 passed, 0 failed in 14259ms)
+* **Execution Status**: `PASS` (9 passed, 0 failed in 15464ms)
 
 #### Execution Console Output:
 ```text
 Running 9 tests using 1 worker
 
-  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (710ms)
-  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (675ms)
-  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (191ms)
-  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (2.3s)
-  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.4s)
-  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (327ms)
-  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (847ms)
-  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (816ms)
-  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (262ms)
+  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.4s)
+  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (480ms)
+  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (148ms)
+  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.7s)
+  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.2s)
+  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (358ms)
+  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (690ms)
+  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (793ms)
+  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (2.2s)
 
-  9 passed (12.5s)
+  9 passed (13.9s)
 ```
 
 #### Source Code Verification (`tests/browser-integration/dashboard.spec.js`):

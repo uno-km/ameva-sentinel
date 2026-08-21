@@ -1,4 +1,4 @@
-﻿export enum SentinelAction {
+export enum SentinelAction {
   ALLOW = 'ALLOW',
   OBSERVE = 'OBSERVE',
   RATE_LIMIT = 'RATE_LIMIT',
@@ -229,7 +229,9 @@ export type CollectorErrorCode =
   | 'PURPOSE_MISMATCH'
   | 'UNAUTHORIZED_ISSUER'
   | 'REPLAY_ATTACK_DETECTED'
-  | 'CONFIGURATION_ERROR';
+  | 'CONFIGURATION_ERROR'
+  | 'REQUEST_BODY_TOO_LARGE'
+  | 'MALFORMED_REQUEST_BODY';
 
 export interface CollectorTokenPayload {
   v: 1;

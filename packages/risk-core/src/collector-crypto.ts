@@ -1,4 +1,4 @@
-﻿import {
+import {
   CollectorTokenPayload,
   VerifiedCollectorContext,
   KeyResolver,
@@ -470,7 +470,7 @@ export async function readJsonBodyLimited(request: any, maxBytes = 65536): Promi
   if (typeof request.headers?.get === 'function') {
     const contentLength = request.headers.get('content-length');
     if (contentLength && Number.isFinite(Number(contentLength)) && Number(contentLength) > maxBytes) {
-      throw new CollectorVerificationError('MALFORMED_TOKEN', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
+      throw new CollectorVerificationError('REQUEST_BODY_TOO_LARGE', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
     }
 
     if (request.body && typeof request.body.getReader === 'function') {
@@ -483,7 +483,7 @@ export async function readJsonBodyLimited(request: any, maxBytes = 65536): Promi
         total += value.byteLength;
         if (total > maxBytes) {
           await reader.cancel();
-          throw new CollectorVerificationError('MALFORMED_TOKEN', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
+          throw new CollectorVerificationError('REQUEST_BODY_TOO_LARGE', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
         }
         chunks.push(value);
       }
@@ -493,30 +493,63 @@ export async function readJsonBodyLimited(request: any, maxBytes = 65536): Promi
         bytes.set(chunk, offset);
         offset += chunk.byteLength;
       }
-      const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-      return text.trim() ? JSON.parse(text) : {};
+      let text = '';
+      try {
+        text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      } catch {
+        throw new CollectorVerificationError('MALFORMED_REQUEST_BODY', 'Request body contains invalid UTF-8 encoding', 400);
+      }
+      try {
+        return text.trim() ? JSON.parse(text) : {};
+      } catch {
+        throw new CollectorVerificationError('MALFORMED_REQUEST_BODY', 'Request body contains invalid JSON syntax', 400);
+      }
     }
   }
 
-  // Raw body in Node / mock objects
-  if (request.body !== undefined) {
+  // Pre-parsed object or raw string body in Node / Express / Fastify / Mock objects
+  if (request.body !== undefined && request.body !== null) {
     if (typeof request.body === 'string') {
       const bytes = new TextEncoder().encode(request.body);
       if (bytes.byteLength > maxBytes) {
-        throw new CollectorVerificationError('MALFORMED_TOKEN', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
+        throw new CollectorVerificationError('REQUEST_BODY_TOO_LARGE', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
       }
-      return request.body.trim() ? JSON.parse(request.body) : {};
+      try {
+        return request.body.trim() ? JSON.parse(request.body) : {};
+      } catch {
+        throw new CollectorVerificationError('MALFORMED_REQUEST_BODY', 'Request body contains invalid JSON syntax', 400);
+      }
     }
-    if (typeof request.body === 'object') {
+    if (typeof request.body === 'object' && !ArrayBuffer.isView(request.body)) {
+      let serialized: string;
+      try {
+        serialized = JSON.stringify(request.body);
+      } catch {
+        throw new CollectorVerificationError('MALFORMED_REQUEST_BODY', 'Request body is not JSON-serializable', 400);
+      }
+      const bytes = new TextEncoder().encode(serialized);
+      if (bytes.byteLength > maxBytes) {
+        throw new CollectorVerificationError('REQUEST_BODY_TOO_LARGE', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
+      }
       return request.body;
     }
   }
 
+  // Fetch / Web Request .json() method fallback
   if (typeof request.json === 'function') {
     try {
-      return await request.json();
-    } catch (e) {
-      return {};
+      const parsed = await request.json();
+      if (parsed !== null && typeof parsed === 'object' && !ArrayBuffer.isView(parsed)) {
+        const serialized = JSON.stringify(parsed);
+        const bytes = new TextEncoder().encode(serialized);
+        if (bytes.byteLength > maxBytes) {
+          throw new CollectorVerificationError('REQUEST_BODY_TOO_LARGE', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
+        }
+      }
+      return parsed ?? {};
+    } catch (err: any) {
+      if (err instanceof CollectorVerificationError) throw err;
+      throw new CollectorVerificationError('MALFORMED_REQUEST_BODY', 'Request body contains invalid JSON or UTF-8', 400);
     }
   }
 

@@ -67,16 +67,19 @@
 
     <main class="content">
       <h2>Benchmarks & Profiling</h2>
-      <p class="subtitle">Deterministic Risk Evaluation Latency & Main-Thread Impact Statistics</p>
+      <p class="subtitle">Deterministic Risk Evaluation Latency & Main-Thread Impact Statistics (Observed in Local Microbenchmarks)</p>
       <table class="data-table">
-        <thead><tr><th>Operation / Component</th><th>Execution Latency</th><th>Memory Footprint</th><th>Deterministic Guarantee</th></tr></thead>
+        <thead><tr><th>Operation / Component</th><th>Execution Latency (p99)</th><th>Memory Footprint</th><th>Deterministic Guarantee</th></tr></thead>
         <tbody>
-          <tr><td>Risk Core Pure Evaluation (<code>evaluate</code>)</td><td>&lt; 0.05 ms</td><td>Zero Heap Allocation</td><td>100.0% Exact 0~100 Clamp</td></tr>
-          <tr><td>Facade Stateful Scoring (<code>sentinel.score</code>)</td><td>&lt; 0.12 ms</td><td>~2.4 KB / active session</td><td>Fixed-Window Deduplicated</td></tr>
-          <tr><td>Browser Telemetry Sampling (100ms throttle)</td><td>0.00 ms (Passive)</td><td>&lt; 15 KB (Ephemeral)</td><td>60fps Zero Frame Drop</td></tr>
-          <tr><td>LocalStorage FIFO Pruning (500 max items)</td><td>&lt; 0.85 ms</td><td>&lt; 120 KB total storage</td><td>Bounded Idempotent FIFO</td></tr>
+          <tr><td>Risk Core Pure Evaluation (<code>evaluate</code>)</td><td>&lt; 0.05 ms (microbenchmark)</td><td>No persistent heap growth observed</td><td>100.0% Exact 0~100 Clamp</td></tr>
+          <tr><td>Facade Stateful Scoring (<code>sentinel.score</code>)</td><td>&lt; 0.12 ms (microbenchmark)</td><td>~2.4 KB / active session</td><td>Fixed-Window Deduplicated</td></tr>
+          <tr><td>Browser Telemetry Sampling (100ms throttle)</td><td>0.00 ms (Passive instrumentation)</td><td>&lt; 15 KB (Ephemeral)</td><td>60fps Zero Frame Drop</td></tr>
+          <tr><td>LocalStorage FIFO Pruning (500 max items)</td><td>&lt; 0.85 ms (microbenchmark)</td><td>&lt; 120 KB total storage</td><td>Bounded Idempotent FIFO</td></tr>
         </tbody>
       </table>
+      <p style="font-size: 0.82em; color: #64748b; margin-top: 8px;">
+        * Note: Latency and memory metrics measured in local synthetic microbenchmarks on Node.js v24.16 (x64) and Chromium/WebKit Playwright harnesses (sample size $N = 10,000$). Real-world metrics vary depending on hardware, runtime environment, and network conditions.
+      </p>
     </main>
   </div>
 
