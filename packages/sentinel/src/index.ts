@@ -418,14 +418,11 @@ export class Sentinel {
     }
 
     if (!this.keyResolver || !this.expectedAudience) {
-      if (this.policy.botPolicy?.targetMode === 'VERIFIED_PARTNERS_ONLY') {
-        return {
-          state: 'FAILED',
-          context: null,
-          error: 'KEY_RESOLVER_NOT_CONFIGURED'
-        };
-      }
-      return { state: 'NONE', context: null };
+      return {
+        state: 'FAILED',
+        context: null,
+        error: 'VERIFIER_CONFIGURATION_MISSING'
+      };
     }
 
     try {

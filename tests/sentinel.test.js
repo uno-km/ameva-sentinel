@@ -417,6 +417,18 @@ async function run() {
     }, /Invalid redirectRegistry URL/);
   });
 
+  // 17. [P1-A Regression] Presented token without verifier configuration is FAILED, never NONE
+  await it('presented token without verifier configuration is FAILED (VERIFIER_CONFIGURATION_MISSING), never NONE', async () => {
+    const s = createSentinel({ mode: 'shadow' });
+    const report = await s.score({
+      headers: {
+        authorization: 'Bearer sv1.payload.signature'
+      }
+    });
+    assert.strictEqual(report.verification.state, 'FAILED');
+    assert.strictEqual(report.verification.error, 'VERIFIER_CONFIGURATION_MISSING');
+  });
+
   if (failedTests > 0) {
     process.exit(1);
   }

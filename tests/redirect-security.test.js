@@ -92,11 +92,19 @@ runTest('should enforce exact hostname when allowSubdomains is false', () => {
 runTest('normalizeAllowedHost normalizes casing/whitespace and strictly rejects malformed host strings', () => {
   assert.strictEqual(normalizeAllowedHost(' Example.COM '), 'example.com');
   assert.strictEqual(normalizeAllowedHost('example.com.'), 'example.com');
+  assert.strictEqual(normalizeAllowedHost('127.0.0.1'), '127.0.0.1');
+  assert.strictEqual(normalizeAllowedHost('localhost'), 'localhost');
 
+  // Rejections for invalid protocols, ports, paths, and malformed label syntax
   assert.throws(() => normalizeAllowedHost('https://example.com'), /Invalid allowed host format/);
   assert.throws(() => normalizeAllowedHost('example.com:443'), /Invalid allowed host format/);
   assert.throws(() => normalizeAllowedHost(''), /Invalid allowed host format/);
   assert.throws(() => normalizeAllowedHost('example.com/path'), /Invalid allowed host format/);
+  assert.throws(() => normalizeAllowedHost('-bad.example.com'), /Invalid allowed host label/);
+  assert.throws(() => normalizeAllowedHost('example..com'), /Invalid allowed host label/);
+  assert.throws(() => normalizeAllowedHost('_bad.example.com'), /Invalid allowed host format/);
+  assert.throws(() => normalizeAllowedHost('exa%mple.com'), /Invalid allowed host format/);
+  assert.throws(() => normalizeAllowedHost('.'), /Invalid allowed host format/);
 
   // Suffix collision attacks (evil-example.com, example.com.evil.test) must be strictly rejected
   const opts = { allowedHosts: ['Example.COM '], allowSubdomains: true };

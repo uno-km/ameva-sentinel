@@ -13,7 +13,7 @@ on:
 
 jobs:
   verify:
-    name: Verify 85 Quality Gates & Packaging
+    name: Verify 86 Quality Gates & Packaging
     runs-on: ubuntu-latest
 
     steps:

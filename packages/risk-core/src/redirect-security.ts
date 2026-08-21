@@ -7,9 +7,12 @@ export interface RedirectValidationResult {
 const FORBIDDEN_PROTOCOLS = /^(javascript|data|file|vbscript|about):/i;
 const CONTROL_CHARACTERS = /[\u0000-\u001F\u007F\r\n]/;
 
+const HOSTNAME_LABEL_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+const IPV4_RE = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
 /**
- * Normalizes and validates an allowed redirect hostname.
- * Strips whitespace, lowercases, removes trailing dot, and rejects protocol, port, path, or credentials.
+ * Normalizes and validates an allowed redirect hostname according to RFC 1123 and IPv4 specifications.
+ * Strips whitespace, lowercases, removes trailing dot, and rejects malformed labels, protocols, ports, or injections.
  */
 export function normalizeAllowedHost(value: string): string {
   if (typeof value !== 'string') {
@@ -18,15 +21,32 @@ export function normalizeAllowedHost(value: string): string {
   const host = value.trim().toLowerCase().replace(/\.$/, '');
   if (
     !host ||
+    host.length > 253 ||
     host.includes('/') ||
     host.includes(':') ||
     host.includes('@') ||
     host.includes('?') ||
     host.includes('#') ||
+    host.includes('%') ||
+    host.includes('_') ||
     /\s/.test(host)
   ) {
-    throw new Error(`Invalid allowed host format: "${value}". Must be a valid hostname without protocol, port, path, or credentials.`);
+    throw new Error(`Invalid allowed host format: "${value}". Must be a valid hostname or IPv4 without protocol, port, path, or credentials.`);
   }
+
+  // IPv4 literal or localhost
+  if (host === 'localhost' || IPV4_RE.test(host)) {
+    return host;
+  }
+
+  // RFC 1123 DNS Label Validation
+  const labels = host.split('.');
+  for (const label of labels) {
+    if (!label || !HOSTNAME_LABEL_RE.test(label)) {
+      throw new Error(`Invalid allowed host label: "${label}" in "${value}". Labels must contain only alphanumeric characters or hyphens and cannot start or end with a hyphen.`);
+    }
+  }
+
   return host;
 }
 

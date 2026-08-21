@@ -6,7 +6,7 @@
 [![Official Documentation](https://img.shields.io/badge/docs-uno--km.vercel.app%2Fsentinel-004499?style=flat-square&logo=vercel)](https://uno-km.vercel.app/sentinel/)
 [![npm package](https://img.shields.io/npm/v/@ameva/sentinel/alpha?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/@ameva/sentinel)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)](LICENSE)
-[![Release Gates](https://img.shields.io/badge/release%20checks-85%2F85%20passing%20(82%20tests%20%2B%203%20pkg%20dryruns)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
+[![Release Gates](https://img.shields.io/badge/release%20checks-86%2F86%20passing%20(83%20tests%20%2B%203%20pkg%20dryruns)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
 [![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)](https://uno-km.vercel.app/sentinel/)
 [![Foundation](https://img.shields.io/badge/AOSF-Tier%201%20TLP-f59e0b?style=flat-square)](https://uno-km.vercel.app/docs/foundation/)
 
@@ -95,7 +95,7 @@ console.log(report);
 
 ---
 
-## 🧪 Comprehensive Test Suite & Results (85 / 85 Release Checks)
+## 🧪 Comprehensive Test Suite & Results (86 / 86 Release Checks)
 
 Execute the full fail-closed verification pipeline:
 ```bash

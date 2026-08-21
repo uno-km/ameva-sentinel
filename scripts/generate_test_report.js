@@ -95,12 +95,12 @@ const testSuites = [
   },
   {
     id: 'sentinel',
-    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (16 Gates)',
+    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (17 Gates)',
     file: 'tests/sentinel.test.js',
     category: 'Facade & State Enforcement',
     command: 'node tests/sentinel.test.js',
-    expectedPasses: 16,
-    pointsPerTest: 10 / 16,
+    expectedPasses: 17,
+    pointsPerTest: 10 / 17,
     maxPoints: 10
   },
   {
@@ -323,12 +323,15 @@ fs.writeFileSync(REPORT_FILE, md, 'utf8');
 fs.writeFileSync(CODES_REPORT_FILE, md, 'utf8');
 
 // Generate machine-readable JSON summary
+const releaseFailed = releaseTotal - releasePassed;
 const summaryData = {
   executable: totalPassed,
   packaging: packagingPassedCount,
   total: releaseTotal,
   passed: releasePassed,
-  failed: totalFailed,
+  failed: releaseFailed,
+  executableFailed: totalFailed,
+  packagingFailed: packages.length - packagingPassedCount,
   score: finalScore,
   grade: grade,
   status: overallPassed ? 'PASS' : 'FAIL',
