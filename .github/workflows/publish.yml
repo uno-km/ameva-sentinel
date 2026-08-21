@@ -1,4 +1,4 @@
-name: Publish to npm
+name: Publish to npm & GitHub Packages
 
 on:
   push:
@@ -12,9 +12,11 @@ on:
         default: ''
 
 jobs:
-  publish:
-    name: Publish Packages to npm
+  publish-npm:
+    name: Publish Packages to Public npm Registry
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout Repository
@@ -113,3 +115,50 @@ jobs:
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-github-packages:
+    name: Publish Packages to GitHub Packages Registry
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v22 LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@uno-km'
+
+      - name: Install Clean Dependencies (npm ci)
+        run: npm ci
+
+      - name: Build All Workspaces
+        run: npm run build
+
+      - name: Publish Scoped Packages to GitHub Packages Registry
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+          echo "@uno-km:registry=https://npm.pkg.github.com" >> ~/.npmrc
+
+          for pkg_dir in packages/risk-core packages/browser-sdk packages/sentinel; do
+            if [ -d "$pkg_dir" ]; then
+              echo "Publishing $pkg_dir to GitHub Packages..."
+              node -e '
+                const fs = require("fs");
+                const p = "./'$pkg_dir'/package.json";
+                const pkg = JSON.parse(fs.readFileSync(p, "utf8"));
+                pkg.name = pkg.name.replace("@ameva/", "@uno-km/");
+                pkg.publishConfig = { registry: "https://npm.pkg.github.com" };
+                pkg.repository = "https://github.com/uno-km/ameva-sentinel";
+                fs.writeFileSync(p, JSON.stringify(pkg, null, 2));
+              '
+              (cd "$pkg_dir" && npm publish --registry=https://npm.pkg.github.com) || echo "GitHub package publish skipped or already exists"
+            fi
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
