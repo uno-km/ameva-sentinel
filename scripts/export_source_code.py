@@ -52,8 +52,8 @@ def main():
     # Assess clean state based on tracked source files
     porcelain_raw = cmd(["git", "status", "--porcelain"]) or ""
     source_changes = [
-        line for line in porcelain_raw.splitlines()
-        if not line[3:].startswith("reports/") and not line[3:].startswith("scripts/codes/")
+        line.strip() for line in porcelain_raw.splitlines()
+        if line.strip() and not line.strip().split(None, 1)[-1].startswith("reports/") and not line.strip().split(None, 1)[-1].startswith("scripts/codes/")
     ]
     is_clean = len(source_changes) == 0
     working_tree_state = "CLEAN" if is_clean else "DIRTY"
