@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       dist_tag:
-        description: 'npm dist-tag (e.g. alpha, latest)'
-        required: true
-        default: 'alpha'
+        description: 'Explicit npm dist-tag (leave empty to auto-detect from package version)'
+        required: false
+        default: ''
 
 jobs:
   publish:
@@ -35,48 +35,60 @@ jobs:
       - name: Run Full Quality Gate Verification
         run: npm run verify
 
-      - name: Determine npm dist-tag
-        id: tag_info
+      - name: Determine Target Dist-Tag
+        id: tag_eval
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "DIST_TAG=${{ github.event.inputs.dist_tag }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref_name }}" == *"-alpha"* ]]; then
-            echo "DIST_TAG=alpha" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref_name }}" == *"-beta"* ]]; then
-            echo "DIST_TAG=beta" >> $GITHUB_OUTPUT
+          VERSION=$(node -p "require('./packages/sentinel/package.json').version")
+          if [ -n "${{ github.event.inputs.dist_tag }}" ]; then
+            TAG="${{ github.event.inputs.dist_tag }}"
+          elif [[ "$VERSION" == *"-alpha."* || "$VERSION" == *"-alpha"* ]]; then
+            TAG="alpha"
+          elif [[ "$VERSION" == *"-beta."* || "$VERSION" == *"-beta"* ]]; then
+            TAG="beta"
+          elif [[ "$VERSION" == *"-rc."* || "$VERSION" == *"-rc"* ]]; then
+            TAG="next"
           else
-            echo "DIST_TAG=latest" >> $GITHUB_OUTPUT
+            TAG="latest"
           fi
+          echo "DIST_TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Determined Version: $VERSION, Target Dist-Tag: $TAG"
 
       - name: Publish @ameva/sentinel-risk-core
         run: |
+          DIST_TAG="${{ steps.tag_eval.outputs.DIST_TAG }}"
           VERSION=$(node -p "require('./packages/risk-core/package.json').version")
-          if npm view @ameva/sentinel-risk-core@$VERSION version >/dev/null 2>&1; then
-            echo "Version $VERSION of @ameva/sentinel-risk-core is already published. Skipping."
+          if npm view "@ameva/sentinel-risk-core@$VERSION" version >/dev/null 2>&1; then
+            echo "Version $VERSION already exists. Ensuring dist-tag $DIST_TAG..."
+            npm dist-tag add "@ameva/sentinel-risk-core@$VERSION" "$DIST_TAG" || true
           else
-            npm publish --workspace @ameva/sentinel-risk-core --access public --tag ${{ steps.tag_info.outputs.DIST_TAG }}
+            npm publish --workspace @ameva/sentinel-risk-core --access public --tag "$DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @ameva/sentinel-browser
         run: |
+          DIST_TAG="${{ steps.tag_eval.outputs.DIST_TAG }}"
           VERSION=$(node -p "require('./packages/browser-sdk/package.json').version")
-          if npm view @ameva/sentinel-browser@$VERSION version >/dev/null 2>&1; then
-            echo "Version $VERSION of @ameva/sentinel-browser is already published. Skipping."
+          if npm view "@ameva/sentinel-browser@$VERSION" version >/dev/null 2>&1; then
+            echo "Version $VERSION already exists. Ensuring dist-tag $DIST_TAG..."
+            npm dist-tag add "@ameva/sentinel-browser@$VERSION" "$DIST_TAG" || true
           else
-            npm publish --workspace @ameva/sentinel-browser --access public --tag ${{ steps.tag_info.outputs.DIST_TAG }}
+            npm publish --workspace @ameva/sentinel-browser --access public --tag "$DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @ameva/sentinel
         run: |
+          DIST_TAG="${{ steps.tag_eval.outputs.DIST_TAG }}"
           VERSION=$(node -p "require('./packages/sentinel/package.json').version")
-          if npm view @ameva/sentinel@$VERSION version >/dev/null 2>&1; then
-            echo "Version $VERSION of @ameva/sentinel is already published. Skipping."
+          if npm view "@ameva/sentinel@$VERSION" version >/dev/null 2>&1; then
+            echo "Version $VERSION already exists. Ensuring dist-tag $DIST_TAG..."
+            npm dist-tag add "@ameva/sentinel@$VERSION" "$DIST_TAG" || true
           else
-            npm publish --workspace @ameva/sentinel --access public --tag ${{ steps.tag_info.outputs.DIST_TAG }}
+            npm publish --workspace @ameva/sentinel --access public --tag "$DIST_TAG"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

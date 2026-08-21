@@ -6,7 +6,11 @@
 ![Tests](https://img.shields.io/badge/tests-28%20passing-16a34a?style=flat-square)
 ![Stage](https://img.shields.io/badge/stage-v0.5.0--alpha.1-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)
+![npm](https://img.shields.io/npm/v/@ameva/sentinel/alpha?style=flat-square&color=blue)
 ![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)
+
+> [!NOTE]
+> **Pre-release Notice**: The current release is an alpha prototype intended for local/shadow mode testing. Install explicitly with `npm install @ameva/sentinel@alpha`.
 
 ---
 
@@ -39,7 +43,12 @@
 
 ## 📦 10-Second Quickstart
 
-### 1. Client Browser Telemetry (`@ameva/sentinel-browser`)
+### 1. Installation
+```bash
+npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha
+```
+
+### 2. Client Browser Telemetry (`@ameva/sentinel-browser`)
 ```javascript
 import { createBrowserTelemetry } from '@ameva/sentinel-browser';
 
@@ -47,7 +56,7 @@ const telemetry = createBrowserTelemetry({ autoStart: true });
 const signals = telemetry.snapshot();
 ```
 
-### 2. Risk Evaluation & Storage (`@ameva/sentinel`)
+### 3. Risk Evaluation & Storage (`@ameva/sentinel`)
 ```javascript
 import {
   createSentinel,
@@ -57,7 +66,7 @@ import {
 
 const sentinel = createSentinel({
   mode: 'shadow',
-  counterStore: new MemoryFixedWindowCounterStore(), // Single-process/local use
+  counterStore: new MemoryFixedWindowCounterStore(),
   eventStore: new LocalStorageRiskEventStore()
 });
 
@@ -87,13 +96,13 @@ console.log(report);
 
 ---
 
-## 🔬 Honest Product Scope & Limitations (v0.5.0-alpha.1 Disclosure)
+## 🔬 Product Scope & Current Status (v0.5.0-alpha.1)
 
-- **Browser-Local Prototype**: Current events are stored in the browser's `LocalStorage`. Multi-tenant central traffic aggregation is not yet supported.
-- **CounterStore**: `MemoryFixedWindowCounterStore` is intended for local testing and single-instance Node runtimes. Serverless/distributed edge deployments require external state engines (e.g. Redis / Durable Objects).
+- **Browser-Local Prototype**: Current events are stored in the browser's `LocalStorage`. Centralized multi-tenant aggregation will be supported via Server Collector API in v0.6.
+- **CounterStore**: `MemoryFixedWindowCounterStore` is intended for local testing and single-instance Node runtimes. Serverless/distributed edge deployments will utilize Redis adapters.
 - **Software-Observed Signals**: Interaction metrics (`isTrusted`, `webdriver`) represent browser-reported software signals, not unforgeable hardware biometric proofs.
 - **Token Verification**: In v0.5, client tokens are marked `tokenPresented: true, tokenVerified: false`. Cryptographic HMAC signature verification will be enforced in the server-side Collector (v0.6).
-- **Security Design**: Stored event fields are rendered through DOM APIs and `textContent`, eliminating the previously identified HTML injection sinks.
+- **Security Design**: Stored event fields are rendered through DOM APIs and `textContent`, eliminating DOM XSS injection sinks.
 
 ---
 
@@ -101,17 +110,19 @@ console.log(report);
 
 - **TypeScript Single Source of Truth**: Mechanically compiled `dist/index.js` and `dist/*.d.ts` across all packages.
 - **28 Automated Quality Gate Tests**: 19 Node unit regression tests + 9 Playwright cross-browser tests (Chromium, Firefox, WebKit) 100% passing.
+- **Linux CI Release Gate**: Ubuntu, Node.js 22 LTS, Playwright cross-browser verification, and workspace package dry-run validation.
 - **Cross-Browser Verification**: Reload persistence recovery, real-time multi-tab synchronization, and listener disposal verification.
 - **Deep Schema Validation**: `isStoredRiskEventV1` runtime guards with negative boundary & primitive attribute attack prevention.
-- **Zero-Drift npm Packaging**: `npm pack --dry-run` verified with Apache-2.0 `LICENSE` and `README.md` across workspaces.
+- **Public npm Registry Release**: `@ameva/sentinel-risk-core`, `@ameva/sentinel-browser`, `@ameva/sentinel` published under `@alpha` dist-tag.
+- **Clean-Room Consumer Verification**: Standalone installation from `https://registry.npmjs.org` verified with 100% pass.
 
 ---
 
-## 🗺️ Next Roadmap
+## 🗺️ Next Roadmap (v0.6.0 Milestone)
 
-1. **Server Collector API**: Central `/api/v1/sentinel/collect` endpoint with HMAC signed token verification and replay protection.
-2. **Distributed State Adapters**: `RedisCounterStore` and `PostgresRiskEventStore`.
-3. **Linux CI Automation**: Clean-clone release gate integration.
+1. **Server Collector API**: Central `/api/v1/sentinel/collect` endpoint with short-lived client tokens and server-side verification.
+2. **Cryptographic Signatures & Freshness**: Constant-time HMAC-SHA256 signature verification, timestamp freshness, and nonce replay defense.
+3. **Distributed State Adapters**: `RedisCounterStore` and `PostgresRiskEventStore`.
 
 ---
 
