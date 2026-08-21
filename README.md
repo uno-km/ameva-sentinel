@@ -5,6 +5,8 @@
 
 [![Official Documentation](https://img.shields.io/badge/docs-uno--km.vercel.app%2Fsentinel-004499?style=flat-square&logo=vercel)](https://uno-km.vercel.app/sentinel/)
 [![npm package](https://img.shields.io/npm/v/@ameva/sentinel/alpha?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/@ameva/sentinel)
+[![Open Collective](https://img.shields.io/badge/Open_Collective-AOSF_Fund-004499?style=flat&logo=opencollective)](https://opencollective.com/ameva-foundation)
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub_Sponsors-uno--km-ea4aaa?style=flat&logo=githubsponsors)](https://github.com/sponsors/uno-km)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)](LICENSE)
 [![Release Gates](https://img.shields.io/badge/release%20gates-29%2F29%20passing%20(28%20tests%20%2B%201%20type%20gate)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
 [![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)](https://uno-km.vercel.app/sentinel/)
@@ -131,3 +133,14 @@ console.log(report);
 ## 📄 License
 
 Apache-2.0 © 2026 AMEVA Open Source Ecosystem.
+
+
+---
+
+## 💖 Sponsorship & Community Backing
+
+AMEVA is an independent open-source public good governed under the **AMEVA Open-Source Foundation (AOSF)**. All sponsorship funds are 100% publicly audited and dedicated to physical ARM64 testbeds and CI/CD GPU runners.
+
+- **Open Collective (Non-Profit 501(c)(6))**: [https://opencollective.com/ameva-foundation](https://opencollective.com/ameva-foundation)
+- **GitHub Sponsors**: [https://github.com/sponsors/uno-km](https://github.com/sponsors/uno-km)
+- **Official Foundation Portal**: [https://uno-km.vercel.app/docs/foundation/sponsorship.html](https://uno-km.vercel.app/docs/foundation/sponsorship.html)
