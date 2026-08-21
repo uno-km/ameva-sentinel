@@ -1,5 +1,5 @@
 ﻿import assert from 'node:assert';
-import { validateRedirectUrl } from '../packages/risk-core/dist/index.js';
+import { validateRedirectUrl, createSentinel } from '../packages/sentinel/dist/index.js';
 
 console.log('\n🛡️ Running AMEVA Sentinel Redirect Security & Open Redirect Prevention Tests...\n');
 
@@ -19,7 +19,7 @@ function runTest(name, fn) {
 }
 
 // 1. Valid URLs (Relative & HTTPS)
-runTest('should accept valid relative paths and HTTPS URLs', () => {
+runTest('should accept valid relative paths and HTTPS URLs with normalization', () => {
   const rel = validateRedirectUrl('/llms.txt', { allowRelative: true });
   assert.strictEqual(rel.valid, true);
   assert.strictEqual(rel.sanitizedUrl, '/llms.txt');
@@ -37,11 +37,11 @@ runTest('should strictly reject javascript:, data:, file: and other dangerous sc
   assert.strictEqual(validateRedirectUrl('vbscript:msgbox(1)').valid, false);
 });
 
-// 3. Reject Protocol-Relative URLs (//evil.example.com)
-runTest('should strictly reject protocol-relative URLs (//)', () => {
-  const res = validateRedirectUrl('//evil.example.com/login');
-  assert.strictEqual(res.valid, false);
-  assert.ok(res.error?.includes('Protocol-relative'));
+// 3. Reject Protocol-Relative URLs and Backslashes
+runTest('should strictly reject protocol-relative URLs (//) and backslash traversal', () => {
+  assert.strictEqual(validateRedirectUrl('//evil.example.com/login').valid, false);
+  assert.strictEqual(validateRedirectUrl('/\\evil.example.com/login').valid, false);
+  assert.strictEqual(validateRedirectUrl('/login\\..\\evil').valid, false);
 });
 
 // 4. Reject CRLF and Control Character Injections
@@ -57,8 +57,8 @@ runTest('should reject URLs with embedded user credentials (user:pass@host)', ()
   assert.ok(res.error?.includes('user credentials'));
 });
 
-// 6. Host Whitelist Enforcement
-runTest('should enforce allowedHosts whitelist when specified', () => {
+// 6. Host Whitelist Enforcement & Constructor-Time Registry Validation
+runTest('should enforce allowedHosts whitelist and fail constructor on invalid registry', () => {
   const options = { allowedHosts: ['example.com', 'api.example.com'] };
   
   assert.strictEqual(validateRedirectUrl('https://example.com/bot', options).valid, true);
@@ -67,6 +67,15 @@ runTest('should enforce allowedHosts whitelist when specified', () => {
   const untrusted = validateRedirectUrl('https://evil-phishing.com/bot', options);
   assert.strictEqual(untrusted.valid, false);
   assert.ok(untrusted.error?.includes('not in allowed redirect whitelist'));
+
+  // Constructor-time fail-fast validation
+  assert.throws(() => {
+    createSentinel({
+      redirectRegistry: {
+        AI_FEED: 'javascript:alert(1)'
+      }
+    });
+  }, /Invalid redirectRegistry URL/);
 });
 
 if (failedTests > 0) {

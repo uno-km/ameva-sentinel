@@ -5,7 +5,10 @@ import {
   createPolicy,
   createSentinel,
   SentinelAction,
-  createVerifiedCollectorContext
+  signCollectorToken,
+  verifyCollectorToken,
+  StaticKeyResolver,
+  MemoryNonceStore
 } from '../packages/sentinel/dist/index.js';
 
 console.log('\n🧭 Running AMEVA Sentinel Target Mode & Decision Engine Quality Gate Tests...\n');
@@ -26,6 +29,10 @@ async function runTest(name, fn) {
 }
 
 async function main() {
+  const secretKey = 'partner-secret-key-2026';
+  const keyResolver = new StaticKeyResolver({ 'partner-kid-1': secretKey });
+  const nonceStore = new MemoryNonceStore();
+
   // 1. VERIFIED_PARTNERS_ONLY Mode
   await runTest('VERIFIED_PARTNERS_ONLY should deny unverified traffic and allow authentic verified context', async () => {
     const policy = createPolicy({
@@ -37,17 +44,22 @@ async function main() {
     assert.strictEqual(unverified.action, SentinelAction.TEMPORARY_DENY);
     assert.strictEqual(unverified.decision.reasonCode, 'TARGET_MODE_PARTNERS_UNVERIFIED');
 
-    // Cryptographically Verified Partner Context -> ALLOWED
-    const authenticCtx = createVerifiedCollectorContext({
+    // Cryptographically Verified Partner Context via Verifier -> ALLOWED
+    const token = signCollectorToken({
       v: 1,
-      kid: 'test-kid',
+      kid: 'partner-kid-1',
       iss: 'partner-corp',
-      aud: 'sentinel',
+      aud: 'ameva-sentinel',
       purpose: 'telemetry-collect',
       sessionRef: 'sess-1',
       iat: Date.now(),
       exp: Date.now() + 60000,
-      nonce: 'nonce_partner_1'
+      nonce: 'nonce_partner_decision_1'
+    }, secretKey);
+
+    const authenticCtx = await verifyCollectorToken(token, keyResolver, nonceStore, {
+      expectedAudience: 'ameva-sentinel',
+      expectedPurpose: 'telemetry-collect'
     });
 
     const verified = evaluateVerified({ userAgent: 'PartnerBot/1.0' }, authenticCtx, { policy, enforcementMode: 'ENFORCE' });
@@ -138,32 +150,58 @@ async function main() {
     assert.strictEqual(scraper.decision.reasonCode, 'BOT_DENYLIST_TRIGGERED');
   });
 
-  // 6. Sentinel Facade End-to-End Destination Resolution
-  await runTest('Sentinel.score() should resolve destinationId against closed redirectRegistry', async () => {
+  // 6. Sentinel Facade End-to-End Token Verification & Destination Resolution
+  await runTest('Sentinel.score() should verify presented Bearer token and route destinationId', async () => {
     const policy = createPolicy({
       botPolicy: {
-        targetMode: 'ANY',
-        categoryRouting: {
-          AI_AGENT: { action: SentinelAction.REDIRECT, destinationId: 'AI_FEED', statusCode: 302 }
-        }
+        targetMode: 'VERIFIED_PARTNERS_ONLY'
       }
     });
 
     const sentinel = createSentinel({
       policy,
       mode: 'enforce',
+      keyResolver,
+      nonceStore,
+      expectedAudience: 'sentinel-api-prod',
       redirectRegistry: {
         AI_FEED: 'https://example.com/llms-full.txt'
       }
     });
 
-    const report = await sentinel.score({
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; ClaudeBot/1.0)' }
+    // Valid Bearer Token Presentation -> ALLOWED
+    const validToken = signCollectorToken({
+      v: 1,
+      kid: 'partner-kid-1',
+      iss: 'partner-corp',
+      aud: 'sentinel-api-prod',
+      purpose: 'telemetry-collect',
+      sessionRef: 'sess-prod-100',
+      iat: Date.now(),
+      exp: Date.now() + 60000,
+      nonce: 'nonce_facade_prod_1'
+    }, secretKey);
+
+    const reportAllowed = await sentinel.score({
+      headers: {
+        'user-agent': 'Mozilla/5.0 (compatible; ClaudeBot/1.0)',
+        'authorization': `Bearer ${validToken}`
+      }
     });
 
-    assert.strictEqual(report.action, SentinelAction.REDIRECT);
-    assert.strictEqual(report.redirectTo, 'https://example.com/llms-full.txt');
-    assert.strictEqual(report.redirectStatusCode, 302);
+    assert.strictEqual(reportAllowed.action, SentinelAction.ALLOW);
+    assert.strictEqual(reportAllowed.decision.reasonCode, 'BOT_ALLOWLIST_PASSED');
+    assert.strictEqual(reportAllowed.verification?.state, 'VERIFIED');
+
+    // Unverified Request in VERIFIED_PARTNERS_ONLY -> DENIED
+    const reportDenied = await sentinel.score({
+      headers: {
+        'user-agent': 'Mozilla/5.0 (compatible; ClaudeBot/1.0)'
+      }
+    });
+
+    assert.strictEqual(reportDenied.action, SentinelAction.TEMPORARY_DENY);
+    assert.strictEqual(reportDenied.decision.reasonCode, 'TARGET_MODE_PARTNERS_UNVERIFIED');
   });
 
   if (failedTests > 0) {

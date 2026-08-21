@@ -1,29 +1,29 @@
 # 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Comprehensive Test Suite & Verification Results
 > **Release Target**: `v0.6.0-alpha.1`  
-> **Generated Timestamp**: `2026-08-21T04:07:29.730Z`  
+> **Generated Timestamp**: `2026-08-21T04:25:09.510Z`  
 > **Target Mode, Smart Bot Classifier & Trust Boundary Engine**: 100% Verified  
 > **Overall Gate Status**: `PASSED (100% SUCCESS)`  
 > **Final Score**: `100.0 / 100 pts (Grade A+)`  
-> **Total Checks**: `61 Executable Checks + 3 Packaging Checks = 64 / 64 Release Checks`  
+> **Total Checks**: `63 Executable Checks + 3 Packaging Checks = 66 / 66 Release Checks`  
 
 ---
 
-## 📊 1. Executive Test Scorecard (64 Release Checks: 61 Executable Gates + 3 Package Dry-Runs)
+## 📊 1. Executive Test Scorecard (66 Release Checks: 63 Executable Gates + 3 Package Dry-Runs)
 
 | Test Category | Tests Passed | Execution Time | Score Points | Gate Status |
 | :--- | :---: | :---: | :---: | :---: |
-| TypeScript Static Contract | 1 / 1 | 2960ms | 10.0 / 10 pts | 🟢 PASS |
-| TypeScript Runtime Contract | 1 / 1 | 94ms | 5.0 / 5 pts | 🟢 PASS |
-| Trust Boundary & Collector Crypto | 10 / 10 | 94ms | 15.0 / 15 pts | 🟢 PASS |
-| Redirect & Honeypot Security | 6 / 6 | 87ms | 10.0 / 10 pts | 🟢 PASS |
-| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 87ms | 15.0 / 15 pts | 🟢 PASS |
-| Target Mode & Decision Engine | 6 / 6 | 97ms | 15.0 / 15 pts | 🟢 PASS |
-| Risk Engine Quality Gates | 7 / 7 | 91ms | 10.0 / 10 pts | 🟢 PASS |
-| Facade & State Enforcement | 3 / 3 | 89ms | 10.0 / 10 pts | 🟢 PASS |
-| Persistence & Schema V1/V2 Bounds | 8 / 8 | 85ms | 10.0 / 10 pts | 🟢 PASS |
-| Browser SDK Unit Verification | 2 / 2 | 83ms | 5.0 / 5 pts | 🟢 PASS |
-| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 15780ms | E2E Verified | 🟢 PASS |
-| **TOTAL EXECUTABLE AUDIT SCORE** | **61 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
+| TypeScript Static Contract | 1 / 1 | 2589ms | 10.0 / 10 pts | 🟢 PASS |
+| TypeScript Runtime Contract | 1 / 1 | 87ms | 5.0 / 5 pts | 🟢 PASS |
+| Trust Boundary & Collector Crypto | 12 / 12 | 108ms | 15.0 / 15 pts | 🟢 PASS |
+| Redirect Security & Injection Defense | 6 / 6 | 88ms | 10.0 / 10 pts | 🟢 PASS |
+| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 84ms | 15.0 / 15 pts | 🟢 PASS |
+| Target Mode & Decision Engine | 6 / 6 | 89ms | 15.0 / 15 pts | 🟢 PASS |
+| Risk Engine Quality Gates | 7 / 7 | 83ms | 10.0 / 10 pts | 🟢 PASS |
+| Facade & State Enforcement | 3 / 3 | 90ms | 10.0 / 10 pts | 🟢 PASS |
+| Persistence & Schema V1/V2 Bounds | 8 / 8 | 78ms | 10.0 / 10 pts | 🟢 PASS |
+| Browser SDK Unit Verification | 2 / 2 | 75ms | 5.0 / 5 pts | 🟢 PASS |
+| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 13391ms | E2E Verified | 🟢 PASS |
+| **TOTAL EXECUTABLE AUDIT SCORE** | **63 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
 
 ---
 
@@ -41,7 +41,7 @@
 
 ### 1. TypeScript Static Consumer Contract Gate (32+ Types, Guards, Interfaces)
 * **Target File**: [`tests/typecheck.ts`](../../tests/typecheck.ts)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 2960ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 2589ms)
 
 #### Execution Console Output:
 ```text
@@ -67,6 +67,7 @@
   type RiskEventStore,
   type SentinelPolicy,
   type TelemetrySignals,
+  type UntrustedTelemetrySignals,
   type TrafficTargetMode,
   type BotCategory,
   type BotIdentityState,
@@ -96,7 +97,6 @@
   sanitizeSignals,
   signCollectorToken,
   verifyCollectorToken,
-  createVerifiedCollectorContext,
   isVerifiedCollectorContext,
   MemoryNonceStore,
   StaticKeyResolver,
@@ -135,20 +135,7 @@ const rawSnapshot: BrowserTelemetrySnapshot = telemetryCollector.snapshot();
 const sessionId: string = getLocalSessionId();
 const defaultBrowserCollector: BrowserTelemetryCollector = browserTelemetry;
 
-// 2. Verified Collector Context Brand Contract
-const authenticContext: VerifiedCollectorContext = createVerifiedCollectorContext({
-  v: 1,
-  kid: 'collector-key-2026-a',
-  iss: 'ameva-auth',
-  aud: 'ameva-sentinel-collector',
-  purpose: 'telemetry-collect',
-  sessionRef: 'sess_contract_001',
-  iat: Date.now(),
-  exp: Date.now() + 60000,
-  nonce: 'nonce_contract_001'
-});
-
-// 3. Telemetry Signal Sanitization & Confidence Contract
+// 2. Telemetry Signal Sanitization & Confidence Contract
 const signals: TelemetrySignals = {
   telemetryObserved: rawSnapshot.telemetryObserved,
   sampleComplete: rawSnapshot.sampleComplete,
@@ -167,7 +154,7 @@ const signals: TelemetrySignals = {
 const sanitizedMinimal: MinimalDerivedSignals = sanitizeSignals(signals);
 const confidence: number = calculateConfidence(signals);
 
-// 4. Evidence and Attributes Structural Contract
+// 3. Evidence and Attributes Structural Contract
 const sampleAttrs: RuleAttributes = {
   observed: true,
   count: 3,
@@ -192,7 +179,7 @@ const sampleSanitizedEvidence: SanitizedEvidence = {
   message: sampleEvidence.message
 };
 
-// 5. Bot Policy & Routing Rules Type Contract
+// 4. Bot Policy & Routing Rules Type Contract
 const botRouting: BotRoutingRule = {
   action: SentinelAction.REDIRECT,
   destinationId: 'AI_FEED' as RedirectDestinationId,
@@ -214,7 +201,7 @@ const botPolicyConfig: BotPolicyConfig = {
   heuristicClassification: true
 };
 
-// 6. Custom Policy & Rules Contract
+// 5. Custom Policy & Rules Contract
 const customPolicy: SentinelPolicy = createPolicy({
   rules: [
     rules.webdriver({ weight: 30 }),
@@ -228,12 +215,16 @@ const customPolicy: SentinelPolicy = createPolicy({
   botPolicy: botPolicyConfig
 });
 
-// 7. Store Adapters Type Contract
+// 6. Store Adapters Type Contract
 const storeOptions: RiskEventStoreOptions = { maxItems: 50, maxAgeMs: 86400000 };
 const counterStore: CounterStore = new MemoryFixedWindowCounterStore();
 const altCounterStore: CounterStore = new MemoryCounterStore();
 const memoryEventStore: RiskEventStore = new MemoryRiskEventStore(storeOptions);
 const localEventStore: RiskEventStore = new LocalStorageRiskEventStore(storeOptions);
+
+// 7. Crypto & Token Verifier Type Contract
+const keyResolver: KeyResolver = new StaticKeyResolver({ 'collector-key-2026-a': 'test-secret' });
+const nonceStore: NonceStore = new MemoryNonceStore();
 
 // 8. Facade Options & Instance Contract
 const sentinelOptions: SentinelOptions = {
@@ -241,6 +232,10 @@ const sentinelOptions: SentinelOptions = {
   policy: customPolicy,
   counterStore,
   eventStore: memoryEventStore,
+  keyResolver,
+  nonceStore,
+  expectedAudience: 'sentinel-typecheck',
+  expectedPurpose: 'telemetry-collect',
   rateKeyProvider: (req: any) => (req?.customUserId ? `user_${req.customUserId}` : null),
   redirectRegistry: {
     AI_FEED: 'https://example.com/llms.txt',
@@ -251,10 +246,6 @@ const sentinelOptions: SentinelOptions = {
 
 const sentinel: Sentinel = createSentinel(sentinelOptions);
 
-// 9. Crypto & Token Verifier Type Contract
-const keyResolver: KeyResolver = new StaticKeyResolver({ 'collector-key-2026-a': 'test-secret' });
-const nonceStore: NonceStore = new MemoryNonceStore();
-
 async function runFullStaticTypeCheck(): Promise<void> {
   const reqMock = { signals, customUserId: 'dev-type-verifier' };
   const report: SentinelRiskReport = await sentinel.score(reqMock);
@@ -263,6 +254,24 @@ async function runFullStaticTypeCheck(): Promise<void> {
     policy: defaultPolicy,
     enforcementMode: 'SHADOW' as EnforcementMode
   };
+
+  const token = signCollectorToken({
+    v: 1,
+    kid: 'collector-key-2026-a',
+    iss: 'ameva-auth',
+    aud: 'sentinel-typecheck',
+    purpose: 'telemetry-collect',
+    sessionRef: 'sess_typecheck_1',
+    iat: Date.now(),
+    exp: Date.now() + 60000,
+    nonce: 'nonce_typecheck_1'
+  }, 'test-secret');
+
+  const authenticContext: VerifiedCollectorContext = await verifyCollectorToken(token, keyResolver, nonceStore, {
+    expectedAudience: 'sentinel-typecheck',
+    expectedPurpose: 'telemetry-collect'
+  });
+
   const directEngineReport: SentinelRiskReport = evaluate(signals, evalOptions);
   const verifiedReport: SentinelRiskReport = evaluateVerified(signals, authenticContext, evalOptions);
 
@@ -291,8 +300,6 @@ async function runFullStaticTypeCheck(): Promise<void> {
   void decision;
   void verifiedReport;
   void directEngineReport;
-  void keyResolver;
-  void nonceStore;
   void altCounterStore;
   void localEventStore;
   void defaultBrowserCollector;
@@ -309,14 +316,14 @@ runFullStaticTypeCheck();
 
 ### 2. TypeScript Runtime Consumer Contract Gate (Live Execution & Assertion)
 * **Target File**: [`tests/typecheck.runtime.js`](../../tests/typecheck.runtime.js)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 94ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 87ms)
 
 #### Execution Console Output:
 ```text
 🔍 Running TypeScript Consumer API Runtime Contract Gate...
 
 [TypeScript v0.6.0 Contract Gate] ALL 32+ SDK Types & Runtime Interfaces 100% Verified.
-  - TraceId: trc_9361840e04894cb9
+  - TraceId: trc_e21644f16b194d8c
   - Decision Action: ALLOW (BOT_ALLOWLIST_PASSED)
   - Bot Classification: SEARCH_ENGINE (Googlebot)
   - SessionId: ephemeral_local_session
@@ -332,6 +339,8 @@ import {
   createSentinel,
   MemoryFixedWindowCounterStore,
   MemoryRiskEventStore,
+  StaticKeyResolver,
+  MemoryNonceStore,
   SentinelAction,
   defaultPolicy,
   createPolicy,
@@ -347,7 +356,8 @@ import {
   isStoredRiskEventV1,
   isStoredRiskEventV2,
   sanitizeSignals,
-  createVerifiedCollectorContext,
+  signCollectorToken,
+  verifyCollectorToken,
   isVerifiedCollectorContext,
   validateRedirectUrl
 } from '../packages/sentinel/dist/index.js';
@@ -362,7 +372,11 @@ async function runRuntimeContract() {
   const snapshot = telemetry.snapshot();
   const sessionId = getLocalSessionId();
 
-  const authenticContext = createVerifiedCollectorContext({
+  const secretKey = 'runtime-secret-key-2026';
+  const keyResolver = new StaticKeyResolver({ 'collector-key-2026-a': secretKey });
+  const nonceStore = new MemoryNonceStore();
+
+  const token = signCollectorToken({
     v: 1,
     kid: 'collector-key-2026-a',
     iss: 'ameva-auth',
@@ -371,7 +385,13 @@ async function runRuntimeContract() {
     sessionRef: 'sess_contract_001',
     iat: Date.now(),
     exp: Date.now() + 60000,
-    nonce: 'nonce_contract_001'
+    nonce: 'nonce_contract_runtime_001'
+  }, secretKey);
+
+  const authenticContext = await verifyCollectorToken(token, keyResolver, nonceStore, {
+    expectedAudience: 'ameva-sentinel-collector',
+    expectedPurpose: 'telemetry-collect',
+    allowedIssuers: ['ameva-auth']
   });
 
   assert.strictEqual(isVerifiedCollectorContext(authenticContext), true);
@@ -413,12 +433,20 @@ async function runRuntimeContract() {
     mode: 'shadow',
     eventStore: memoryStore,
     counterStore,
+    keyResolver,
+    nonceStore,
+    expectedAudience: 'ameva-sentinel-collector',
+    expectedPurpose: 'telemetry-collect',
     redirectRegistry: {
       AI_FEED: 'https://example.com/llms.txt'
     }
   });
 
-  const report = await sentinel.score({ signals, customUserId: 'dev-runtime-user' });
+  const report = await sentinel.score({
+    signals,
+    customUserId: 'dev-runtime-user'
+  });
+
   assert.strictEqual(typeof report.score, 'number');
   assert.ok(report.traceId.startsWith('trc_'));
   assert.strictEqual(report.action, SentinelAction.ALLOW);
@@ -456,26 +484,28 @@ runRuntimeContract().catch(err => {
 
 ---
 
-### 3. Trust Boundary Collector HMAC, Freshness & Replay Attack Defense Suite (10 Gates)
+### 3. Trust Boundary Collector HMAC, Freshness, Replay Attack & 100-Concurrency Suite (12 Gates)
 * **Target File**: [`tests/collector-crypto.test.js`](../../tests/collector-crypto.test.js)
-* **Execution Status**: `PASS` (10 passed, 0 failed in 94ms)
+* **Execution Status**: `PASS` (12 passed, 0 failed in 108ms)
 
 #### Execution Console Output:
 ```text
 🔐 Running AMEVA Sentinel Trust Boundary Collector & Crypto Quality Gate Tests...
 
-  ✅ PASS: should verify valid sv1 token and issue unforgeable branded context
+  ✅ PASS: should verify valid sv1 token and issue authentic opaque context via verifier
   ✅ PASS: should reject malformed or oversized tokens
   ✅ PASS: should reject unknown kid with UNKNOWN_KEY_ID
   ✅ PASS: should reject tampered payload or signature with INVALID_SIGNATURE
   ✅ PASS: should reject expired tokens with TOKEN_EXPIRED
   ✅ PASS: should reject stale timestamp with INVALID_TIMESTAMP_FRESHNESS
-  ✅ PASS: should reject audience or purpose mismatch
+  ✅ PASS: should reject audience, purpose, or unauthorized issuer mismatch
   ✅ PASS: should block replay attacks with REPLAY_ATTACK_DETECTED on duplicate nonce
-  ✅ PASS: evaluateVerified should grant VERIFIED state only with authentic branded context
-  ✅ PASS: constantTimeEqual should reject mismatched lengths and verify exact buffers
+  ✅ PASS: concurrent 100-request nonce consumption race guarantees exactly 1 success and 99 replays
+  ✅ PASS: evaluateVerified should reject structural forged objects and accept authentic verifier context
+  ✅ PASS: verifyCollectorToken should fail-closed on missing mandatory expectedAudience/Purpose
+  ✅ PASS: canonicalizeJsonSubset should reject non-finite numbers and circular references
 
-{"suite":"collector_crypto","passed":10,"failed":0,"total":10}
+{"suite":"collector_crypto","passed":12,"failed":0,"total":12}
 ```
 
 #### Source Code Verification (`tests/collector-crypto.test.js`):
@@ -484,12 +514,12 @@ runRuntimeContract().catch(err => {
 import {
   signCollectorToken,
   verifyCollectorToken,
-  createVerifiedCollectorContext,
   isVerifiedCollectorContext,
   MemoryNonceStore,
   StaticKeyResolver,
   constantTimeEqual,
   evaluateVerified,
+  canonicalizeJsonSubset,
   SentinelAction
 } from '../packages/risk-core/dist/index.js';
 
@@ -529,13 +559,16 @@ async function main() {
     sessionRef: 'sess_ref_123'
   };
 
+  const defaultVerifyOpts = {
+    expectedAudience: 'ameva-sentinel-collector',
+    expectedPurpose: 'telemetry-collect',
+    allowedIssuers: ['ameva-authenticator']
+  };
+
   // 1. Valid Signature & VerifiedCollectorContext issuance
-  await runTest('should verify valid sv1 token and issue unforgeable branded context', async () => {
+  await runTest('should verify valid sv1 token and issue authentic opaque context via verifier', async () => {
     const token = signCollectorToken(basePayload, secretKey);
-    const ctx = await verifyCollectorToken(token, keyResolver, nonceStore, {
-      expectedAudience: 'ameva-sentinel-collector',
-      expectedPurpose: 'telemetry-collect'
-    });
+    const ctx = await verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts);
 
     assert.strictEqual(isVerifiedCollectorContext(ctx), true);
     assert.strictEqual(ctx.kid, 'kid-2026-prod-a');
@@ -546,11 +579,11 @@ async function main() {
   // 2. Reject Malformed Token (> 4096 bytes or bad format)
   await runTest('should reject malformed or oversized tokens', async () => {
     await assert.rejects(
-      async () => verifyCollectorToken('invalid.token', keyResolver, nonceStore),
+      async () => verifyCollectorToken('invalid.token', keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'MALFORMED_TOKEN' }
     );
     await assert.rejects(
-      async () => verifyCollectorToken('sv1.' + 'a'.repeat(5000), keyResolver, nonceStore),
+      async () => verifyCollectorToken('sv1.' + 'a'.repeat(5000), keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'MALFORMED_TOKEN' }
     );
   });
@@ -560,7 +593,7 @@ async function main() {
     const badKidPayload = { ...basePayload, kid: 'unknown-key-999', nonce: 'nonce_bad_kid' };
     const token = signCollectorToken(badKidPayload, secretKey);
     await assert.rejects(
-      async () => verifyCollectorToken(token, keyResolver, nonceStore),
+      async () => verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'UNKNOWN_KEY_ID' }
     );
   });
@@ -570,7 +603,7 @@ async function main() {
     const token = signCollectorToken({ ...basePayload, nonce: 'nonce_tamper_1' }, secretKey);
     const tampered = token.slice(0, -4) + 'zzzz';
     await assert.rejects(
-      async () => verifyCollectorToken(tampered, keyResolver, nonceStore),
+      async () => verifyCollectorToken(tampered, keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'INVALID_SIGNATURE' }
     );
   });
@@ -585,7 +618,7 @@ async function main() {
     };
     const token = signCollectorToken(expiredPayload, secretKey);
     await assert.rejects(
-      async () => verifyCollectorToken(token, keyResolver, nonceStore),
+      async () => verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'TOKEN_EXPIRED' }
     );
   });
@@ -600,56 +633,78 @@ async function main() {
     };
     const token = signCollectorToken(stalePayload, secretKey);
     await assert.rejects(
-      async () => verifyCollectorToken(token, keyResolver, nonceStore),
+      async () => verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'INVALID_TIMESTAMP_FRESHNESS' }
     );
   });
 
-  // 7. Audience & Purpose Validation
-  await runTest('should reject audience or purpose mismatch', async () => {
-    const token = signCollectorToken({ ...basePayload, nonce: 'nonce_aud_test' }, secretKey);
+  // 7. Audience, Purpose & Issuer Whitelist Validation
+  await runTest('should reject audience, purpose, or unauthorized issuer mismatch', async () => {
+    const token1 = signCollectorToken({ ...basePayload, nonce: 'nonce_aud_1' }, secretKey);
     await assert.rejects(
-      async () => verifyCollectorToken(token, keyResolver, nonceStore, { expectedAudience: 'other-service' }),
+      async () => verifyCollectorToken(token1, keyResolver, nonceStore, { ...defaultVerifyOpts, expectedAudience: 'other-service' }),
       { name: 'CollectorVerificationError', code: 'AUDIENCE_MISMATCH' }
+    );
+
+    const token2 = signCollectorToken({ ...basePayload, nonce: 'nonce_aud_2' }, secretKey);
+    await assert.rejects(
+      async () => verifyCollectorToken(token2, keyResolver, nonceStore, { ...defaultVerifyOpts, expectedPurpose: 'other-purpose' }),
+      { name: 'CollectorVerificationError', code: 'PURPOSE_MISMATCH' }
+    );
+
+    const token3 = signCollectorToken({ ...basePayload, nonce: 'nonce_aud_3', iss: 'rogue-issuer' }, secretKey);
+    await assert.rejects(
+      async () => verifyCollectorToken(token3, keyResolver, nonceStore, { ...defaultVerifyOpts, allowedIssuers: ['trusted-only'] }),
+      { name: 'CollectorVerificationError', code: 'UNAUTHORIZED_ISSUER' }
     );
   });
 
-  // 8. Replay Attack Defense (Atomic Nonce Consumption)
+  // 8. Replay Attack Defense (Multi-Tenant Atomic Nonce Consumption)
   await runTest('should block replay attacks with REPLAY_ATTACK_DETECTED on duplicate nonce', async () => {
     const replayPayload = { ...basePayload, nonce: 'nonce_replay_unique_1' };
     const token = signCollectorToken(replayPayload, secretKey);
 
     // 1st Consumption -> SUCCESS
-    const ctx1 = await verifyCollectorToken(token, keyResolver, nonceStore);
+    const ctx1 = await verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts);
     assert.strictEqual(isVerifiedCollectorContext(ctx1), true);
 
     // 2nd Consumption -> REJECTED (HTTP 409)
     await assert.rejects(
-      async () => verifyCollectorToken(token, keyResolver, nonceStore),
+      async () => verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'REPLAY_ATTACK_DETECTED' }
     );
   });
 
-  // 9. evaluateVerified Brand Security
-  await runTest('evaluateVerified should grant VERIFIED state only with authentic branded context', () => {
-    const authenticCtx = createVerifiedCollectorContext({
-      v: 1,
-      kid: 'kid-2026-prod-a',
-      iss: 'ameva-auth',
-      aud: 'collector',
-      purpose: 'telemetry-collect',
-      iat: Date.now(),
-      exp: Date.now() + 60000,
-      nonce: 'nonce_eval_1',
-      sessionRef: 'sess_1'
-    });
+  // 9. 100 Concurrent Nonce Consumption Race Test
+  await runTest('concurrent 100-request nonce consumption race guarantees exactly 1 success and 99 replays', async () => {
+    const racePayload = { ...basePayload, nonce: 'nonce_race_test_100' };
+    const token = signCollectorToken(racePayload, secretKey);
+
+    const results = await Promise.allSettled(
+      Array.from({ length: 100 }, () =>
+        verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts)
+      )
+    );
+
+    const fulfilled = results.filter(r => r.status === 'fulfilled');
+    const rejected = results.filter(r => r.status === 'rejected');
+
+    assert.strictEqual(fulfilled.length, 1, `Expected exactly 1 fulfilled request, got ${fulfilled.length}`);
+    assert.strictEqual(rejected.length, 99, `Expected exactly 99 rejected requests, got ${rejected.length}`);
+    assert.strictEqual(rejected[0].reason.code, 'REPLAY_ATTACK_DETECTED');
+  });
+
+  // 10. evaluateVerified Brand Security (Rejects Forged Plain Object)
+  await runTest('evaluateVerified should reject structural forged objects and accept authentic verifier context', async () => {
+    const token = signCollectorToken({ ...basePayload, nonce: 'nonce_eval_verified_1' }, secretKey);
+    const authenticCtx = await verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts);
 
     // Authentic Context -> VERIFIED
     const report1 = evaluateVerified({}, authenticCtx);
     assert.strictEqual(report1.verification?.state, 'VERIFIED');
-    assert.strictEqual(report1.verification?.issuer, 'ameva-auth');
+    assert.strictEqual(report1.verification?.issuer, 'ameva-authenticator');
 
-    // Forged Structural Object (Missing Brand Symbol) -> FAILED
+    // Forged Structural Object (Missing Internal Symbol) -> FAILED
     const forgedCtx = {
       isVerified: true,
       kid: 'hacker-kid',
@@ -659,16 +714,23 @@ async function main() {
     assert.strictEqual(report2.verification?.state, 'FAILED');
   });
 
-  // 10. Constant-Time Comparison Security
-  await runTest('constantTimeEqual should reject mismatched lengths and verify exact buffers', () => {
-    const b1 = new Uint8Array([1, 2, 3, 4]);
-    const b2 = new Uint8Array([1, 2, 3, 4]);
-    const b3 = new Uint8Array([1, 2, 3, 5]);
-    const b4 = new Uint8Array([1, 2, 3]);
+  // 11. Fail-Closed Configuration Guard
+  await runTest('verifyCollectorToken should fail-closed on missing mandatory expectedAudience/Purpose', async () => {
+    const token = signCollectorToken({ ...basePayload, nonce: 'nonce_cfg_1' }, secretKey);
+    await assert.rejects(
+      async () => verifyCollectorToken(token, keyResolver, nonceStore, {}),
+      { name: 'CollectorVerificationError', code: 'CONFIGURATION_ERROR' }
+    );
+  });
 
-    assert.strictEqual(constantTimeEqual(b1, b2), true);
-    assert.strictEqual(constantTimeEqual(b1, b3), false);
-    assert.strictEqual(constantTimeEqual(b1, b4), false);
+  // 12. Canonical JSON Subset Robustness
+  await runTest('canonicalizeJsonSubset should reject non-finite numbers and circular references', () => {
+    assert.throws(() => canonicalizeJsonSubset({ num: NaN }), { code: 'MALFORMED_TOKEN' });
+    assert.throws(() => canonicalizeJsonSubset({ num: Infinity }), { code: 'MALFORMED_TOKEN' });
+    
+    const circ = {};
+    circ.self = circ;
+    assert.throws(() => canonicalizeJsonSubset(circ), { code: 'MALFORMED_TOKEN' });
   });
 
   if (failedTests > 0) {
@@ -685,18 +747,18 @@ main();
 
 ### 4. Redirect Security & Closed-Destination Injection Defense Suite (6 Gates)
 * **Target File**: [`tests/redirect-security.test.js`](../../tests/redirect-security.test.js)
-* **Execution Status**: `PASS` (6 passed, 0 failed in 87ms)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 88ms)
 
 #### Execution Console Output:
 ```text
 🛡️ Running AMEVA Sentinel Redirect Security & Open Redirect Prevention Tests...
 
-  ✅ PASS: should accept valid relative paths and HTTPS URLs
+  ✅ PASS: should accept valid relative paths and HTTPS URLs with normalization
   ✅ PASS: should strictly reject javascript:, data:, file: and other dangerous schemes
-  ✅ PASS: should strictly reject protocol-relative URLs (//)
+  ✅ PASS: should strictly reject protocol-relative URLs (//) and backslash traversal
   ✅ PASS: should strictly reject CRLF and header injection attempts
   ✅ PASS: should reject URLs with embedded user credentials (user:pass@host)
-  ✅ PASS: should enforce allowedHosts whitelist when specified
+  ✅ PASS: should enforce allowedHosts whitelist and fail constructor on invalid registry
 
 {"suite":"redirect_security","passed":6,"failed":0,"total":6}
 ```
@@ -704,7 +766,7 @@ main();
 #### Source Code Verification (`tests/redirect-security.test.js`):
 ```javascript
 ﻿import assert from 'node:assert';
-import { validateRedirectUrl } from '../packages/risk-core/dist/index.js';
+import { validateRedirectUrl, createSentinel } from '../packages/sentinel/dist/index.js';
 
 console.log('\n🛡️ Running AMEVA Sentinel Redirect Security & Open Redirect Prevention Tests...\n');
 
@@ -724,7 +786,7 @@ function runTest(name, fn) {
 }
 
 // 1. Valid URLs (Relative & HTTPS)
-runTest('should accept valid relative paths and HTTPS URLs', () => {
+runTest('should accept valid relative paths and HTTPS URLs with normalization', () => {
   const rel = validateRedirectUrl('/llms.txt', { allowRelative: true });
   assert.strictEqual(rel.valid, true);
   assert.strictEqual(rel.sanitizedUrl, '/llms.txt');
@@ -742,11 +804,11 @@ runTest('should strictly reject javascript:, data:, file: and other dangerous sc
   assert.strictEqual(validateRedirectUrl('vbscript:msgbox(1)').valid, false);
 });
 
-// 3. Reject Protocol-Relative URLs (//evil.example.com)
-runTest('should strictly reject protocol-relative URLs (//)', () => {
-  const res = validateRedirectUrl('//evil.example.com/login');
-  assert.strictEqual(res.valid, false);
-  assert.ok(res.error?.includes('Protocol-relative'));
+// 3. Reject Protocol-Relative URLs and Backslashes
+runTest('should strictly reject protocol-relative URLs (//) and backslash traversal', () => {
+  assert.strictEqual(validateRedirectUrl('//evil.example.com/login').valid, false);
+  assert.strictEqual(validateRedirectUrl('/\\evil.example.com/login').valid, false);
+  assert.strictEqual(validateRedirectUrl('/login\\..\\evil').valid, false);
 });
 
 // 4. Reject CRLF and Control Character Injections
@@ -762,8 +824,8 @@ runTest('should reject URLs with embedded user credentials (user:pass@host)', ()
   assert.ok(res.error?.includes('user credentials'));
 });
 
-// 6. Host Whitelist Enforcement
-runTest('should enforce allowedHosts whitelist when specified', () => {
+// 6. Host Whitelist Enforcement & Constructor-Time Registry Validation
+runTest('should enforce allowedHosts whitelist and fail constructor on invalid registry', () => {
   const options = { allowedHosts: ['example.com', 'api.example.com'] };
   
   assert.strictEqual(validateRedirectUrl('https://example.com/bot', options).valid, true);
@@ -772,6 +834,15 @@ runTest('should enforce allowedHosts whitelist when specified', () => {
   const untrusted = validateRedirectUrl('https://evil-phishing.com/bot', options);
   assert.strictEqual(untrusted.valid, false);
   assert.ok(untrusted.error?.includes('not in allowed redirect whitelist'));
+
+  // Constructor-time fail-fast validation
+  assert.throws(() => {
+    createSentinel({
+      redirectRegistry: {
+        AI_FEED: 'javascript:alert(1)'
+      }
+    });
+  }, /Invalid redirectRegistry URL/);
 });
 
 if (failedTests > 0) {
@@ -785,7 +856,7 @@ console.log(`\n{"suite":"redirect_security","passed":${passedTests},"failed":${f
 
 ### 5. Smart Bot Classifier & ReDoS Safety Suite (7 Taxonomies, 8 Gates)
 * **Target File**: [`tests/bot-classifier.test.js`](../../tests/bot-classifier.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 87ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 84ms)
 
 #### Execution Console Output:
 ```text
@@ -969,7 +1040,7 @@ console.log(`\n{"suite":"bot_classifier","passed":${passedTests},"failed":${fail
 
 ### 6. Target Mode & Decision Engine Suite (Closed-Destination Routing, 6 Gates)
 * **Target File**: [`tests/decision.test.js`](../../tests/decision.test.js)
-* **Execution Status**: `PASS` (6 passed, 0 failed in 97ms)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 89ms)
 
 #### Execution Console Output:
 ```text
@@ -980,7 +1051,7 @@ console.log(`\n{"suite":"bot_classifier","passed":${passedTests},"failed":${fail
   ✅ PASS: BOTS_ONLY should redirect human interactive browser to BOT_GUIDANCE and allow bots
   ✅ PASS: should execute closed-destination redirect for AI_AGENT category
   ✅ PASS: should strictly trigger TEMPORARY_DENY on denylisted bot categories
-  ✅ PASS: Sentinel.score() should resolve destinationId against closed redirectRegistry
+  ✅ PASS: Sentinel.score() should verify presented Bearer token and route destinationId
 
 {"suite":"decision","passed":6,"failed":0,"total":6}
 ```
@@ -994,7 +1065,10 @@ import {
   createPolicy,
   createSentinel,
   SentinelAction,
-  createVerifiedCollectorContext
+  signCollectorToken,
+  verifyCollectorToken,
+  StaticKeyResolver,
+  MemoryNonceStore
 } from '../packages/sentinel/dist/index.js';
 
 console.log('\n🧭 Running AMEVA Sentinel Target Mode & Decision Engine Quality Gate Tests...\n');
@@ -1015,6 +1089,10 @@ async function runTest(name, fn) {
 }
 
 async function main() {
+  const secretKey = 'partner-secret-key-2026';
+  const keyResolver = new StaticKeyResolver({ 'partner-kid-1': secretKey });
+  const nonceStore = new MemoryNonceStore();
+
   // 1. VERIFIED_PARTNERS_ONLY Mode
   await runTest('VERIFIED_PARTNERS_ONLY should deny unverified traffic and allow authentic verified context', async () => {
     const policy = createPolicy({
@@ -1026,17 +1104,22 @@ async function main() {
     assert.strictEqual(unverified.action, SentinelAction.TEMPORARY_DENY);
     assert.strictEqual(unverified.decision.reasonCode, 'TARGET_MODE_PARTNERS_UNVERIFIED');
 
-    // Cryptographically Verified Partner Context -> ALLOWED
-    const authenticCtx = createVerifiedCollectorContext({
+    // Cryptographically Verified Partner Context via Verifier -> ALLOWED
+    const token = signCollectorToken({
       v: 1,
-      kid: 'test-kid',
+      kid: 'partner-kid-1',
       iss: 'partner-corp',
-      aud: 'sentinel',
+      aud: 'ameva-sentinel',
       purpose: 'telemetry-collect',
       sessionRef: 'sess-1',
       iat: Date.now(),
       exp: Date.now() + 60000,
-      nonce: 'nonce_partner_1'
+      nonce: 'nonce_partner_decision_1'
+    }, secretKey);
+
+    const authenticCtx = await verifyCollectorToken(token, keyResolver, nonceStore, {
+      expectedAudience: 'ameva-sentinel',
+      expectedPurpose: 'telemetry-collect'
     });
 
     const verified = evaluateVerified({ userAgent: 'PartnerBot/1.0' }, authenticCtx, { policy, enforcementMode: 'ENFORCE' });
@@ -1127,32 +1210,58 @@ async function main() {
     assert.strictEqual(scraper.decision.reasonCode, 'BOT_DENYLIST_TRIGGERED');
   });
 
-  // 6. Sentinel Facade End-to-End Destination Resolution
-  await runTest('Sentinel.score() should resolve destinationId against closed redirectRegistry', async () => {
+  // 6. Sentinel Facade End-to-End Token Verification & Destination Resolution
+  await runTest('Sentinel.score() should verify presented Bearer token and route destinationId', async () => {
     const policy = createPolicy({
       botPolicy: {
-        targetMode: 'ANY',
-        categoryRouting: {
-          AI_AGENT: { action: SentinelAction.REDIRECT, destinationId: 'AI_FEED', statusCode: 302 }
-        }
+        targetMode: 'VERIFIED_PARTNERS_ONLY'
       }
     });
 
     const sentinel = createSentinel({
       policy,
       mode: 'enforce',
+      keyResolver,
+      nonceStore,
+      expectedAudience: 'sentinel-api-prod',
       redirectRegistry: {
         AI_FEED: 'https://example.com/llms-full.txt'
       }
     });
 
-    const report = await sentinel.score({
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; ClaudeBot/1.0)' }
+    // Valid Bearer Token Presentation -> ALLOWED
+    const validToken = signCollectorToken({
+      v: 1,
+      kid: 'partner-kid-1',
+      iss: 'partner-corp',
+      aud: 'sentinel-api-prod',
+      purpose: 'telemetry-collect',
+      sessionRef: 'sess-prod-100',
+      iat: Date.now(),
+      exp: Date.now() + 60000,
+      nonce: 'nonce_facade_prod_1'
+    }, secretKey);
+
+    const reportAllowed = await sentinel.score({
+      headers: {
+        'user-agent': 'Mozilla/5.0 (compatible; ClaudeBot/1.0)',
+        'authorization': `Bearer ${validToken}`
+      }
     });
 
-    assert.strictEqual(report.action, SentinelAction.REDIRECT);
-    assert.strictEqual(report.redirectTo, 'https://example.com/llms-full.txt');
-    assert.strictEqual(report.redirectStatusCode, 302);
+    assert.strictEqual(reportAllowed.action, SentinelAction.ALLOW);
+    assert.strictEqual(reportAllowed.decision.reasonCode, 'BOT_ALLOWLIST_PASSED');
+    assert.strictEqual(reportAllowed.verification?.state, 'VERIFIED');
+
+    // Unverified Request in VERIFIED_PARTNERS_ONLY -> DENIED
+    const reportDenied = await sentinel.score({
+      headers: {
+        'user-agent': 'Mozilla/5.0 (compatible; ClaudeBot/1.0)'
+      }
+    });
+
+    assert.strictEqual(reportDenied.action, SentinelAction.TEMPORARY_DENY);
+    assert.strictEqual(reportDenied.decision.reasonCode, 'TARGET_MODE_PARTNERS_UNVERIFIED');
   });
 
   if (failedTests > 0) {
@@ -1169,7 +1278,7 @@ main();
 
 ### 7. Risk Core Pure Engine & Clamping Quality Gates (7 Gates)
 * **Target File**: [`tests/engine.test.js`](../../tests/engine.test.js)
-* **Execution Status**: `PASS` (7 passed, 0 failed in 91ms)
+* **Execution Status**: `PASS` (7 passed, 0 failed in 83ms)
 
 #### Execution Console Output:
 ```text
@@ -1335,7 +1444,7 @@ console.log(`\n{"suite":"engine","passed":${passedTests},"failed":${failedTests}
 
 ### 8. Sentinel Facade & Stateful Rate Enforcement Tests (3 Gates)
 * **Target File**: [`tests/sentinel.test.js`](../../tests/sentinel.test.js)
-* **Execution Status**: `PASS` (3 passed, 0 failed in 89ms)
+* **Execution Status**: `PASS` (3 passed, 0 failed in 90ms)
 
 #### Execution Console Output:
 ```text
@@ -1479,7 +1588,7 @@ run();
 
 ### 9. RiskEventStore V1 & V2 Schema Validation & Migration Suite (8 Gates)
 * **Target File**: [`tests/store.test.js`](../../tests/store.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 85ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 78ms)
 
 #### Execution Console Output:
 ```text
@@ -1662,7 +1771,7 @@ console.log(`\n{"suite":"store","passed":${passedTests},"failed":${failedTests},
 
 ### 10. @ameva/sentinel-browser Client Telemetry Unit Tests (2 Gates)
 * **Target File**: [`tests/browser.test.js`](../../tests/browser.test.js)
-* **Execution Status**: `PASS` (2 passed, 0 failed in 83ms)
+* **Execution Status**: `PASS` (2 passed, 0 failed in 75ms)
 
 #### Execution Console Output:
 ```text
@@ -1728,23 +1837,23 @@ console.log(`\n{"suite":"browser","passed":${passedTests},"failed":${failedTests
 
 ### 11. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)
 * **Target File**: [`tests/browser-integration/dashboard.spec.js`](../../tests/browser-integration/dashboard.spec.js)
-* **Execution Status**: `PASS` (9 passed, 0 failed in 15780ms)
+* **Execution Status**: `PASS` (9 passed, 0 failed in 13391ms)
 
 #### Execution Console Output:
 ```text
 Running 9 tests using 1 worker
 
-  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (737ms)
-  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (590ms)
-  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (155ms)
-  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (2.6s)
-  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.3s)
-  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (385ms)
-  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (920ms)
-  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (821ms)
-  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (298ms)
+  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (739ms)
+  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (512ms)
+  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (145ms)
+  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.9s)
+  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.4s)
+  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (329ms)
+  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (651ms)
+  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (883ms)
+  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (263ms)
 
-  9 passed (14.0s)
+  9 passed (11.9s)
 ```
 
 #### Source Code Verification (`tests/browser-integration/dashboard.spec.js`):

@@ -1,4 +1,4 @@
-export interface CounterIncrementResult {
+﻿export interface CounterIncrementResult {
   count: number;
   resetAt: number;
 }
@@ -14,22 +14,37 @@ interface WindowBucket {
   expiresAt: number;
 }
 
+export interface MemoryCounterStoreOptions {
+  maxKeys?: number;
+}
+
 /**
- * Fixed-Window Memory Counter Store
- * 
- * Scope & Limitations:
- * - Fixed-window counter suitable for local development, testing, and single-instance Node runtimes.
- * - For multi-tenant, serverless, or distributed edge deployments, use an external atomic store (e.g. Redis / Cloudflare Durable Objects).
+ * Fixed-Window Memory Counter Store with Bounded Memory
  */
 export class MemoryFixedWindowCounterStore implements CounterStore {
   private store = new Map<string, WindowBucket>();
+  private readonly maxKeys: number;
+
+  constructor(options: MemoryCounterStoreOptions = {}) {
+    this.maxKeys = options.maxKeys ?? 10000;
+  }
 
   async increment(key: string, options: { windowMs: number; amount?: number }): Promise<CounterIncrementResult> {
     const now = Date.now();
     const amount = options.amount ?? 1;
+    this.prune();
+
     const existing = this.store.get(key);
 
     if (!existing || existing.expiresAt <= now) {
+      if (this.store.size >= this.maxKeys) {
+        this.prune();
+        if (this.store.size >= this.maxKeys) {
+          // Evict oldest entry to protect memory
+          const oldestKey = this.store.keys().next().value;
+          if (oldestKey) this.store.delete(oldestKey);
+        }
+      }
       const resetAt = now + options.windowMs;
       this.store.set(key, { count: amount, expiresAt: resetAt });
       return { count: amount, resetAt };
@@ -51,6 +66,15 @@ export class MemoryFixedWindowCounterStore implements CounterStore {
 
   async reset(key: string): Promise<void> {
     this.store.delete(key);
+  }
+
+  private prune(): void {
+    const now = Date.now();
+    for (const [k, bucket] of this.store.entries()) {
+      if (bucket.expiresAt <= now) {
+        this.store.delete(k);
+      }
+    }
   }
 }
 

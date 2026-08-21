@@ -2,9 +2,9 @@
   CollectorTokenPayload,
   VerifiedCollectorContext,
   KeyResolver,
+  NonceNamespace,
   NonceStore,
-  CollectorErrorCode,
-  VERIFIED_COLLECTOR_BRAND
+  CollectorErrorCode
 } from './types.js';
 
 export class CollectorVerificationError extends Error {
@@ -19,26 +19,48 @@ export class CollectorVerificationError extends Error {
   }
 }
 
+// Unexported internal Symbol guaranteeing brand unforgeability outside this module
+const VERIFIED_COLLECTOR_BRAND = Symbol('AMEVA_VERIFIED_COLLECTOR_INTERNAL');
+
 /**
- * In-memory atomic Nonce Store with automatic TTL cleanup
+ * In-memory atomic Nonce Store with bounded capacity and multi-tenant namespace
  */
 export class MemoryNonceStore implements NonceStore {
   private nonces = new Map<string, number>();
+  private readonly maxEntries: number;
 
-  async consume(nonce: string, expiresAt: number): Promise<boolean> {
+  constructor(options: { maxEntries?: number } = {}) {
+    this.maxEntries = options.maxEntries ?? 10000;
+  }
+
+  async consume(namespace: NonceNamespace, expiresAtEpochMs: number): Promise<boolean> {
+    if (!namespace || !namespace.issuer || !namespace.kid || !namespace.nonce) {
+      return false;
+    }
+    const key = `${namespace.issuer}:${namespace.kid}:${namespace.nonce}`;
     this.prune();
-    if (this.nonces.has(nonce)) {
+
+    if (this.nonces.has(key)) {
       return false; // Replay detected!
     }
-    this.nonces.set(nonce, expiresAt);
+
+    if (this.nonces.size >= this.maxEntries) {
+      // Memory bound reached -> prune aggressively or fail-closed
+      this.prune();
+      if (this.nonces.size >= this.maxEntries) {
+        return false;
+      }
+    }
+
+    this.nonces.set(key, expiresAtEpochMs);
     return true;
   }
 
   private prune(): void {
     const now = Date.now();
-    for (const [nonce, exp] of this.nonces.entries()) {
+    for (const [key, exp] of this.nonces.entries()) {
       if (exp <= now) {
-        this.nonces.delete(nonce);
+        this.nonces.delete(key);
       }
     }
   }
@@ -56,7 +78,7 @@ export class StaticKeyResolver implements KeyResolver {
 }
 
 /**
- * Creates unforgeable VerifiedCollectorContext branded with unexported module Symbol
+ * Internal factory creating unforgeable VerifiedCollectorContext
  */
 export function createVerifiedCollectorContext(payload: CollectorTokenPayload): VerifiedCollectorContext {
   return Object.freeze({
@@ -65,35 +87,59 @@ export function createVerifiedCollectorContext(payload: CollectorTokenPayload): 
     issuer: payload.iss,
     audience: payload.aud,
     sessionRef: payload.sessionRef,
-    issuedAt: payload.iat,
-    expiresAt: payload.exp
-  });
+    issuedAtEpochMs: payload.iat,
+    expiresAtEpochMs: payload.exp
+  }) as unknown as VerifiedCollectorContext;
 }
 
 /**
- * Checks if object is authentic VerifiedCollectorContext
+ * Internal guard checking if an object is an authentic VerifiedCollectorContext
  */
-export function isVerifiedCollectorContext(obj: any): obj is VerifiedCollectorContext {
-  return typeof obj === 'object' && obj !== null && obj[VERIFIED_COLLECTOR_BRAND] === true;
+export function isVerifiedCollectorContext(obj: unknown): obj is VerifiedCollectorContext {
+  return typeof obj === 'object' && obj !== null && (obj as any)[VERIFIED_COLLECTOR_BRAND] === true;
 }
 
 /**
- * Deterministic RFC 8785 Canonical JSON Serialization
+ * AMEVA Deterministic Canonical JSON Subset
+ * Handles primitives, objects with sorted keys, and arrays without circular references.
  */
-export function canonicalizeJson(obj: any): string {
-  if (obj === null || typeof obj !== 'object') {
+export function canonicalizeJsonSubset(obj: unknown, seen = new Set<unknown>()): string {
+  if (obj === null) return 'null';
+  if (typeof obj === 'number') {
+    if (!Number.isFinite(obj)) {
+      throw new CollectorVerificationError('MALFORMED_TOKEN', 'Non-finite numbers are not permitted in canonical JSON', 400);
+    }
     return JSON.stringify(obj);
   }
-  if (Array.isArray(obj)) {
-    return '[' + obj.map(canonicalizeJson).join(',') + ']';
+  if (typeof obj === 'boolean' || typeof obj === 'string') {
+    return JSON.stringify(obj);
   }
-  const sortedKeys = Object.keys(obj).sort();
-  const entries = sortedKeys.map(k => `${JSON.stringify(k)}:${canonicalizeJson(obj[k])}`);
+  if (typeof obj === 'undefined') {
+    throw new CollectorVerificationError('MALFORMED_TOKEN', 'Undefined values are not permitted in canonical JSON', 400);
+  }
+  if (typeof obj !== 'object') {
+    throw new CollectorVerificationError('MALFORMED_TOKEN', `Unsupported type ${typeof obj} in canonical JSON`, 400);
+  }
+
+  if (seen.has(obj)) {
+    throw new CollectorVerificationError('MALFORMED_TOKEN', 'Circular reference detected in payload', 400);
+  }
+  seen.add(obj);
+
+  if (Array.isArray(obj)) {
+    const items = obj.map(item => canonicalizeJsonSubset(item, seen));
+    seen.delete(obj);
+    return '[' + items.join(',') + ']';
+  }
+
+  const keys = Object.keys(obj as Record<string, unknown>).sort();
+  const entries = keys.map(k => `${JSON.stringify(k)}:${canonicalizeJsonSubset((obj as Record<string, unknown>)[k], seen)}`);
+  seen.delete(obj);
   return '{' + entries.join(',') + '}';
 }
 
 /**
- * Safe Base64URL utilities (Zero dependencies, Browser & Node isomorphic)
+ * Safe Base64URL utilities (Browser & Node isomorphic)
  */
 export function base64UrlEncode(data: string | Uint8Array): string {
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
@@ -127,7 +173,7 @@ export function base64UrlDecode(str: string): string {
 }
 
 /**
- * Length pre-checked constant-time comparison
+ * Length pre-checked constant-time buffer comparison
  */
 export function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) {
@@ -141,7 +187,7 @@ export function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 /**
- * Pure Isomorphic SHA-256 implementation (Zero dependencies)
+ * Pure Isomorphic SHA-256
  */
 function sha256(data: Uint8Array): Uint8Array {
   const K = [
@@ -256,10 +302,10 @@ export function computeHmacSha256(key: string | Uint8Array, data: string | Uint8
 }
 
 /**
- * Helper to generate a valid signed `sv1` token for testing and collectors
+ * Server-side helper to sign a valid `sv1` token
  */
 export function signCollectorToken(payload: CollectorTokenPayload, secretKey: string): string {
-  const canonical = canonicalizeJson(payload);
+  const canonical = canonicalizeJsonSubset(payload);
   const payloadB64 = base64UrlEncode(canonical);
   const signingInput = `sv1.${payloadB64}`;
   const sigBytes = computeHmacSha256(secretKey, signingInput);
@@ -268,24 +314,34 @@ export function signCollectorToken(payload: CollectorTokenPayload, secretKey: st
 }
 
 export interface VerifyTokenOptions {
-  expectedAudience?: string;
-  expectedPurpose?: string;
-  maxClockSkewMs?: number;
+  expectedAudience: string; // REQUIRED: Non-empty string
+  expectedPurpose: string;  // REQUIRED: Non-empty string
+  allowedIssuers?: string[]; // Whitelist of authorized issuers
+  maxClockSkewMs?: number;   // default 30,000ms
+  maxTokenLifetimeMs?: number; // default 300,000ms (5 min)
   nowEpochMs?: number;
 }
 
 /**
- * Complete sv1 Envelope Token Verifier Pipeline
+ * Strict sv1 Token Verifier Pipeline (Fail-Closed by Default)
  */
 export async function verifyCollectorToken(
   token: string,
   keyResolver: KeyResolver,
   nonceStore: NonceStore,
-  options: VerifyTokenOptions = {}
+  options: VerifyTokenOptions
 ): Promise<VerifiedCollectorContext> {
+  // Guard 0: Mandatory configuration check
+  if (!options || typeof options.expectedAudience !== 'string' || !options.expectedAudience.trim()) {
+    throw new CollectorVerificationError('CONFIGURATION_ERROR', 'options.expectedAudience must be a non-empty string', 500);
+  }
+  if (typeof options.expectedPurpose !== 'string' || !options.expectedPurpose.trim()) {
+    throw new CollectorVerificationError('CONFIGURATION_ERROR', 'options.expectedPurpose must be a non-empty string', 500);
+  }
+
   // Step 1: Max token size check (4096 bytes)
-  if (typeof token !== 'string' || token.length > 4096) {
-    throw new CollectorVerificationError('MALFORMED_TOKEN', 'Token exceeds maximum allowed size of 4096 bytes', 400);
+  if (typeof token !== 'string' || token.length === 0 || token.length > 4096) {
+    throw new CollectorVerificationError('MALFORMED_TOKEN', 'Token exceeds maximum allowed size of 4096 bytes or is empty', 400);
   }
 
   // Step 2: Format and segment validation (sv1.<payload_b64>.<sig_b64>)
@@ -295,6 +351,9 @@ export async function verifyCollectorToken(
   }
 
   const [, payloadB64, sigB64] = parts;
+  if (!payloadB64 || !sigB64) {
+    throw new CollectorVerificationError('MALFORMED_TOKEN', 'Token segments must be non-empty', 400);
+  }
 
   // Step 3: Base64URL Decode and Payload Parse
   let payload: CollectorTokenPayload;
@@ -305,29 +364,65 @@ export async function verifyCollectorToken(
     throw new CollectorVerificationError('MALFORMED_TOKEN', 'Failed to decode or parse token payload JSON', 400);
   }
 
-  // Mandatory fields check
+  // Mandatory fields & safe integer checks
   if (
     payload.v !== 1 ||
-    typeof payload.kid !== 'string' ||
-    typeof payload.iss !== 'string' ||
-    typeof payload.aud !== 'string' ||
-    typeof payload.purpose !== 'string' ||
-    typeof payload.iat !== 'number' ||
-    typeof payload.exp !== 'number' ||
-    typeof payload.nonce !== 'string' ||
+    typeof payload.kid !== 'string' || !payload.kid ||
+    typeof payload.iss !== 'string' || !payload.iss ||
+    typeof payload.aud !== 'string' || !payload.aud ||
+    typeof payload.purpose !== 'string' || !payload.purpose ||
+    !Number.isSafeInteger(payload.iat) || payload.iat <= 0 ||
+    !Number.isSafeInteger(payload.exp) || payload.exp <= 0 ||
+    typeof payload.nonce !== 'string' || !payload.nonce ||
     typeof payload.sessionRef !== 'string'
   ) {
-    throw new CollectorVerificationError('MALFORMED_TOKEN', 'Token payload is missing mandatory envelope claims', 400);
+    throw new CollectorVerificationError('MALFORMED_TOKEN', 'Token payload contains invalid or missing mandatory claims', 400);
   }
 
-  // Step 4: Key ID Resolution
+  // Step 4: Issuer Whitelist Check
+  if (options.allowedIssuers && options.allowedIssuers.length > 0) {
+    if (!options.allowedIssuers.includes(payload.iss)) {
+      throw new CollectorVerificationError('UNAUTHORIZED_ISSUER', `Issuer "${payload.iss}" is not in authorized issuers whitelist`, 403);
+    }
+  }
+
+  // Step 5: Audience & Purpose Validation (Strict)
+  if (payload.aud !== options.expectedAudience) {
+    throw new CollectorVerificationError('AUDIENCE_MISMATCH', `Expected audience "${options.expectedAudience}", got "${payload.aud}"`, 403);
+  }
+  if (payload.purpose !== options.expectedPurpose) {
+    throw new CollectorVerificationError('PURPOSE_MISMATCH', `Expected purpose "${options.expectedPurpose}", got "${payload.purpose}"`, 403);
+  }
+
+  // Step 6: Lifetime & Expiration Check
+  const now = options.nowEpochMs ?? Date.now();
+  if (payload.exp <= payload.iat) {
+    throw new CollectorVerificationError('MALFORMED_TOKEN', 'Token expiration must be strictly greater than issued timestamp', 400);
+  }
+
+  const maxLifetime = options.maxTokenLifetimeMs ?? 300000;
+  if ((payload.exp - payload.iat) > maxLifetime) {
+    throw new CollectorVerificationError('MALFORMED_TOKEN', `Token lifetime exceeds maximum allowed duration (${maxLifetime}ms)`, 400);
+  }
+
+  if (payload.exp < now) {
+    throw new CollectorVerificationError('TOKEN_EXPIRED', 'Collector token has expired', 401);
+  }
+
+  // Step 7: Timestamp Freshness Window Check (+- 30s default)
+  const maxClockSkewMs = options.maxClockSkewMs ?? 30000;
+  if (Math.abs(now - payload.iat) > maxClockSkewMs) {
+    throw new CollectorVerificationError('INVALID_TIMESTAMP_FRESHNESS', 'Token timestamp violates freshness window', 401);
+  }
+
+  // Step 8: Key ID Resolution
   const secretKey = await keyResolver.resolveKey(payload.kid);
   if (!secretKey) {
     throw new CollectorVerificationError('UNKNOWN_KEY_ID', `Key ID "${payload.kid}" is not recognized or has been revoked`, 401);
   }
 
-  // Step 5: Canonicalize & HMAC Constant-Time Verification
-  const canonical = canonicalizeJson(payload);
+  // Step 9: Canonicalize & HMAC Constant-Time Verification
+  const canonical = canonicalizeJsonSubset(payload);
   const reEncodedPayloadB64 = base64UrlEncode(canonical);
   const signingInput = `sv1.${reEncodedPayloadB64}`;
   const expectedSigBytes = computeHmacSha256(secretKey, signingInput);
@@ -343,30 +438,15 @@ export async function verifyCollectorToken(
     throw new CollectorVerificationError('INVALID_SIGNATURE', 'Cryptographic signature verification failed', 401);
   }
 
-  // Step 6: Expiration Check
-  const now = options.nowEpochMs ?? Date.now();
-  if (payload.exp < now) {
-    throw new CollectorVerificationError('TOKEN_EXPIRED', 'Collector token has expired', 401);
-  }
-
-  // Step 7: Timestamp Freshness Window Check (+- 30s default)
-  const maxClockSkewMs = options.maxClockSkewMs ?? 30000;
-  if (Math.abs(now - payload.iat) > maxClockSkewMs) {
-    throw new CollectorVerificationError('INVALID_TIMESTAMP_FRESHNESS', 'Token timestamp violates freshness window', 401);
-  }
-
-  // Step 8: Audience & Purpose Validation
-  if (options.expectedAudience && payload.aud !== options.expectedAudience) {
-    throw new CollectorVerificationError('AUDIENCE_MISMATCH', `Expected audience ${options.expectedAudience}, got ${payload.aud}`, 403);
-  }
-  if (options.expectedPurpose && payload.purpose !== options.expectedPurpose) {
-    throw new CollectorVerificationError('PURPOSE_MISMATCH', `Expected purpose ${options.expectedPurpose}, got ${payload.purpose}`, 403);
-  }
-
-  // Step 9: Replay Defense (Atomic Nonce Consumption)
-  const nonceAccepted = await nonceStore.consume(payload.nonce, payload.exp);
+  // Step 10: Replay Defense (Atomic Multi-Tenant Nonce Consumption)
+  const namespace: NonceNamespace = {
+    issuer: payload.iss,
+    kid: payload.kid,
+    nonce: payload.nonce
+  };
+  const nonceAccepted = await nonceStore.consume(namespace, payload.exp);
   if (!nonceAccepted) {
-    throw new CollectorVerificationError('REPLAY_ATTACK_DETECTED', `Nonce "${payload.nonce}" has already been used (Replay Attack Detected)`, 409);
+    throw new CollectorVerificationError('REPLAY_ATTACK_DETECTED', `Nonce "${payload.nonce}" has already been used for issuer "${payload.iss}" (Replay Attack Detected)`, 409);
   }
 
   // Return Unforgeable Branded Verified Context

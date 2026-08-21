@@ -25,13 +25,17 @@ export function validateRedirectUrl(
     return { valid: false, error: 'URL exceeds maximum length of 2048 characters' };
   }
 
-  // Guard 2: Control characters and CRLF injection
+  // Guard 2: Control characters, CRLF injection, and backslashes
   if (CONTROL_CHARACTERS.test(trimmed)) {
     return { valid: false, error: 'URL contains forbidden control characters or CRLF' };
   }
 
+  if (trimmed.includes('\\')) {
+    return { valid: false, error: 'URL contains forbidden backslash characters' };
+  }
+
   // Guard 3: Protocol-relative URLs (//evil.com)
-  if (trimmed.startsWith('//')) {
+  if (trimmed.startsWith('//') || trimmed.startsWith('/\\')) {
     return { valid: false, error: 'Protocol-relative URLs (//) are strictly prohibited' };
   }
 
@@ -40,10 +44,19 @@ export function validateRedirectUrl(
     return { valid: false, error: 'Dangerous URL protocol scheme detected' };
   }
 
-  // Guard 5: Relative URL support (/path/only)
+  // Guard 5: Relative URL normalization and validation
   if (trimmed.startsWith('/')) {
     if (options.allowRelative !== false) {
-      return { valid: true, sanitizedUrl: trimmed };
+      try {
+        const dummyBase = new URL('https://internal.sentinel.base');
+        const parsedRel = new URL(trimmed, dummyBase);
+        if (parsedRel.origin !== dummyBase.origin) {
+          return { valid: false, error: 'Relative URL parsed across origin boundary' };
+        }
+        return { valid: true, sanitizedUrl: parsedRel.pathname + parsedRel.search + parsedRel.hash };
+      } catch (err) {
+        return { valid: false, error: 'Malformed relative URL structure' };
+      }
     }
     return { valid: false, error: 'Relative URLs are not permitted in this context' };
   }
@@ -56,7 +69,7 @@ export function validateRedirectUrl(
     return { valid: false, error: 'Malformed URL structure' };
   }
 
-  // Protocol must be HTTPS (or HTTP for localhost in dev)
+  // Protocol must be HTTPS (or HTTP for localhost in local dev)
   const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
   if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && isLocalhost)) {
     return { valid: false, error: 'Redirect URL must use https: protocol' };

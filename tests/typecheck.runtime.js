@@ -3,6 +3,8 @@ import {
   createSentinel,
   MemoryFixedWindowCounterStore,
   MemoryRiskEventStore,
+  StaticKeyResolver,
+  MemoryNonceStore,
   SentinelAction,
   defaultPolicy,
   createPolicy,
@@ -18,7 +20,8 @@ import {
   isStoredRiskEventV1,
   isStoredRiskEventV2,
   sanitizeSignals,
-  createVerifiedCollectorContext,
+  signCollectorToken,
+  verifyCollectorToken,
   isVerifiedCollectorContext,
   validateRedirectUrl
 } from '../packages/sentinel/dist/index.js';
@@ -33,7 +36,11 @@ async function runRuntimeContract() {
   const snapshot = telemetry.snapshot();
   const sessionId = getLocalSessionId();
 
-  const authenticContext = createVerifiedCollectorContext({
+  const secretKey = 'runtime-secret-key-2026';
+  const keyResolver = new StaticKeyResolver({ 'collector-key-2026-a': secretKey });
+  const nonceStore = new MemoryNonceStore();
+
+  const token = signCollectorToken({
     v: 1,
     kid: 'collector-key-2026-a',
     iss: 'ameva-auth',
@@ -42,7 +49,13 @@ async function runRuntimeContract() {
     sessionRef: 'sess_contract_001',
     iat: Date.now(),
     exp: Date.now() + 60000,
-    nonce: 'nonce_contract_001'
+    nonce: 'nonce_contract_runtime_001'
+  }, secretKey);
+
+  const authenticContext = await verifyCollectorToken(token, keyResolver, nonceStore, {
+    expectedAudience: 'ameva-sentinel-collector',
+    expectedPurpose: 'telemetry-collect',
+    allowedIssuers: ['ameva-auth']
   });
 
   assert.strictEqual(isVerifiedCollectorContext(authenticContext), true);
@@ -84,12 +97,20 @@ async function runRuntimeContract() {
     mode: 'shadow',
     eventStore: memoryStore,
     counterStore,
+    keyResolver,
+    nonceStore,
+    expectedAudience: 'ameva-sentinel-collector',
+    expectedPurpose: 'telemetry-collect',
     redirectRegistry: {
       AI_FEED: 'https://example.com/llms.txt'
     }
   });
 
-  const report = await sentinel.score({ signals, customUserId: 'dev-runtime-user' });
+  const report = await sentinel.score({
+    signals,
+    customUserId: 'dev-runtime-user'
+  });
+
   assert.strictEqual(typeof report.score, 'number');
   assert.ok(report.traceId.startsWith('trc_'));
   assert.strictEqual(report.action, SentinelAction.ALLOW);

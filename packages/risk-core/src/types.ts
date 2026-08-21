@@ -1,4 +1,4 @@
-export enum SentinelAction {
+﻿export enum SentinelAction {
   ALLOW = 'ALLOW',
   OBSERVE = 'OBSERVE',
   RATE_LIMIT = 'RATE_LIMIT',
@@ -45,8 +45,7 @@ export type DecisionReasonCode =
 export type RedirectDestinationId =
   | 'AI_FEED'
   | 'BOT_GUIDANCE'
-  | 'DECOY_SERVICE'
-  | string;
+  | 'DECOY_SERVICE';
 
 export interface BotClassificationResult {
   isBotLikely: boolean;
@@ -82,16 +81,20 @@ export interface BotPolicyConfig {
   heuristicClassification?: boolean;
 }
 
-export const VERIFIED_COLLECTOR_BRAND = Symbol('AMEVA_VERIFIED_COLLECTOR_BRAND');
+declare const VERIFIED_COLLECTOR_BRAND: unique symbol;
 
+/**
+ * Opaque unforgeable cryptographic collector context.
+ * Cannot be constructed directly by consumers; only produced by verifyCollectorToken().
+ */
 export interface VerifiedCollectorContext {
   readonly [VERIFIED_COLLECTOR_BRAND]: true;
   readonly kid: string;
   readonly issuer: string;
   readonly audience: string;
   readonly sessionRef: string;
-  readonly issuedAt: number;
-  readonly expiresAt: number;
+  readonly issuedAtEpochMs: number;
+  readonly expiresAtEpochMs: number;
 }
 
 export interface RuleAttributes {
@@ -112,22 +115,34 @@ export interface SanitizedEvidence {
   message: string;
 }
 
-export interface TelemetrySignals {
+/**
+ * Untrusted raw input telemetry signals received from client or HTTP request
+ */
+export interface UntrustedTelemetrySignals {
   webdriver?: boolean;
   telemetryObserved?: boolean;
   sampleComplete?: boolean;
   observationDurationMs?: number;
   isTrustedEventsCount?: number;
+  trustedInputCount?: number;
   burstCount10s?: number;
   touchMismatch?: boolean;
   suspiciousUA?: boolean;
   claimedBot?: string;
-  verifiedBot?: boolean;
-  botCategory?: BotCategory;
   userAgent?: string;
+  token?: string;
   tokenPresented?: boolean;
   tokenFreshnessMs?: number;
-  customSignals?: Record<string, any>;
+  customSignals?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/**
+ * Internal enriched telemetry signals used during 4-stage pipeline evaluation
+ */
+export interface TelemetrySignals extends UntrustedTelemetrySignals {
+  botCategory?: BotCategory;
+  verifiedBot?: boolean; // Set strictly by evaluateVerified via authentic VerifiedCollectorContext
 }
 
 export interface SentinelRiskReport {
@@ -200,7 +215,9 @@ export type CollectorErrorCode =
   | 'INVALID_TIMESTAMP_FRESHNESS'
   | 'AUDIENCE_MISMATCH'
   | 'PURPOSE_MISMATCH'
-  | 'REPLAY_ATTACK_DETECTED';
+  | 'UNAUTHORIZED_ISSUER'
+  | 'REPLAY_ATTACK_DETECTED'
+  | 'CONFIGURATION_ERROR';
 
 export interface CollectorTokenPayload {
   v: 1;
@@ -209,8 +226,8 @@ export interface CollectorTokenPayload {
   aud: string;
   purpose: string;
   sessionRef: string;
-  iat: number;
-  exp: number;
+  iat: number; // safe integer epoch ms
+  exp: number; // safe integer epoch ms
   nonce: string;
 }
 
@@ -218,8 +235,14 @@ export interface KeyResolver {
   resolveKey(kid: string): Promise<string | null>;
 }
 
+export interface NonceNamespace {
+  issuer: string;
+  kid: string;
+  nonce: string;
+}
+
 export interface NonceStore {
-  consume(nonce: string, expiresAt: number): Promise<boolean>;
+  consume(namespace: NonceNamespace, expiresAtEpochMs: number): Promise<boolean>;
 }
 
 export function createTraceId(): string {
@@ -228,4 +251,3 @@ export function createTraceId(): string {
     : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
   return `trc_${uuid.replace(/-/g, '').slice(0, 16)}`;
 }
-

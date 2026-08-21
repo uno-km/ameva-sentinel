@@ -14,6 +14,7 @@
   type RiskEventStore,
   type SentinelPolicy,
   type TelemetrySignals,
+  type UntrustedTelemetrySignals,
   type TrafficTargetMode,
   type BotCategory,
   type BotIdentityState,
@@ -43,7 +44,6 @@
   sanitizeSignals,
   signCollectorToken,
   verifyCollectorToken,
-  createVerifiedCollectorContext,
   isVerifiedCollectorContext,
   MemoryNonceStore,
   StaticKeyResolver,
@@ -82,20 +82,7 @@ const rawSnapshot: BrowserTelemetrySnapshot = telemetryCollector.snapshot();
 const sessionId: string = getLocalSessionId();
 const defaultBrowserCollector: BrowserTelemetryCollector = browserTelemetry;
 
-// 2. Verified Collector Context Brand Contract
-const authenticContext: VerifiedCollectorContext = createVerifiedCollectorContext({
-  v: 1,
-  kid: 'collector-key-2026-a',
-  iss: 'ameva-auth',
-  aud: 'ameva-sentinel-collector',
-  purpose: 'telemetry-collect',
-  sessionRef: 'sess_contract_001',
-  iat: Date.now(),
-  exp: Date.now() + 60000,
-  nonce: 'nonce_contract_001'
-});
-
-// 3. Telemetry Signal Sanitization & Confidence Contract
+// 2. Telemetry Signal Sanitization & Confidence Contract
 const signals: TelemetrySignals = {
   telemetryObserved: rawSnapshot.telemetryObserved,
   sampleComplete: rawSnapshot.sampleComplete,
@@ -114,7 +101,7 @@ const signals: TelemetrySignals = {
 const sanitizedMinimal: MinimalDerivedSignals = sanitizeSignals(signals);
 const confidence: number = calculateConfidence(signals);
 
-// 4. Evidence and Attributes Structural Contract
+// 3. Evidence and Attributes Structural Contract
 const sampleAttrs: RuleAttributes = {
   observed: true,
   count: 3,
@@ -139,7 +126,7 @@ const sampleSanitizedEvidence: SanitizedEvidence = {
   message: sampleEvidence.message
 };
 
-// 5. Bot Policy & Routing Rules Type Contract
+// 4. Bot Policy & Routing Rules Type Contract
 const botRouting: BotRoutingRule = {
   action: SentinelAction.REDIRECT,
   destinationId: 'AI_FEED' as RedirectDestinationId,
@@ -161,7 +148,7 @@ const botPolicyConfig: BotPolicyConfig = {
   heuristicClassification: true
 };
 
-// 6. Custom Policy & Rules Contract
+// 5. Custom Policy & Rules Contract
 const customPolicy: SentinelPolicy = createPolicy({
   rules: [
     rules.webdriver({ weight: 30 }),
@@ -175,12 +162,16 @@ const customPolicy: SentinelPolicy = createPolicy({
   botPolicy: botPolicyConfig
 });
 
-// 7. Store Adapters Type Contract
+// 6. Store Adapters Type Contract
 const storeOptions: RiskEventStoreOptions = { maxItems: 50, maxAgeMs: 86400000 };
 const counterStore: CounterStore = new MemoryFixedWindowCounterStore();
 const altCounterStore: CounterStore = new MemoryCounterStore();
 const memoryEventStore: RiskEventStore = new MemoryRiskEventStore(storeOptions);
 const localEventStore: RiskEventStore = new LocalStorageRiskEventStore(storeOptions);
+
+// 7. Crypto & Token Verifier Type Contract
+const keyResolver: KeyResolver = new StaticKeyResolver({ 'collector-key-2026-a': 'test-secret' });
+const nonceStore: NonceStore = new MemoryNonceStore();
 
 // 8. Facade Options & Instance Contract
 const sentinelOptions: SentinelOptions = {
@@ -188,6 +179,10 @@ const sentinelOptions: SentinelOptions = {
   policy: customPolicy,
   counterStore,
   eventStore: memoryEventStore,
+  keyResolver,
+  nonceStore,
+  expectedAudience: 'sentinel-typecheck',
+  expectedPurpose: 'telemetry-collect',
   rateKeyProvider: (req: any) => (req?.customUserId ? `user_${req.customUserId}` : null),
   redirectRegistry: {
     AI_FEED: 'https://example.com/llms.txt',
@@ -198,10 +193,6 @@ const sentinelOptions: SentinelOptions = {
 
 const sentinel: Sentinel = createSentinel(sentinelOptions);
 
-// 9. Crypto & Token Verifier Type Contract
-const keyResolver: KeyResolver = new StaticKeyResolver({ 'collector-key-2026-a': 'test-secret' });
-const nonceStore: NonceStore = new MemoryNonceStore();
-
 async function runFullStaticTypeCheck(): Promise<void> {
   const reqMock = { signals, customUserId: 'dev-type-verifier' };
   const report: SentinelRiskReport = await sentinel.score(reqMock);
@@ -210,6 +201,24 @@ async function runFullStaticTypeCheck(): Promise<void> {
     policy: defaultPolicy,
     enforcementMode: 'SHADOW' as EnforcementMode
   };
+
+  const token = signCollectorToken({
+    v: 1,
+    kid: 'collector-key-2026-a',
+    iss: 'ameva-auth',
+    aud: 'sentinel-typecheck',
+    purpose: 'telemetry-collect',
+    sessionRef: 'sess_typecheck_1',
+    iat: Date.now(),
+    exp: Date.now() + 60000,
+    nonce: 'nonce_typecheck_1'
+  }, 'test-secret');
+
+  const authenticContext: VerifiedCollectorContext = await verifyCollectorToken(token, keyResolver, nonceStore, {
+    expectedAudience: 'sentinel-typecheck',
+    expectedPurpose: 'telemetry-collect'
+  });
+
   const directEngineReport: SentinelRiskReport = evaluate(signals, evalOptions);
   const verifiedReport: SentinelRiskReport = evaluateVerified(signals, authenticContext, evalOptions);
 
@@ -238,8 +247,6 @@ async function runFullStaticTypeCheck(): Promise<void> {
   void decision;
   void verifiedReport;
   void directEngineReport;
-  void keyResolver;
-  void nonceStore;
   void altCounterStore;
   void localEventStore;
   void defaultBrowserCollector;

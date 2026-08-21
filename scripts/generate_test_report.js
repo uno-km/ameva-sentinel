@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -45,19 +45,19 @@ const testSuites = [
   },
   {
     id: 'collector_crypto',
-    title: '3. Trust Boundary Collector HMAC, Freshness & Replay Attack Defense Suite (10 Gates)',
+    title: '3. Trust Boundary Collector HMAC, Freshness, Replay Attack & 100-Concurrency Suite (12 Gates)',
     file: 'tests/collector-crypto.test.js',
     category: 'Trust Boundary & Collector Crypto',
     command: 'node tests/collector-crypto.test.js',
-    expectedPasses: 10,
-    pointsPerTest: 15 / 10,
+    expectedPasses: 12,
+    pointsPerTest: 15 / 12,
     maxPoints: 15
   },
   {
     id: 'redirect_security',
     title: '4. Redirect Security & Closed-Destination Injection Defense Suite (6 Gates)',
     file: 'tests/redirect-security.test.js',
-    category: 'Redirect & Honeypot Security',
+    category: 'Redirect Security & Injection Defense',
     command: 'node tests/redirect-security.test.js',
     expectedPasses: 6,
     pointsPerTest: 10 / 6,

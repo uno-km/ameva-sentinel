@@ -2,12 +2,12 @@
 import {
   signCollectorToken,
   verifyCollectorToken,
-  createVerifiedCollectorContext,
   isVerifiedCollectorContext,
   MemoryNonceStore,
   StaticKeyResolver,
   constantTimeEqual,
   evaluateVerified,
+  canonicalizeJsonSubset,
   SentinelAction
 } from '../packages/risk-core/dist/index.js';
 
@@ -47,13 +47,16 @@ async function main() {
     sessionRef: 'sess_ref_123'
   };
 
+  const defaultVerifyOpts = {
+    expectedAudience: 'ameva-sentinel-collector',
+    expectedPurpose: 'telemetry-collect',
+    allowedIssuers: ['ameva-authenticator']
+  };
+
   // 1. Valid Signature & VerifiedCollectorContext issuance
-  await runTest('should verify valid sv1 token and issue unforgeable branded context', async () => {
+  await runTest('should verify valid sv1 token and issue authentic opaque context via verifier', async () => {
     const token = signCollectorToken(basePayload, secretKey);
-    const ctx = await verifyCollectorToken(token, keyResolver, nonceStore, {
-      expectedAudience: 'ameva-sentinel-collector',
-      expectedPurpose: 'telemetry-collect'
-    });
+    const ctx = await verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts);
 
     assert.strictEqual(isVerifiedCollectorContext(ctx), true);
     assert.strictEqual(ctx.kid, 'kid-2026-prod-a');
@@ -64,11 +67,11 @@ async function main() {
   // 2. Reject Malformed Token (> 4096 bytes or bad format)
   await runTest('should reject malformed or oversized tokens', async () => {
     await assert.rejects(
-      async () => verifyCollectorToken('invalid.token', keyResolver, nonceStore),
+      async () => verifyCollectorToken('invalid.token', keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'MALFORMED_TOKEN' }
     );
     await assert.rejects(
-      async () => verifyCollectorToken('sv1.' + 'a'.repeat(5000), keyResolver, nonceStore),
+      async () => verifyCollectorToken('sv1.' + 'a'.repeat(5000), keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'MALFORMED_TOKEN' }
     );
   });
@@ -78,7 +81,7 @@ async function main() {
     const badKidPayload = { ...basePayload, kid: 'unknown-key-999', nonce: 'nonce_bad_kid' };
     const token = signCollectorToken(badKidPayload, secretKey);
     await assert.rejects(
-      async () => verifyCollectorToken(token, keyResolver, nonceStore),
+      async () => verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'UNKNOWN_KEY_ID' }
     );
   });
@@ -88,7 +91,7 @@ async function main() {
     const token = signCollectorToken({ ...basePayload, nonce: 'nonce_tamper_1' }, secretKey);
     const tampered = token.slice(0, -4) + 'zzzz';
     await assert.rejects(
-      async () => verifyCollectorToken(tampered, keyResolver, nonceStore),
+      async () => verifyCollectorToken(tampered, keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'INVALID_SIGNATURE' }
     );
   });
@@ -103,7 +106,7 @@ async function main() {
     };
     const token = signCollectorToken(expiredPayload, secretKey);
     await assert.rejects(
-      async () => verifyCollectorToken(token, keyResolver, nonceStore),
+      async () => verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'TOKEN_EXPIRED' }
     );
   });
@@ -118,56 +121,78 @@ async function main() {
     };
     const token = signCollectorToken(stalePayload, secretKey);
     await assert.rejects(
-      async () => verifyCollectorToken(token, keyResolver, nonceStore),
+      async () => verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'INVALID_TIMESTAMP_FRESHNESS' }
     );
   });
 
-  // 7. Audience & Purpose Validation
-  await runTest('should reject audience or purpose mismatch', async () => {
-    const token = signCollectorToken({ ...basePayload, nonce: 'nonce_aud_test' }, secretKey);
+  // 7. Audience, Purpose & Issuer Whitelist Validation
+  await runTest('should reject audience, purpose, or unauthorized issuer mismatch', async () => {
+    const token1 = signCollectorToken({ ...basePayload, nonce: 'nonce_aud_1' }, secretKey);
     await assert.rejects(
-      async () => verifyCollectorToken(token, keyResolver, nonceStore, { expectedAudience: 'other-service' }),
+      async () => verifyCollectorToken(token1, keyResolver, nonceStore, { ...defaultVerifyOpts, expectedAudience: 'other-service' }),
       { name: 'CollectorVerificationError', code: 'AUDIENCE_MISMATCH' }
+    );
+
+    const token2 = signCollectorToken({ ...basePayload, nonce: 'nonce_aud_2' }, secretKey);
+    await assert.rejects(
+      async () => verifyCollectorToken(token2, keyResolver, nonceStore, { ...defaultVerifyOpts, expectedPurpose: 'other-purpose' }),
+      { name: 'CollectorVerificationError', code: 'PURPOSE_MISMATCH' }
+    );
+
+    const token3 = signCollectorToken({ ...basePayload, nonce: 'nonce_aud_3', iss: 'rogue-issuer' }, secretKey);
+    await assert.rejects(
+      async () => verifyCollectorToken(token3, keyResolver, nonceStore, { ...defaultVerifyOpts, allowedIssuers: ['trusted-only'] }),
+      { name: 'CollectorVerificationError', code: 'UNAUTHORIZED_ISSUER' }
     );
   });
 
-  // 8. Replay Attack Defense (Atomic Nonce Consumption)
+  // 8. Replay Attack Defense (Multi-Tenant Atomic Nonce Consumption)
   await runTest('should block replay attacks with REPLAY_ATTACK_DETECTED on duplicate nonce', async () => {
     const replayPayload = { ...basePayload, nonce: 'nonce_replay_unique_1' };
     const token = signCollectorToken(replayPayload, secretKey);
 
     // 1st Consumption -> SUCCESS
-    const ctx1 = await verifyCollectorToken(token, keyResolver, nonceStore);
+    const ctx1 = await verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts);
     assert.strictEqual(isVerifiedCollectorContext(ctx1), true);
 
     // 2nd Consumption -> REJECTED (HTTP 409)
     await assert.rejects(
-      async () => verifyCollectorToken(token, keyResolver, nonceStore),
+      async () => verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts),
       { name: 'CollectorVerificationError', code: 'REPLAY_ATTACK_DETECTED' }
     );
   });
 
-  // 9. evaluateVerified Brand Security
-  await runTest('evaluateVerified should grant VERIFIED state only with authentic branded context', () => {
-    const authenticCtx = createVerifiedCollectorContext({
-      v: 1,
-      kid: 'kid-2026-prod-a',
-      iss: 'ameva-auth',
-      aud: 'collector',
-      purpose: 'telemetry-collect',
-      iat: Date.now(),
-      exp: Date.now() + 60000,
-      nonce: 'nonce_eval_1',
-      sessionRef: 'sess_1'
-    });
+  // 9. 100 Concurrent Nonce Consumption Race Test
+  await runTest('concurrent 100-request nonce consumption race guarantees exactly 1 success and 99 replays', async () => {
+    const racePayload = { ...basePayload, nonce: 'nonce_race_test_100' };
+    const token = signCollectorToken(racePayload, secretKey);
+
+    const results = await Promise.allSettled(
+      Array.from({ length: 100 }, () =>
+        verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts)
+      )
+    );
+
+    const fulfilled = results.filter(r => r.status === 'fulfilled');
+    const rejected = results.filter(r => r.status === 'rejected');
+
+    assert.strictEqual(fulfilled.length, 1, `Expected exactly 1 fulfilled request, got ${fulfilled.length}`);
+    assert.strictEqual(rejected.length, 99, `Expected exactly 99 rejected requests, got ${rejected.length}`);
+    assert.strictEqual(rejected[0].reason.code, 'REPLAY_ATTACK_DETECTED');
+  });
+
+  // 10. evaluateVerified Brand Security (Rejects Forged Plain Object)
+  await runTest('evaluateVerified should reject structural forged objects and accept authentic verifier context', async () => {
+    const token = signCollectorToken({ ...basePayload, nonce: 'nonce_eval_verified_1' }, secretKey);
+    const authenticCtx = await verifyCollectorToken(token, keyResolver, nonceStore, defaultVerifyOpts);
 
     // Authentic Context -> VERIFIED
     const report1 = evaluateVerified({}, authenticCtx);
     assert.strictEqual(report1.verification?.state, 'VERIFIED');
-    assert.strictEqual(report1.verification?.issuer, 'ameva-auth');
+    assert.strictEqual(report1.verification?.issuer, 'ameva-authenticator');
 
-    // Forged Structural Object (Missing Brand Symbol) -> FAILED
+    // Forged Structural Object (Missing Internal Symbol) -> FAILED
     const forgedCtx = {
       isVerified: true,
       kid: 'hacker-kid',
@@ -177,16 +202,23 @@ async function main() {
     assert.strictEqual(report2.verification?.state, 'FAILED');
   });
 
-  // 10. Constant-Time Comparison Security
-  await runTest('constantTimeEqual should reject mismatched lengths and verify exact buffers', () => {
-    const b1 = new Uint8Array([1, 2, 3, 4]);
-    const b2 = new Uint8Array([1, 2, 3, 4]);
-    const b3 = new Uint8Array([1, 2, 3, 5]);
-    const b4 = new Uint8Array([1, 2, 3]);
+  // 11. Fail-Closed Configuration Guard
+  await runTest('verifyCollectorToken should fail-closed on missing mandatory expectedAudience/Purpose', async () => {
+    const token = signCollectorToken({ ...basePayload, nonce: 'nonce_cfg_1' }, secretKey);
+    await assert.rejects(
+      async () => verifyCollectorToken(token, keyResolver, nonceStore, {}),
+      { name: 'CollectorVerificationError', code: 'CONFIGURATION_ERROR' }
+    );
+  });
 
-    assert.strictEqual(constantTimeEqual(b1, b2), true);
-    assert.strictEqual(constantTimeEqual(b1, b3), false);
-    assert.strictEqual(constantTimeEqual(b1, b4), false);
+  // 12. Canonical JSON Subset Robustness
+  await runTest('canonicalizeJsonSubset should reject non-finite numbers and circular references', () => {
+    assert.throws(() => canonicalizeJsonSubset({ num: NaN }), { code: 'MALFORMED_TOKEN' });
+    assert.throws(() => canonicalizeJsonSubset({ num: Infinity }), { code: 'MALFORMED_TOKEN' });
+    
+    const circ = {};
+    circ.self = circ;
+    assert.throws(() => canonicalizeJsonSubset(circ), { code: 'MALFORMED_TOKEN' });
   });
 
   if (failedTests > 0) {
