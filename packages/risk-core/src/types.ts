@@ -24,13 +24,13 @@ export interface TelemetrySignals {
   telemetryObserved?: boolean;
   observationDurationMs?: number;
   isTrustedEventsCount?: number;
-  mousePhysicsVariance?: number;
   burstCount10s?: number;
   touchMismatch?: boolean;
   suspiciousUA?: boolean;
   claimedBot?: string;
   verifiedBot?: boolean;
-  hasSignedToken?: boolean;
+  tokenPresented?: boolean;
+  tokenVerified?: boolean;
   tokenFreshnessMs?: number;
   customSignals?: Record<string, any>;
 }
@@ -38,11 +38,19 @@ export interface TelemetrySignals {
 export interface SentinelRiskReport {
   traceId: string;
   score: number;                       // 0 ~ 100 (Clamped)
-  evidenceConfidence: number;          // 0.00 ~ 1.00 (Signal & Rule Completeness Index)
-  action: SentinelAction;              // Actual action to take
+  evidenceConfidence: number;          // 0.00 ~ 1.00 (Signal Completeness Index)
+  action: SentinelAction;              // Actual action executed (OBSERVE in shadow mode)
   recommendedAction: SentinelAction;   // Evaluated policy recommendation
   enforcementMode: EnforcementMode;    // 'SHADOW' | 'ENFORCE'
   policyVersion: string;
   evidence: EvidenceItem[];
   evaluatedAt: string;
+  signals?: TelemetrySignals;
+}
+
+export function createTraceId(): string {
+  const uuid = typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  return `trc_${uuid.replace(/-/g, '').slice(0, 16)}`;
 }

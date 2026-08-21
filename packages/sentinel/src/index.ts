@@ -6,7 +6,17 @@ import {
   defaultPolicy,
   evaluate,
   createPolicy,
-  rules
+  rules,
+  MemoryFixedWindowCounterStore,
+  MemoryCounterStore,
+  MemoryRiskEventStore,
+  LocalStorageRiskEventStore,
+  StoredRiskEventV1,
+  toStoredRiskEvent,
+  sanitizeSignals,
+  createTraceId,
+  CounterStore,
+  RiskEventStore
 } from '@ameva/sentinel-risk-core';
 
 export {
@@ -14,39 +24,126 @@ export {
   SentinelRiskReport,
   TelemetrySignals,
   SentinelPolicy,
+  defaultPolicy,
   createPolicy,
   rules,
-  evaluate
+  evaluate,
+  MemoryFixedWindowCounterStore,
+  MemoryCounterStore,
+  MemoryRiskEventStore,
+  LocalStorageRiskEventStore,
+  StoredRiskEventV1,
+  toStoredRiskEvent,
+  sanitizeSignals,
+  createTraceId
 };
 
 export interface SentinelOptions {
   policy?: SentinelPolicy;
-  salt?: string;
+  mode?: 'shadow' | 'enforce';
+  counterStore?: CounterStore;
+  eventStore?: RiskEventStore | null;
+  rateKeyProvider?: (req: any) => string | null;
 }
 
 export class Sentinel {
   private policy: SentinelPolicy;
+  private mode: 'shadow' | 'enforce';
+  private counterStore: CounterStore;
+  private eventStore: RiskEventStore | null;
+  private rateKeyProvider?: (req: any) => string | null;
 
   constructor(options: SentinelOptions = {}) {
     this.policy = options.policy || defaultPolicy;
+    this.mode = options.mode || 'shadow';
+    this.counterStore = options.counterStore || new MemoryFixedWindowCounterStore();
+    this.eventStore = options.eventStore || null;
+    this.rateKeyProvider = options.rateKeyProvider;
   }
 
   /**
-   * 1-Line Signature API: Evaluates HTTP request and returns an explainable SentinelRiskReport
-   * Pipeline: score() -> collect() -> verify() -> evaluate() -> recommend()
+   * Main Evaluation Pipeline:
+   * 1. Collect telemetry & headers
+   * 2. Apply rate limiter increment if rateKey is present
+   * 3. Verify signature (stubbed in v0.5)
+   * 4. Evaluate risk against policy
+   * 5. Persist sanitized report to eventStore (if configured)
    */
   async score(req: any): Promise<SentinelRiskReport> {
-    const ctx = await this.collect(req);
-    const verified = await this.verify(ctx);
-    const report = evaluate(verified, this.policy);
+    const rawSignals = await this.collect(req);
+
+    // Optional Rate Limiting (Session/Client Scoped)
+    let burstCount10s = rawSignals.burstCount10s ?? 1;
+    const rateKey = this.deriveRateKey(req);
+    if (rateKey) {
+      try {
+        const rate = await this.counterStore.increment(rateKey, { windowMs: 10000 });
+        burstCount10s = rate.count;
+      } catch (e) {}
+    }
+
+    const enrichedSignals: TelemetrySignals = {
+      ...rawSignals,
+      burstCount10s
+    };
+
+    const verified = await this.verify(enrichedSignals);
+    const report = evaluate(verified, {
+      policy: this.policy,
+      enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW'
+    });
+
+    if (this.eventStore && typeof this.eventStore.append === 'function') {
+      try {
+        await this.eventStore.append(report);
+      } catch (e) {}
+    }
+
     return report;
   }
 
   /**
-   * 1. Collect: Extract signals from HTTP headers and client telemetry body
+   * Derives session or client rate limiting key.
+   * Returns null if no explicit session or client key is provided (prevents shared anonymous collisions).
    */
+  deriveRateKey(req: any): string | null {
+    if (this.rateKeyProvider) {
+      return this.rateKeyProvider(req);
+    }
+    if (!req) return null;
+    if (req.sessionId) return `sess_${req.sessionId}`;
+    if (req.testClientId) return `test_${req.testClientId}`;
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        const key = 'ameva:sentinel:session-id';
+        const existing = sessionStorage.getItem(key);
+        if (existing) return existing;
+        const newId = 'sess_' + Math.random().toString(36).substring(2, 10);
+        sessionStorage.setItem(key, newId);
+        return newId;
+      } catch (e) {}
+    }
+    return null;
+  }
+
   async collect(req: any): Promise<TelemetrySignals> {
     if (!req) return {};
+
+    // Support direct signals bag from browser-sdk
+    if (req.signals && typeof req.signals === 'object') {
+      const s = req.signals;
+      return {
+        webdriver: !!s.webdriverObserved || !!s.webdriver,
+        telemetryObserved: !!s.telemetryObserved,
+        observationDurationMs: typeof s.observationDurationMs === 'number' ? s.observationDurationMs : 6000,
+        isTrustedEventsCount: typeof s.trustedInputCount === 'number' ? s.trustedInputCount : (typeof s.isTrustedEventsCount === 'number' ? s.isTrustedEventsCount : 0),
+        touchMismatch: !!s.touchMismatch,
+        suspiciousUA: !!s.suspiciousUA,
+        tokenPresented: Boolean(s.token),
+        tokenVerified: false,
+        tokenFreshnessMs: typeof s.tokenFreshnessMs === 'number' ? s.tokenFreshnessMs : 100
+      };
+    }
 
     const headers = req.headers || {};
     const getHeader = (name: string): string => {
@@ -57,7 +154,6 @@ export class Sentinel {
     const ua = getHeader('user-agent');
     const secChUaMobile = getHeader('sec-ch-ua-mobile');
 
-    // Parse Body if present
     let body: any = {};
     if (typeof req.json === 'function') {
       try { body = await req.json(); } catch (e) {}
@@ -71,23 +167,26 @@ export class Sentinel {
 
     return {
       webdriver: isWebdriver,
-      burstCount10s: typeof body.burst_count === 'number' ? body.burst_count : 1,
-      isTrustedEventsCount: typeof body.trusted_events === 'number' ? body.trusted_events : 1,
+      telemetryObserved: body.telemetry_observed !== undefined ? !!body.telemetry_observed : (body.trusted_events !== undefined),
+      observationDurationMs: typeof body.observation_duration_ms === 'number' ? body.observation_duration_ms : 6000,
+      isTrustedEventsCount: typeof body.trusted_events === 'number' ? body.trusted_events : 0,
       touchMismatch: isTouchMismatch,
       suspiciousUA: isSuspiciousUA,
       claimedBot: body.claimed_bot || (ua.includes('Bot') ? 'claimed_bot' : undefined),
-      hasSignedToken: !!body.token,
+      tokenPresented: Boolean(body.token),
+      tokenVerified: false, // Cryptographic verification required in Collector v0.6
       tokenFreshnessMs: body.timestamp ? Date.now() - body.timestamp : 100
     };
   }
 
-  /**
-   * 2. Verify: Validate token authenticity and replay protection
-   */
   async verify(signals: TelemetrySignals): Promise<TelemetrySignals> {
-    // In production, verifies token signature with HMAC secret
+    // In v0.5 Prototype, verification requires collector endpoint
     return signals;
   }
+}
+
+export function createSentinel(options: SentinelOptions = {}): Sentinel {
+  return new Sentinel(options);
 }
 
 export const sentinel = new Sentinel();

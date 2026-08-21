@@ -3,7 +3,8 @@
  * Privacy-first browser environment & user interaction telemetry collector
  * 
  * Guarantees:
- * - Throttled pointer sampling (100ms interval) to protect main-thread FPS
+ * - Throttled pointermove sampling (100ms interval) to protect 60fps main-thread
+ * - Discrete click/touch/keyboard interactions recorded un-throttled
  * - ZERO raw mouse coordinates collected
  * - ZERO keystroke contents or form values collected
  * - Non-persistent per-tab ephemeral session identifier
@@ -30,10 +31,6 @@ export interface BrowserTelemetrySnapshot {
   collectedAt: string;
 }
 
-/**
- * Returns ephemeral per-tab session ID from sessionStorage.
- * Disposed automatically when the tab closes.
- */
 export function getLocalSessionId(): string {
   if (typeof sessionStorage === 'undefined') return 'ephemeral_local_session';
   const key = 'ameva:sentinel:session-id';
@@ -53,6 +50,7 @@ export class BrowserTelemetryCollector {
   private isListening = false;
   private maxEventsCap: number;
   private pointerIntervalMs: number;
+  private samplingWindowMs: number;
   private lastPointerSampleAt = 0;
   private abortController: AbortController | null = null;
 
@@ -65,8 +63,19 @@ export class BrowserTelemetryCollector {
   constructor(options: BrowserTelemetryOptions = {}) {
     this.maxEventsCap = options.maxEventsCap ?? 500;
     this.pointerIntervalMs = options.pointerSampleIntervalMs ?? 100;
+    this.samplingWindowMs = options.samplingWindowMs ?? 5000;
     if (options.autoStart !== false) {
       this.start();
+    }
+  }
+
+  private recordInteraction(type: 'pointer' | 'touch' | 'keyboard', isTrusted: boolean): void {
+    if (type === 'pointer' && this.pointerEvents < this.maxEventsCap) this.pointerEvents++;
+    if (type === 'touch' && this.touchEvents < this.maxEventsCap) this.touchEvents++;
+    if (type === 'keyboard' && this.keyboardEvents < this.maxEventsCap) this.keyboardEvents++;
+
+    if (isTrusted && this.trustedEvents < this.maxEventsCap) {
+      this.trustedEvents++;
     }
   }
 
@@ -76,37 +85,35 @@ export class BrowserTelemetryCollector {
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
-    const onPointer = (e: Event) => {
+    // 1. Throttled Pointer Movement (100ms interval)
+    const onPointerMove = (e: PointerEvent | MouseEvent) => {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
       if (now - this.lastPointerSampleAt < this.pointerIntervalMs) {
         return; // Throttled to prevent main-thread overhead
       }
       this.lastPointerSampleAt = now;
-
-      if (this.pointerEvents < this.maxEventsCap) this.pointerEvents++;
-      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
-        this.trustedEvents++;
-      }
+      this.recordInteraction('pointer', e.isTrusted === true);
     };
 
-    const onTouch = (e: Event) => {
-      if (this.touchEvents < this.maxEventsCap) this.touchEvents++;
-      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
-        this.trustedEvents++;
-      }
+    // 2. Discrete User Click (Never throttled)
+    const onClick = (e: MouseEvent) => {
+      this.recordInteraction('pointer', e.isTrusted === true);
     };
 
-    const onKey = (e: Event) => {
-      if (this.keyboardEvents < this.maxEventsCap) this.keyboardEvents++;
-      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
-        this.trustedEvents++;
-      }
+    // 3. Discrete Touch Interactions (Never throttled)
+    const onTouch = (e: TouchEvent) => {
+      this.recordInteraction('touch', e.isTrusted === true);
     };
 
-    window.addEventListener('pointermove', onPointer, { passive: true, signal });
-    window.addEventListener('click', onPointer, { passive: true, signal });
-    window.addEventListener('touchstart', onTouch, { passive: true, signal });
-    window.addEventListener('keydown', onKey, { passive: true, signal });
+    // 4. Discrete Keyboard Interactions (Never throttled)
+    const onKey = (e: KeyboardEvent) => {
+      this.recordInteraction('keyboard', e.isTrusted === true);
+    };
+
+    window.addEventListener('pointermove', onPointerMove as EventListener, { passive: true, signal });
+    window.addEventListener('click', onClick as EventListener, { passive: true, signal });
+    window.addEventListener('touchstart', onTouch as EventListener, { passive: true, signal });
+    window.addEventListener('keydown', onKey as EventListener, { passive: true, signal });
   }
 
   snapshot(): BrowserTelemetrySnapshot {
@@ -126,6 +133,7 @@ export class BrowserTelemetryCollector {
       };
     }
 
+    const elapsed = Math.max(0, Date.now() - this.startTime);
     const nav = navigator as any;
     const isWebdriver = !!nav.webdriver;
     const hasTouch = 'ontouchstart' in window || (nav.maxTouchPoints || 0) > 0;
@@ -134,8 +142,8 @@ export class BrowserTelemetryCollector {
     const isSuspiciousUA = !nav.userAgent || /HeadlessChrome|PhantomJS|Selenium|Playwright|curl|wget|python-requests/i.test(nav.userAgent);
 
     return {
-      telemetryObserved: true,
-      observationDurationMs: Math.max(0, Date.now() - this.startTime),
+      telemetryObserved: this.isListening && elapsed >= 500,
+      observationDurationMs: elapsed,
       webdriverObserved: isWebdriver,
       trustedInputCount: this.trustedEvents,
       pointerEventCount: this.pointerEvents,

@@ -31,7 +31,7 @@ it('should classify clean synthetic baseline session as ALLOW with 0 score', () 
     telemetryObserved: true,
     observationDurationMs: 10000,
     isTrustedEventsCount: 8,
-    hasSignedToken: true,
+    tokenVerified: true,
     tokenFreshnessMs: 500
   };
 

@@ -1,10 +1,10 @@
 # 🛡️ AMEVA Sentinel
 
 > **Privacy-first Security Observability Layer for Web Applications**  
-> *AMEVA Sentinel v0.5 — Browser-Local Shadow Mode Prototype*
+> *AMEVA Sentinel v0.5.0-alpha.1 — Browser-Local Shadow Mode Prototype*
 
 ![Tests](https://img.shields.io/badge/internal%20tests-16%20passing-16a34a?style=flat-square)
-![Stage](https://img.shields.io/badge/status-v0.5%20prototype-blue?style=flat-square)
+![Stage](https://img.shields.io/badge/stage-v0.5.0--alpha.1-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)
 ![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)
 
@@ -17,22 +17,22 @@
 
 ---
 
-## 🏗️ Architecture & Vertical Slice (v0.5)
+## 🏗️ Architecture & Single Source of Truth
 
 ```text
-[Browser User Interaction]
+[Browser Interaction]
        │
        ▼
 [@ameva/sentinel-browser] ──► Software-observed signals (isTrusted count, duration, webdriver flag)
+       │                      (Throttled 100ms pointermove, discrete click/touch unthrottled)
+       ▼
+[sentinel.score(request)] ──► Session-scoped fixed-window counter + Policy-as-Code evaluation
+       │                      (Deterministic 0~100 clamp, strict UUID traceIds, tokenVerified gate)
+       ▼
+[StoredRiskEventV1] ───────► Explicit schema conversion (zero raw cookies/auth/headers/PII)
        │
        ▼
-[sentinel.score(request)] ──► Sliding-window rate counter + Policy-as-Code evaluation
-       │
-       ▼
-[RiskEventStore] ──────────► LocalStorageRiskEventStore (Idempotent, FIFO capacity, 24h TTL)
-       │
-       ▼
-[Shadow Mode Dashboard] ───► summarize(reports) dynamic aggregation & Policy Re-Evaluation
+[Shadow Mode Dashboard] ───► Single Risk Core engine import (100% DOM XSS Immune via DOM API)
 ```
 
 ---
@@ -51,13 +51,13 @@ const signals = telemetry.snapshot();
 ```javascript
 import {
   createSentinel,
-  MemoryCounterStore,
+  MemoryFixedWindowCounterStore,
   LocalStorageRiskEventStore
 } from '@ameva/sentinel';
 
 const sentinel = createSentinel({
   mode: 'shadow',
-  counterStore: new MemoryCounterStore(), // Single-process/local use
+  counterStore: new MemoryFixedWindowCounterStore(), // Single-process/local use
   eventStore: new LocalStorageRiskEventStore()
 });
 
@@ -66,7 +66,7 @@ const report = await sentinel.score({ signals });
 console.log(report);
 /* Output:
 {
-  "traceId": "trc_8fdc1a92e4b3",
+  "traceId": "trc_8fdc1a92e4b34455",
   "score": 75,
   "evidenceConfidence": 0.82,
   "action": "OBSERVE",
@@ -87,18 +87,19 @@ console.log(report);
 
 ---
 
-## 🔬 Honest Product Scope & Limitations (v0.5 Disclosure)
+## 🔬 Honest Product Scope & Limitations (v0.5.0-alpha.1 Disclosure)
 
-- **Browser-Local Prototype**: Current demo events are stored in the browser's `LocalStorage`. Multi-tenant central traffic aggregation is not yet supported.
-- **CounterStore**: `MemoryCounterStore` is intended for local testing and single-instance Node runtimes. Serverless/distributed edge deployments require external state engines (e.g. Redis / Durable Objects).
+- **Browser-Local Prototype**: Current events are stored in the browser's `LocalStorage`. Multi-tenant central traffic aggregation is not yet supported.
+- **CounterStore**: `MemoryFixedWindowCounterStore` is intended for local testing and single-instance Node runtimes. Serverless/distributed edge deployments require external state engines (e.g. Redis / Durable Objects).
 - **Software-Observed Signals**: Interaction metrics (`isTrusted`, `webdriver`) represent browser-reported software signals, not unforgeable hardware biometric proofs.
+- **Token Verification**: In v0.5, client tokens are marked `tokenPresented: true, tokenVerified: false`. Cryptographic HMAC signature verification will be enforced in the server-side Collector (v0.6).
 
 ---
 
 ## 🗺️ Next Roadmap
 
-1. **Automated Browser E2E Tests**: Playwright automated suites for tab sync, reload recovery, and listener disposal.
-2. **Server Collector API**: Central `/api/v1/sentinel/collect` endpoint with HMAC signed token verification.
+1. **Automated Browser E2E Tests**: Playwright automated suite for multi-tab sync, reload recovery, and listener disposal across Chromium, Firefox, WebKit.
+2. **Server Collector API**: Central `/api/v1/sentinel/collect` endpoint with HMAC signed token verification and replay protection.
 3. **Distributed State Adapters**: `RedisCounterStore` and `PostgresRiskEventStore`.
 
 ---

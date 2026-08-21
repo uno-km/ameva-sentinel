@@ -4,9 +4,13 @@ import {
   evaluate,
   createPolicy,
   rules,
+  MemoryFixedWindowCounterStore,
   MemoryCounterStore,
   MemoryRiskEventStore,
-  LocalStorageRiskEventStore
+  LocalStorageRiskEventStore,
+  toStoredRiskEvent,
+  sanitizeSignals,
+  createTraceId
 } from '../../risk-core/src/index.js';
 
 export {
@@ -15,68 +19,61 @@ export {
   createPolicy,
   rules,
   evaluate,
+  MemoryFixedWindowCounterStore,
   MemoryCounterStore,
   MemoryRiskEventStore,
-  LocalStorageRiskEventStore
+  LocalStorageRiskEventStore,
+  toStoredRiskEvent,
+  sanitizeSignals,
+  createTraceId
 };
 
 export class Sentinel {
-  /**
-   * @param options.mode - 'shadow' | 'enforce' (default: 'shadow')
-   * @param options.counterStore - Sliding window counter (MemoryCounterStore is local-only; for distributed environments, use Redis/Durable Objects)
-   * @param options.eventStore - Risk event persistence store
-   */
   constructor(options = {}) {
     this.policy = options.policy || defaultPolicy;
     this.mode = options.mode || 'shadow';
-    this.counterStore = options.counterStore || new MemoryCounterStore();
+    this.counterStore = options.counterStore || new MemoryFixedWindowCounterStore();
     this.eventStore = options.eventStore || null;
+    this.rateKeyProvider = options.rateKeyProvider;
   }
 
-  /**
-   * Evaluates HTTP request with stateful sliding-window rate tracking,
-   * shadow mode semantics, and event store persistence.
-   */
   async score(req) {
     const rawSignals = await this.collect(req);
 
-    // v0.5 Local Prototype: Use explicit session or test client identifier
+    let burstCount10s = rawSignals.burstCount10s ?? 1;
     const rateKey = this.deriveRateKey(req);
-    const rate = await this.counterStore.increment(rateKey, { windowMs: 10000 });
-    
-    // Combine collected signals with sliding window counter
+    if (rateKey) {
+      try {
+        const rate = await this.counterStore.increment(rateKey, { windowMs: 10000 });
+        burstCount10s = rate.count;
+      } catch (e) {}
+    }
+
     const enrichedSignals = {
       ...rawSignals,
-      burstCount10s: rate.count
+      burstCount10s
     };
 
     const verified = await this.verify(enrichedSignals);
-    const evaluated = evaluate(verified, {
+    const report = evaluate(verified, {
       policy: this.policy,
       enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW'
     });
 
-    // Sanitized Report for Storage (Strictly allowlisted minimal derived signals, zero PII / zero raw headers)
-    const sanitizedReport = {
-      ...evaluated,
-      signals: this.sanitizeDerivedSignals(verified)
-    };
-
     if (this.eventStore && typeof this.eventStore.append === 'function') {
       try {
-        await this.eventStore.append(sanitizedReport);
+        await this.eventStore.append(report);
       } catch (e) {}
     }
 
-    return sanitizedReport;
+    return report;
   }
 
-  /**
-   * Derives rate limiting key for v0.5 local evaluation.
-   * In a distributed server architecture, this will be replaced by a server-side subnet HMAC hash.
-   */
   deriveRateKey(req) {
-    if (!req) return 'ephemeral_local_session';
+    if (this.rateKeyProvider) {
+      return this.rateKeyProvider(req);
+    }
+    if (!req) return null;
     if (req.sessionId) return `sess_${req.sessionId}`;
     if (req.testClientId) return `test_${req.testClientId}`;
     if (typeof sessionStorage !== 'undefined') {
@@ -89,39 +86,24 @@ export class Sentinel {
         return newId;
       } catch (e) {}
     }
-    return 'ephemeral_local_session';
-  }
-
-  /**
-   * Strict privacy filter: Allowlist only minimal derived numerical & boolean signals.
-   * Strips all raw headers, tokens, cookies, and coordinates.
-   */
-  sanitizeDerivedSignals(signals = {}) {
-    return {
-      webdriver: !!signals.webdriver,
-      telemetryObserved: !!signals.telemetryObserved,
-      observationDurationMs: typeof signals.observationDurationMs === 'number' ? signals.observationDurationMs : 0,
-      isTrustedEventsCount: typeof signals.isTrustedEventsCount === 'number' ? signals.isTrustedEventsCount : 0,
-      burstCount10s: typeof signals.burstCount10s === 'number' ? signals.burstCount10s : 1,
-      touchMismatch: !!signals.touchMismatch,
-      suspiciousUA: !!signals.suspiciousUA
-    };
+    return null;
   }
 
   async collect(req) {
     if (!req) return {};
 
-    // Support direct signals bag
     if (req.signals && typeof req.signals === 'object') {
+      const s = req.signals;
       return {
-        webdriver: !!req.signals.webdriverObserved || !!req.signals.webdriver,
-        telemetryObserved: !!req.signals.telemetryObserved,
-        observationDurationMs: typeof req.signals.observationDurationMs === 'number' ? req.signals.observationDurationMs : 6000,
-        isTrustedEventsCount: typeof req.signals.trustedInputCount === 'number' ? req.signals.trustedInputCount : (typeof req.signals.isTrustedEventsCount === 'number' ? req.signals.isTrustedEventsCount : 0),
-        touchMismatch: !!req.signals.touchMismatch,
-        suspiciousUA: !!req.signals.suspiciousUA,
-        hasSignedToken: !!req.signals.hasSignedToken,
-        tokenFreshnessMs: typeof req.signals.tokenFreshnessMs === 'number' ? req.signals.tokenFreshnessMs : 100
+        webdriver: !!s.webdriverObserved || !!s.webdriver,
+        telemetryObserved: !!s.telemetryObserved,
+        observationDurationMs: typeof s.observationDurationMs === 'number' ? s.observationDurationMs : 6000,
+        isTrustedEventsCount: typeof s.trustedInputCount === 'number' ? s.trustedInputCount : (typeof s.isTrustedEventsCount === 'number' ? s.isTrustedEventsCount : 0),
+        touchMismatch: !!s.touchMismatch,
+        suspiciousUA: !!s.suspiciousUA,
+        tokenPresented: Boolean(s.token),
+        tokenVerified: false,
+        tokenFreshnessMs: typeof s.tokenFreshnessMs === 'number' ? s.tokenFreshnessMs : 100
       };
     }
 
@@ -153,7 +135,8 @@ export class Sentinel {
       touchMismatch: isTouchMismatch,
       suspiciousUA: isSuspiciousUA,
       claimedBot: body.claimed_bot || (ua.includes('Bot') ? 'claimed_bot' : undefined),
-      hasSignedToken: !!body.token,
+      tokenPresented: Boolean(body.token),
+      tokenVerified: false,
       tokenFreshnessMs: body.timestamp ? Date.now() - body.timestamp : 100
     };
   }

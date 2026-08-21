@@ -8,7 +8,14 @@ export const SentinelAction = {
   TEMPORARY_DENY: 'TEMPORARY_DENY'
 };
 
-export class MemoryCounterStore {
+export function createTraceId() {
+  const uuid = typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  return `trc_${uuid.replace(/-/g, '').slice(0, 16)}`;
+}
+
+export class MemoryFixedWindowCounterStore {
   constructor() {
     this.store = new Map();
   }
@@ -38,6 +45,8 @@ export class MemoryCounterStore {
     this.store.delete(key);
   }
 }
+
+export const MemoryCounterStore = MemoryFixedWindowCounterStore;
 
 export function sanitizeSignals(signals = {}) {
   return {
@@ -173,7 +182,7 @@ export class LocalStorageRiskEventStore {
 
 export function calculateConfidence(signals) {
   if (!signals || typeof signals !== 'object') return 0.10;
-  const qSignal = signals.hasSignedToken ? 1.0 : 0.5;
+  const qSignal = signals.tokenVerified === true ? 1.0 : 0.5;
   const validKeys = ['webdriver', 'burstCount10s', 'isTrustedEventsCount', 'touchMismatch', 'suspiciousUA'];
   const presentCount = validKeys.filter(k => signals[k] !== undefined).length;
   const cRules = Math.min(1.0, Math.max(0.4, presentCount / 4));
@@ -324,7 +333,7 @@ export function evaluate(signals = {}, optionsOrPolicy = defaultPolicy) {
     if (optionsOrPolicy.enforcementMode) enforcementMode = optionsOrPolicy.enforcementMode;
   }
 
-  const currentTraceId = traceId || 'trc_' + Math.random().toString(36).substring(2, 14);
+  const currentTraceId = traceId || createTraceId();
   const evidence = [];
   let calculatedScore = 0;
   const safeSignals = { ...signals };
@@ -373,6 +382,7 @@ export function evaluate(signals = {}, optionsOrPolicy = defaultPolicy) {
     enforcementMode,
     policyVersion: policy.version,
     evidence,
-    evaluatedAt: new Date().toISOString()
+    evaluatedAt: new Date().toISOString(),
+    signals: safeSignals
   };
 }

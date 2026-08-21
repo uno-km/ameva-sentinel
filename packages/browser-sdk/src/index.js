@@ -20,6 +20,7 @@ export class BrowserTelemetryCollector {
     this.isListening = false;
     this.maxEventsCap = options.maxEventsCap ?? 500;
     this.pointerIntervalMs = options.pointerSampleIntervalMs ?? 100;
+    this.samplingWindowMs = options.samplingWindowMs ?? 5000;
     this.lastPointerSampleAt = 0;
     this.abortController = null;
 
@@ -33,41 +34,45 @@ export class BrowserTelemetryCollector {
     }
   }
 
+  recordInteraction(type, isTrusted) {
+    if (type === 'pointer' && this.pointerEvents < this.maxEventsCap) this.pointerEvents++;
+    if (type === 'touch' && this.touchEvents < this.maxEventsCap) this.touchEvents++;
+    if (type === 'keyboard' && this.keyboardEvents < this.maxEventsCap) this.keyboardEvents++;
+
+    if (isTrusted && this.trustedEvents < this.maxEventsCap) {
+      this.trustedEvents++;
+    }
+  }
+
   start() {
     if (this.isListening || typeof window === 'undefined') return;
     this.isListening = true;
     this.abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const signal = this.abortController ? this.abortController.signal : undefined;
 
-    const onPointer = (e) => {
+    const onPointerMove = (e) => {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
       if (now - this.lastPointerSampleAt < this.pointerIntervalMs) {
         return;
       }
       this.lastPointerSampleAt = now;
+      this.recordInteraction('pointer', e.isTrusted === true);
+    };
 
-      if (this.pointerEvents < this.maxEventsCap) this.pointerEvents++;
-      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
-        this.trustedEvents++;
-      }
+    const onClick = (e) => {
+      this.recordInteraction('pointer', e.isTrusted === true);
     };
 
     const onTouch = (e) => {
-      if (this.touchEvents < this.maxEventsCap) this.touchEvents++;
-      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
-        this.trustedEvents++;
-      }
+      this.recordInteraction('touch', e.isTrusted === true);
     };
 
     const onKey = (e) => {
-      if (this.keyboardEvents < this.maxEventsCap) this.keyboardEvents++;
-      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
-        this.trustedEvents++;
-      }
+      this.recordInteraction('keyboard', e.isTrusted === true);
     };
 
-    window.addEventListener('pointermove', onPointer, { passive: true, signal });
-    window.addEventListener('click', onPointer, { passive: true, signal });
+    window.addEventListener('pointermove', onPointerMove, { passive: true, signal });
+    window.addEventListener('click', onClick, { passive: true, signal });
     window.addEventListener('touchstart', onTouch, { passive: true, signal });
     window.addEventListener('keydown', onKey, { passive: true, signal });
   }
@@ -89,6 +94,7 @@ export class BrowserTelemetryCollector {
       };
     }
 
+    const elapsed = Math.max(0, Date.now() - this.startTime);
     const nav = navigator;
     const isWebdriver = !!nav.webdriver;
     const hasTouch = 'ontouchstart' in window || (nav.maxTouchPoints || 0) > 0;
@@ -97,8 +103,8 @@ export class BrowserTelemetryCollector {
     const isSuspiciousUA = !nav.userAgent || /HeadlessChrome|PhantomJS|Selenium|Playwright|curl|wget|python-requests/i.test(nav.userAgent);
 
     return {
-      telemetryObserved: true,
-      observationDurationMs: Math.max(0, Date.now() - this.startTime),
+      telemetryObserved: this.isListening && elapsed >= 500,
+      observationDurationMs: elapsed,
       webdriverObserved: isWebdriver,
       trustedInputCount: this.trustedEvents,
       pointerEventCount: this.pointerEvents,

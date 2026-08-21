@@ -41,13 +41,13 @@ async function run() {
     assert.strictEqual(typeof report.score, 'number');
     assert.strictEqual(report.action, SentinelAction.ALLOW);
     assert.strictEqual(report.enforcementMode, 'SHADOW');
-    assert.strictEqual(report.schemaVersion, undefined); // In return object
-    assert.ok(report.signals !== undefined, 'Report must contain sanitized derived signals');
+    assert.strictEqual(report.schemaVersion, undefined);
+    assert.ok(report.signals !== undefined, 'Report must contain signals');
     assert.strictEqual(report.signals.webdriver, false);
   });
 
-  // 2. Stateful Sliding-Window Request Burst Counter Test
-  await it('should automatically track sliding-window request rates and trigger burst rules on high frequency', async () => {
+  // 2. Stateful Fixed-Window Request Burst Counter Test
+  await it('should automatically track request rates and trigger burst rules on high frequency', async () => {
     const counterStore = new MemoryCounterStore();
     const rateSentinel = createSentinel({
       mode: 'shadow',
@@ -77,37 +77,44 @@ async function run() {
     assert.ok(rulesTriggered.includes('header.suspicious_ua'));
   });
 
-  // 3. Enforce Mode & Event Store Vertical Plumbing Test
-  await it('createSentinel({ mode: "enforce", eventStore }) should enforce and persist to store', async () => {
+  // 3. Genuine Enforce Mode Test: High-Risk Request triggers TEMPORARY_DENY
+  await it('createSentinel({ mode: "enforce", eventStore }) should enforce TEMPORARY_DENY on high-risk payload', async () => {
     const eventStore = new MemoryRiskEventStore();
     const enforcingSentinel = createSentinel({
       mode: 'enforce',
       eventStore
     });
 
-    const mockReq = {
-      testClientId: 'test_client_007',
+    const highRiskReq = {
+      testClientId: 'high_risk_bot_client',
       headers: {
-        'user-agent': 'HeadlessChrome/128.0'
+        'user-agent': 'HeadlessChrome/128.0',
+        'sec-ch-ua-mobile': '?1'
       },
       body: {
         webdriver: true,
         telemetry_observed: true,
         observation_duration_ms: 10000,
-        trusted_events: 0
+        trusted_events: 0,
+        is_touch: false
       }
     };
 
-    const risk = await enforcingSentinel.score(mockReq);
+    // Send 35 requests to trigger burst (30) + webdriver (25) + suspicious_ua (15) + trusted_absent (20) = 90 score
+    let risk;
+    for (let i = 0; i < 35; i++) {
+      risk = await enforcingSentinel.score(highRiskReq);
+    }
 
     assert.strictEqual(risk.enforcementMode, 'ENFORCE');
-    assert.strictEqual(risk.action, SentinelAction.OBSERVE);
-    assert.strictEqual(risk.recommendedAction, SentinelAction.OBSERVE);
+    assert.ok(risk.score >= 85, `Score should be >= 85, got ${risk.score}`);
+    assert.strictEqual(risk.recommendedAction, SentinelAction.TEMPORARY_DENY);
+    assert.strictEqual(risk.action, SentinelAction.TEMPORARY_DENY, 'In ENFORCE mode, high-risk session must be directly blocked');
 
     const stored = await eventStore.list();
-    assert.strictEqual(stored.length, 1);
+    assert.strictEqual(stored.length, 35);
     assert.strictEqual(stored[0].traceId, risk.traceId);
-    assert.strictEqual(stored[0].score, risk.score);
+    assert.strictEqual(stored[0].action, SentinelAction.TEMPORARY_DENY);
   });
 
   console.log('\n------------------------------------------------');

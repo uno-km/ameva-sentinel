@@ -3,7 +3,8 @@ import {
   SentinelRiskReport,
   TelemetrySignals,
   EvidenceItem,
-  EnforcementMode
+  EnforcementMode,
+  createTraceId
 } from './types.js';
 import { calculateConfidence } from './confidence.js';
 import { SentinelPolicy, defaultPolicy } from './policy.js';
@@ -15,15 +16,14 @@ export interface EvaluateOptions {
 }
 
 /**
- * Pure evaluation function.
- * Evaluates telemetry signals against policy and returns an immutable SentinelRiskReport.
- * Never mutates the input signals object.
+ * Pure risk evaluation engine.
+ * Evaluates telemetry signals against the configured SentinelPolicy.
+ * Guaranteed input immutability and deterministic 0~100 score clamping.
  */
 export function evaluate(
   signals: TelemetrySignals = {},
   optionsOrPolicy: EvaluateOptions | SentinelPolicy = defaultPolicy
 ): SentinelRiskReport {
-  // Normalize options
   let policy: SentinelPolicy = defaultPolicy;
   let traceId: string | undefined;
   let enforcementMode: EnforcementMode = 'SHADOW';
@@ -37,11 +37,11 @@ export function evaluate(
     if (opts.enforcementMode) enforcementMode = opts.enforcementMode;
   }
 
-  const currentTraceId = traceId || 'trc_' + Math.random().toString(36).substring(2, 14);
+  const currentTraceId = traceId || createTraceId();
   const evidence: EvidenceItem[] = [];
   let calculatedScore = 0;
 
-  // Defensive copy to prevent mutation
+  // Defensive copy to guarantee input immutability
   const safeSignals: TelemetrySignals = { ...signals };
 
   for (const rule of policy.rules) {
@@ -57,14 +57,14 @@ export function evaluate(
     }
   }
 
-  // Strict Clamping: Must be between 0 and 100
+  // Strict Clamping: Must be finite and clamped strictly between 0 and 100
   const finalScore = Number.isFinite(calculatedScore)
     ? Math.min(100, Math.max(0, calculatedScore))
     : 0;
 
   const evidenceConfidence = calculateConfidence(safeSignals);
 
-  // Determine Evaluated Recommendation
+  // Determine Evaluated Recommendation based on Policy Thresholds
   let recommendedAction = SentinelAction.ALLOW;
   if (finalScore >= policy.thresholds.deny) {
     recommendedAction = SentinelAction.TEMPORARY_DENY;
@@ -91,6 +91,7 @@ export function evaluate(
     enforcementMode,
     policyVersion: policy.version,
     evidence,
-    evaluatedAt: new Date().toISOString()
+    evaluatedAt: new Date().toISOString(),
+    signals: safeSignals
   };
 }

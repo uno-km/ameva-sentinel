@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMEVA-Sentinel Status &amp; Observability Manager (v0.5 Vertical Slice Demo)</title>
+    <title>AMEVA-Sentinel Status &amp; Observability Manager (v0.5-alpha.1 Prototype)</title>
     <link rel="icon" type="image/svg+xml" href="https://uno-km.vercel.app/shared/brand/favicon.svg">
     <style>
         :root {
@@ -190,7 +190,7 @@
             <h1>AMEVA-Sentinel</h1>
         </div>
         <div class="header-controls">
-            <span class="tomcat-badge badge-shadow">v0.5 Vertical Slice</span>
+            <span class="tomcat-badge badge-shadow">v0.5.0-alpha.1</span>
             <a href="https://github.com/uno-km/AMEVA-Sentinel" target="_blank" class="header-btn primary">🐙 GitHub</a>
         </div>
     </header>
@@ -201,7 +201,7 @@
                 <div class="status-title">
                     <span>🛡️ Security Observability Manager</span>
                     <span class="tomcat-badge badge-shadow">Shadow Mode</span>
-                    <span class="tomcat-badge badge-demo">LocalStorage (v0.5 Vertical Slice)</span>
+                    <span class="tomcat-badge badge-demo">LocalStorage (v0.5 Prototype)</span>
                 </div>
                 <div style="font-size: 0.85em; color: var(--text-muted); margin-top: 4px;">
                     Policy: <strong>v2026-08-21.1</strong> &bull; 
@@ -211,20 +211,20 @@
                 </div>
             </div>
             <div>
-                <button class="btn-tomcat" onclick="renderDashboard()">🔄 Refresh Status</button>
+                <button class="btn-tomcat" id="btn-refresh">🔄 Refresh Status</button>
             </div>
         </div>
 
         <div class="control-panel">
             <div style="font-weight: 700; color: var(--primary-color);">
-                ⚡ Live Browser Telemetry &amp; Ingestion:
-                <span style="font-size:0.85em; font-weight:normal; color:#64748b;">현재 브라우저의 실제 물리 신호(isTrusted, navigator.webdriver) 또는 시뮬레이션 신호를 즉시 평가합니다.</span>
+                ⚡ Live Ingestion Controls:
+                <span style="font-size:0.85em; font-weight:normal; color:#64748b;">수집된 소프트웨어 관측 신호를 단일 Risk Core 엔진으로 평가하고 브라우저에 안전하게 저장합니다.</span>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn-tomcat primary" onclick="evaluateRealBrowserTelemetry()">📡 Evaluate Real Browser (Live SDK)</button>
-                <button class="btn-tomcat" style="color:#b91c1c; border-color:#fca5a5;" onclick="simulateEvent('webdriver')">🤖 Simulate Headless Bot</button>
-                <button class="btn-tomcat" style="color:#b91c1c; border-color:#fca5a5;" onclick="simulateEvent('burst')">💥 Simulate Burst Attack</button>
-                <button class="btn-tomcat danger" onclick="clearEventStore()">🗑️ Clear Store</button>
+                <button class="btn-tomcat primary" id="btn-eval-browser">📡 Evaluate Real Browser (Live SDK)</button>
+                <button class="btn-tomcat" style="color:#b91c1c; border-color:#fca5a5;" id="btn-sim-bot">🤖 Simulate Headless Bot</button>
+                <button class="btn-tomcat" style="color:#b91c1c; border-color:#fca5a5;" id="btn-sim-burst">💥 Simulate Burst Attack</button>
+                <button class="btn-tomcat danger" id="btn-clear">🗑️ Clear Store</button>
             </div>
         </div>
 
@@ -278,7 +278,6 @@
                 <div style="margin-top:10px;">
                     <div style="font-size:0.9em; font-weight:700; color:var(--primary-color); margin-bottom:6px;">Triggered Policy Rules Breakdown</div>
                     <div id="top-rules-container" style="display:flex; flex-direction:column; gap:6px; font-size:0.85em;">
-                        <!-- Dynamic -->
                     </div>
                 </div>
             </div>
@@ -297,7 +296,7 @@
                             <span><code>automation.webdriver</code> Weight:</span>
                             <span id="val-webdriver" style="color:var(--primary-color); font-family:monospace;">25</span>
                         </div>
-                        <input type="range" id="slider-webdriver" min="5" max="50" value="25" style="width:100%;" oninput="runPolicySimulation()">
+                        <input type="range" id="slider-webdriver" min="5" max="50" value="25" style="width:100%;">
                     </div>
 
                     <div>
@@ -305,7 +304,7 @@
                             <span><code>rate.burst_request</code> Weight:</span>
                             <span id="val-burst" style="color:var(--primary-color); font-family:monospace;">30</span>
                         </div>
-                        <input type="range" id="slider-burst" min="10" max="60" value="30" style="width:100%;" oninput="runPolicySimulation()">
+                        <input type="range" id="slider-burst" min="10" max="60" value="30" style="width:100%;">
                     </div>
                 </div>
 
@@ -330,7 +329,7 @@
                 <table class="tomcat-table">
                     <thead>
                         <tr>
-                            <th style="width:130px;">Trace ID</th>
+                            <th style="width:140px;">Trace ID</th>
                             <th style="width:80px;">Score</th>
                             <th style="width:90px;">Evidence Conf</th>
                             <th style="width:110px;">Action (Shadow)</th>
@@ -340,18 +339,17 @@
                         </tr>
                     </thead>
                     <tbody id="sessions-tbody">
-                        <!-- Dynamic Rows -->
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="session-modal" onclick="closeSessionModal()">
-        <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-overlay" id="session-modal">
+        <div class="modal-box" id="modal-box">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
                 <div style="font-weight:800; font-size:1.1em; color:var(--primary-color);" id="modal-trace-id">Session Detail</div>
-                <button class="btn-tomcat" onclick="closeSessionModal()">✕ Close</button>
+                <button class="btn-tomcat" id="btn-close-modal">✕ Close</button>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
@@ -372,152 +370,41 @@
             <div>
                 <div style="font-size:0.88em; font-weight:700; color:var(--primary-color); margin-bottom:6px;">🔬 Triggered Evidence Attributes</div>
                 <div id="modal-evidence-list" style="display:flex; flex-direction:column; gap:6px;">
-                    <!-- Dynamic -->
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        const STORAGE_KEY = 'ameva:sentinel:risk-events';
+    <script type="module">
+        import {
+            evaluate,
+            createPolicy,
+            rules,
+            LocalStorageRiskEventStore
+        } from '../risk-core/src/index.js';
 
-        const pageLoadTime = Date.now();
-        let trustedHardwareEvents = 0;
-        ['pointermove', 'click', 'keydown', 'touchstart'].forEach(type => {
-            window.addEventListener(type, (e) => {
-                if (e.isTrusted === true) trustedHardwareEvents++;
-            }, { passive: true });
-        });
+        import {
+            browserTelemetry
+        } from '../browser-sdk/src/index.js';
 
-        function calculateConfidence(signals) {
-            const qSignal = signals.hasSignedToken ? 1.0 : 0.5;
-            const validKeys = ['webdriver', 'burstCount10s', 'isTrustedEventsCount', 'touchMismatch', 'suspiciousUA'];
-            const presentCount = validKeys.filter(k => signals[k] !== undefined).length;
-            const cRules = Math.min(1.0, Math.max(0.4, presentCount / 4));
-            const latency = signals.tokenFreshnessMs || 100;
-            const fFreshness = latency < 5000 ? 1.0 : 0.8;
-            const sCompleteness = signals.isTrustedEventsCount !== undefined ? 1.0 : 0.6;
-            return Math.min(1.0, Math.max(0.05, Math.round(qSignal * cRules * fFreshness * sCompleteness * 100) / 100));
+        const store = new LocalStorageRiskEventStore();
+
+        function createTextCell(row, text, className = '') {
+            const cell = row.insertCell();
+            cell.textContent = String(text ?? '');
+            if (className) cell.className = className;
+            return cell;
         }
 
-        function evaluateSignals(signals, customRules = null) {
-            const defaultRules = [
-                {
-                    id: 'automation.webdriver',
-                    weight: customRules?.webdriver ?? 25,
-                    evaluate: (s) => ({
-                        triggered: !!s.webdriver,
-                        attributes: { observed: !!s.webdriver, property: 'navigator.webdriver' },
-                        message: 'navigator.webdriver automation flag is active'
-                    })
-                },
-                {
-                    id: 'rate.burst_request',
-                    weight: customRules?.burst ?? 30,
-                    evaluate: (s) => ({
-                        triggered: (s.burstCount10s || 1) >= 30,
-                        attributes: { window: '10s', count: s.burstCount10s || 1, threshold: 30 },
-                        message: `High frequency request burst (${s.burstCount10s || 1} req / 10s)`
-                    })
-                },
-                {
-                    id: 'interaction.trusted_input_absent',
-                    weight: 20,
-                    evaluate: (s) => {
-                        if (!s.telemetryObserved) return { triggered: false, attributes: { telemetry_observed: false }, message: 'Telemetry not observed' };
-                        const dur = s.observationDurationMs || 0;
-                        const isTrusted = s.isTrustedEventsCount || 0;
-                        const burst = s.burstCount10s || 1;
-                        const isTriggered = dur >= 5000 && isTrusted === 0 && burst >= 5;
-                        return {
-                            triggered: isTriggered,
-                            attributes: { observation_duration_ms: dur, is_trusted_count: isTrusted, burst_count: burst },
-                            message: 'No trusted interaction events observed during active sampling window'
-                        };
-                    }
-                },
-                {
-                    id: 'environment.touch_mismatch',
-                    weight: 15,
-                    evaluate: (s) => ({
-                        triggered: !!s.touchMismatch,
-                        attributes: { touch_mismatch: true },
-                        message: 'Mobile platform Client-Hints and touch capability mismatch'
-                    })
-                }
-            ];
-
-            let score = 0;
-            const evidence = [];
-            for (const rule of defaultRules) {
-                const res = rule.evaluate(signals);
-                if (res.triggered) {
-                    score += rule.weight;
-                    evidence.push({
-                        rule: rule.id,
-                        score: rule.weight,
-                        attributes: res.attributes,
-                        message: res.message
-                    });
-                }
-            }
-
-            score = Math.min(100, Math.max(0, score));
-            const evidenceConfidence = calculateConfidence(signals);
-
-            let action = 'ALLOW';
-            if (score >= 85) action = 'TEMPORARY_DENY';
-            else if (score >= 70) action = 'REQUIRE_APP_VERIFICATION';
-            else if (score >= 50) action = 'RATE_LIMIT';
-            else if (score > 20) action = 'OBSERVE';
-
-            return {
-                schemaVersion: '1.0',
-                traceId: 'trc_' + Math.random().toString(36).substring(2, 10),
-                score,
-                evidenceConfidence,
-                action: action !== 'ALLOW' ? 'OBSERVE' : 'ALLOW',
-                recommendedAction: action,
-                enforcementMode: 'SHADOW',
-                policyVersion: '2026-08-21.1',
-                evidence,
-                signals,
-                evaluatedAt: new Date().toISOString()
-            };
+        function formatTimeAgo(date) {
+            const sec = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+            if (sec < 60) return `${sec}s ago`;
+            if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
+            return date.toLocaleTimeString();
         }
 
-        function getStoredReports() {
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                if (!raw) return [];
-                const parsed = JSON.parse(raw);
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (e) { return []; }
-        }
-
-        function saveReports(reports) {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(reports.slice(0, 500)));
-                window.dispatchEvent(new CustomEvent('sentinel:risk-event-appended'));
-            } catch (e) {}
-        }
-
-        function seedInitialDataIfEmpty() {
-            const current = getStoredReports();
-            if (current.length === 0) {
-                const seeds = [
-                    evaluateSignals({ webdriver: false, burstCount10s: 2, telemetryObserved: true, observationDurationMs: 8000, isTrustedEventsCount: 8, hasSignedToken: true }),
-                    evaluateSignals({ webdriver: true, burstCount10s: 48, telemetryObserved: true, observationDurationMs: 12000, isTrustedEventsCount: 0, hasSignedToken: true }),
-                    evaluateSignals({ webdriver: false, burstCount10s: 35, telemetryObserved: true, observationDurationMs: 5000, isTrustedEventsCount: 4, touchMismatch: true, hasSignedToken: true }),
-                    evaluateSignals({ webdriver: false, burstCount10s: 1, telemetryObserved: false, hasSignedToken: true }),
-                    evaluateSignals({ webdriver: true, burstCount10s: 6, telemetryObserved: true, observationDurationMs: 7000, isTrustedEventsCount: 0, hasSignedToken: false })
-                ];
-                saveReports(seeds);
-            }
-        }
-
-        function renderDashboard() {
-            const reports = getStoredReports();
+        async function renderDashboard() {
+            const reports = await store.list();
             const total = reports.length;
 
             const low = reports.filter(r => r.score < 30).length;
@@ -527,16 +414,16 @@
             const avgScore = total === 0 ? 0 : Math.round(reports.reduce((s, r) => s + r.score, 0) / total);
             const avgConf = total === 0 ? 0 : (reports.reduce((s, r) => s + (r.evidenceConfidence || 0.8), 0) / total).toFixed(2);
 
-            document.getElementById('stat-total').innerText = total.toLocaleString();
-            document.getElementById('stat-high').innerText = high.toLocaleString();
-            document.getElementById('stat-high-pct').innerText = total === 0 ? '0%' : `${Math.round((high / total) * 100)}% of traffic`;
-            document.getElementById('stat-avg-score').innerText = `${avgScore} / 100`;
-            document.getElementById('stat-avg-conf').innerText = avgConf;
+            document.getElementById('stat-total').textContent = total.toLocaleString();
+            document.getElementById('stat-high').textContent = high.toLocaleString();
+            document.getElementById('stat-high-pct').textContent = total === 0 ? '0%' : `${Math.round((high / total) * 100)}% of traffic`;
+            document.getElementById('stat-avg-score').textContent = `${avgScore} / 100`;
+            document.getElementById('stat-avg-conf').textContent = String(avgConf);
 
-            document.getElementById('banner-events-count').innerHTML = `<strong>${total} Events</strong>`;
-            document.getElementById('banner-last-event').innerText = total > 0 ? new Date(reports[0].evaluatedAt).toLocaleTimeString() : 'None';
-            document.getElementById('dist-count-label').innerText = `${total} events`;
-            document.getElementById('table-count-label').innerText = `${total} total entries`;
+            document.getElementById('banner-events-count').textContent = `${total} Events`;
+            document.getElementById('banner-last-event').textContent = total > 0 ? new Date(reports[0].evaluatedAt).toLocaleTimeString() : 'None';
+            document.getElementById('dist-count-label').textContent = `${total} events`;
+            document.getElementById('table-count-label').textContent = `${total} total entries`;
 
             const lowPct = total === 0 ? 100 : Math.round((low / total) * 100);
             const medPct = total === 0 ? 0 : Math.round((med / total) * 100);
@@ -546,9 +433,9 @@
             document.getElementById('dist-bar-med').style.width = `${medPct}%`;
             document.getElementById('dist-bar-high').style.width = `${highPct}%`;
 
-            document.getElementById('legend-low-pct').innerText = `${lowPct}% (${low})`;
-            document.getElementById('legend-med-pct').innerText = `${medPct}% (${med})`;
-            document.getElementById('legend-high-pct').innerText = `${highPct}% (${high})`;
+            document.getElementById('legend-low-pct').textContent = `${lowPct}% (${low})`;
+            document.getElementById('legend-med-pct').textContent = `${medPct}% (${med})`;
+            document.getElementById('legend-high-pct').textContent = `${highPct}% (${high})`;
 
             const ruleCounts = {};
             reports.forEach(r => {
@@ -558,178 +445,258 @@
             });
 
             const topRulesContainer = document.getElementById('top-rules-container');
+            topRulesContainer.textContent = '';
+
             const sortedRules = Object.entries(ruleCounts).sort((a, b) => b[1] - a[1]);
             if (sortedRules.length === 0) {
-                topRulesContainer.innerHTML = '<div style="color:#64748b;">No rules triggered.</div>';
+                const emptyMsg = document.createElement('div');
+                emptyMsg.style.color = '#64748b';
+                emptyMsg.textContent = 'No rules triggered in stored events.';
+                topRulesContainer.appendChild(emptyMsg);
             } else {
-                topRulesContainer.innerHTML = sortedRules.map(([rule, count]) => {
+                sortedRules.forEach(([rule, count]) => {
                     const pct = total === 0 ? 0 : Math.round((count / total) * 100);
-                    return `
-                        <div style="background:#f8fafc; border:1px solid var(--border-color); padding:6px 10px; border-radius:3px;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                                <span><code>${rule}</code></span>
-                                <strong>${count} (${pct}%)</strong>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                    const itemBox = document.createElement('div');
+                    itemBox.style.cssText = 'background:#f8fafc; border:1px solid #cbd5e1; padding:6px 10px; border-radius:3px;';
+
+                    const rowFlex = document.createElement('div');
+                    rowFlex.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:2px;';
+
+                    const codeElem = document.createElement('code');
+                    codeElem.textContent = rule;
+
+                    const strongElem = document.createElement('strong');
+                    strongElem.textContent = `${count} (${pct}%)`;
+
+                    rowFlex.appendChild(codeElem);
+                    rowFlex.appendChild(strongElem);
+                    itemBox.appendChild(rowFlex);
+                    topRulesContainer.appendChild(itemBox);
+                });
             }
 
             const tbody = document.getElementById('sessions-tbody');
-            if (reports.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding:20px;">No events in store. Click buttons above to generate real events!</td></tr>';
-            } else {
-                tbody.innerHTML = reports.map((r, idx) => {
-                    const scoreCls = r.score >= 70 ? 'score-high' : r.score >= 30 ? 'score-med' : 'score-low';
-                    const pillCls = r.recommendedAction === 'ALLOW' ? 'pill-allow' : r.recommendedAction === 'RATE_LIMIT' ? 'pill-deny' : r.recommendedAction === 'REQUIRE_APP_VERIFICATION' ? 'pill-verify' : 'pill-observe';
-                    const evidenceSummary = (r.evidence || []).map(e => `<code>${e.rule.split('.')[1] || e.rule} (+${e.score})</code>`).join(', ') || '<span style="color:#16a34a;">Clean</span>';
-                    const timeAgo = formatTimeAgo(new Date(r.evaluatedAt));
-                    const latestAttr = idx === 0 ? 'data-testid="latest-trace-id"' : '';
+            tbody.textContent = '';
 
-                    return `
-                        <tr onclick="showReportDetail(${idx})" data-trace-id="${r.traceId}">
-                            <td><code ${latestAttr}>${r.traceId}</code></td>
-                            <td><span class="score-box ${scoreCls}">${r.score}</span></td>
-                            <td style="font-family:monospace;">${r.evidenceConfidence || 0.85}</td>
-                            <td><span class="pill-action pill-observe">${r.action}</span></td>
-                            <td><span class="pill-action ${pillCls}">${r.recommendedAction}</span></td>
-                            <td>${evidenceSummary}</td>
-                            <td style="color:#64748b;">${timeAgo}</td>
-                        </tr>
-                    `;
-                }).join('');
+            if (reports.length === 0) {
+                const emptyRow = tbody.insertRow();
+                const cell = emptyRow.insertCell();
+                cell.colSpan = 7;
+                cell.style.cssText = 'text-align:center; color:#64748b; padding:20px;';
+                cell.textContent = 'No events in store. Click buttons above to generate real events!';
+            } else {
+                reports.forEach((r, idx) => {
+                    const row = tbody.insertRow();
+                    row.setAttribute('data-trace-id', r.traceId);
+                    row.onclick = () => showReportDetail(r);
+
+                    const traceCell = row.insertCell();
+                    const code = document.createElement('code');
+                    code.textContent = r.traceId;
+                    if (idx === 0) code.setAttribute('data-testid', 'latest-trace-id');
+                    traceCell.appendChild(code);
+
+                    const scoreCell = row.insertCell();
+                    const scoreBox = document.createElement('span');
+                    scoreBox.className = 'score-box ' + (r.score >= 70 ? 'score-high' : r.score >= 30 ? 'score-med' : 'score-low');
+                    scoreBox.textContent = String(r.score);
+                    scoreCell.appendChild(scoreBox);
+
+                    const confCell = createTextCell(row, r.evidenceConfidence || 0.85);
+                    confCell.style.fontFamily = 'monospace';
+
+                    const actionCell = row.insertCell();
+                    const actionPill = document.createElement('span');
+                    actionPill.className = 'pill-action pill-observe';
+                    actionPill.textContent = r.action;
+                    actionCell.appendChild(actionPill);
+
+                    const recCell = row.insertCell();
+                    const recPill = document.createElement('span');
+                    const pillCls = r.recommendedAction === 'ALLOW' ? 'pill-allow' : r.recommendedAction === 'RATE_LIMIT' ? 'pill-deny' : r.recommendedAction === 'REQUIRE_APP_VERIFICATION' ? 'pill-verify' : 'pill-observe';
+                    recPill.className = `pill-action ${pillCls}`;
+                    recPill.textContent = r.recommendedAction;
+                    recCell.appendChild(recPill);
+
+                    const evidenceCell = row.insertCell();
+                    if (!r.evidence || r.evidence.length === 0) {
+                        const cleanSpan = document.createElement('span');
+                        cleanSpan.style.color = '#16a34a';
+                        cleanSpan.textContent = 'Clean';
+                        evidenceCell.appendChild(cleanSpan);
+                    } else {
+                        r.evidence.forEach((e, i) => {
+                            if (i > 0) evidenceCell.appendChild(document.createTextNode(', '));
+                            const ruleCode = document.createElement('code');
+                            ruleCode.textContent = `${e.rule.split('.')[1] || e.rule} (+${e.score})`;
+                            evidenceCell.appendChild(ruleCode);
+                        });
+                    }
+
+                    const timeCell = createTextCell(row, formatTimeAgo(new Date(r.evaluatedAt)));
+                    timeCell.style.color = '#64748b';
+                });
             }
 
             runPolicySimulation();
         }
 
-        function formatTimeAgo(date) {
-            const sec = Math.round((Date.now() - date.getTime()) / 1000);
-            if (sec < 60) return `${sec}s ago`;
-            if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
-            return date.toLocaleTimeString();
-        }
+        function showReportDetail(r) {
+            if (!r) return;
+            document.getElementById('modal-trace-id').textContent = `Session Trace: ${r.traceId}`;
+            document.getElementById('modal-score').textContent = String(r.score);
+            document.getElementById('modal-confidence').textContent = String(r.evidenceConfidence || 0.85);
+            document.getElementById('modal-action').textContent = r.recommendedAction;
 
-        function evaluateRealBrowserTelemetry() {
-            const isWebdriver = !!navigator.webdriver;
-            const duration = Date.now() - pageLoadTime;
-            const hasTouch = 'ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0;
-            const isMobileUA = /Android|iPhone|iPad/i.test(navigator.userAgent);
+            const modalEvidenceList = document.getElementById('modal-evidence-list');
+            modalEvidenceList.textContent = '';
 
-            const signals = {
-                webdriver: isWebdriver,
-                telemetryObserved: true,
-                observationDurationMs: duration,
-                isTrustedEventsCount: trustedHardwareEvents,
-                touchMismatch: isMobileUA && !hasTouch,
-                suspiciousUA: !navigator.userAgent,
-                hasSignedToken: true,
-                burstCount10s: 1
-            };
+            if (!r.evidence || r.evidence.length === 0) {
+                const cleanMsg = document.createElement('div');
+                cleanMsg.style.cssText = 'color:#15803d; padding:10px;';
+                cleanMsg.textContent = '✅ Clean session. Zero suspicious evidence rules triggered.';
+                modalEvidenceList.appendChild(cleanMsg);
+            } else {
+                r.evidence.forEach((e, i) => {
+                    const itemBox = document.createElement('div');
+                    itemBox.className = 'evidence-item';
 
-            const report = evaluateSignals(signals);
-            const current = getStoredReports();
-            current.unshift(report);
-            saveReports(current);
-            renderDashboard();
-        }
+                    const headerFlex = document.createElement('div');
+                    headerFlex.style.cssText = 'display:flex; justify-content:space-between; font-weight:700; color:#004499;';
+                    
+                    const ruleName = document.createElement('span');
+                    ruleName.textContent = `${i + 1}. ${e.rule}`;
 
-        function simulateEvent(type) {
-            let signals = {};
-            if (type === 'webdriver') {
-                signals = { webdriver: true, burstCount10s: 45, telemetryObserved: true, observationDurationMs: 10000, isTrustedEventsCount: 0, hasSignedToken: true };
-            } else if (type === 'burst') {
-                signals = { webdriver: false, burstCount10s: 65, telemetryObserved: true, observationDurationMs: 6000, isTrustedEventsCount: 0, touchMismatch: true, hasSignedToken: true };
+                    const scoreVal = document.createElement('span');
+                    scoreVal.style.color = '#b91c1c';
+                    scoreVal.textContent = `+${e.score}`;
+
+                    headerFlex.appendChild(ruleName);
+                    headerFlex.appendChild(scoreVal);
+
+                    const messageElem = document.createElement('div');
+                    messageElem.style.cssText = 'font-size:0.85em; color:#0f172a; margin:2px 0;';
+                    messageElem.textContent = e.message;
+
+                    const attrBox = document.createElement('pre');
+                    attrBox.style.cssText = 'font-size:0.8em; color:#64748b; font-family:monospace; background:#ffffff; padding:4px 6px; border:1px solid #cbd5e1; border-radius:2px;';
+                    attrBox.textContent = JSON.stringify(e.attributes, null, 2);
+
+                    itemBox.appendChild(headerFlex);
+                    itemBox.appendChild(messageElem);
+                    itemBox.appendChild(attrBox);
+                    modalEvidenceList.appendChild(itemBox);
+                });
             }
 
-            const report = evaluateSignals(signals);
-            const current = getStoredReports();
-            current.unshift(report);
-            saveReports(current);
-            renderDashboard();
+            document.getElementById('session-modal').style.display = 'flex';
         }
 
-        function clearEventStore() {
-            localStorage.removeItem(STORAGE_KEY);
-            renderDashboard();
-        }
-
-        function runPolicySimulation() {
+        async function runPolicySimulation() {
             const w1 = parseInt(document.getElementById('slider-webdriver').value, 10);
             const w2 = parseInt(document.getElementById('slider-burst').value, 10);
 
-            document.getElementById('val-webdriver').innerText = w1;
-            document.getElementById('val-burst').innerText = w2;
+            document.getElementById('val-webdriver').textContent = String(w1);
+            document.getElementById('val-burst').textContent = String(w2);
 
-            const reports = getStoredReports();
+            const customPolicy = createPolicy({
+                rules: [
+                    rules.webdriver({ weight: w1 }),
+                    rules.burst({ weight: w2 }),
+                    rules.trustedInputAbsent(),
+                    rules.touchMismatch(),
+                    rules.suspiciousUA()
+                ]
+            });
+
+            const reports = await store.list();
             const origHigh = reports.filter(r => r.score >= 70).length;
 
             let reclassifiedHigh = 0;
             const reclassifiedIds = [];
 
             reports.forEach(r => {
-                const simReport = evaluateSignals(r.signals || {}, { webdriver: w1, burst: w2 });
+                const simSignals = {
+                    webdriver: r.minimalDerivedSignals?.webdriverObserved,
+                    telemetryObserved: r.minimalDerivedSignals?.telemetryObserved,
+                    observationDurationMs: r.minimalDerivedSignals?.observationDurationMs,
+                    isTrustedEventsCount: r.minimalDerivedSignals?.trustedInputCount,
+                    burstCount10s: r.minimalDerivedSignals?.burstCount10s,
+                    touchMismatch: r.minimalDerivedSignals?.touchMismatch,
+                    suspiciousUA: r.minimalDerivedSignals?.suspiciousUA
+                };
+
+                const simReport = evaluate(simSignals, { policy: customPolicy, enforcementMode: 'SHADOW' });
                 if (simReport.score >= 70) {
                     reclassifiedHigh++;
-                    if (r.score < 70) {
-                        reclassifiedIds.push(r.traceId);
-                    }
+                    if (r.score < 70) reclassifiedIds.push(r.traceId);
                 }
             });
 
             const diff = reclassifiedHigh - origHigh;
-            document.getElementById('sim-orig-high').innerText = origHigh;
-            document.getElementById('sim-new-high').innerText = `${reclassifiedHigh} (${diff >= 0 ? '+' : ''}${diff})`;
+            document.getElementById('sim-orig-high').textContent = String(origHigh);
+            document.getElementById('sim-new-high').textContent = `${reclassifiedHigh} (${diff >= 0 ? '+' : ''}${diff})`;
 
             const idLabel = reclassifiedIds.length > 0
                 ? `Reclassified: ${reclassifiedIds.slice(0, 3).join(', ')}${reclassifiedIds.length > 3 ? '...' : ''}`
                 : 'Reclassified: None';
-            document.getElementById('sim-reclassified-ids').innerText = idLabel;
+            document.getElementById('sim-reclassified-ids').textContent = idLabel;
         }
 
-        function showReportDetail(idx) {
-            const reports = getStoredReports();
-            const r = reports[idx];
-            if (!r) return;
+        async function evaluateRealBrowser() {
+            const snap = browserTelemetry.snapshot();
+            const signals = {
+                webdriver: snap.webdriverObserved,
+                telemetryObserved: snap.telemetryObserved,
+                observationDurationMs: snap.observationDurationMs,
+                isTrustedEventsCount: snap.trustedInputCount,
+                touchMismatch: snap.touchMismatch,
+                suspiciousUA: snap.suspiciousUA,
+                tokenPresented: false,
+                tokenVerified: false,
+                burstCount10s: 1
+            };
 
-            document.getElementById('modal-trace-id').innerText = `Session Trace: ${r.traceId}`;
-            document.getElementById('modal-score').innerText = r.score;
-            document.getElementById('modal-confidence').innerText = r.evidenceConfidence || 0.85;
-            document.getElementById('modal-action').innerText = r.recommendedAction;
-
-            const modalEvidenceList = document.getElementById('modal-evidence-list');
-            if (!r.evidence || r.evidence.length === 0) {
-                modalEvidenceList.innerHTML = '<div style="color:#15803d; padding:10px;">✅ Clean session. Zero suspicious evidence rules triggered.</div>';
-            } else {
-                modalEvidenceList.innerHTML = r.evidence.map((e, i) => `
-                    <div class="evidence-item">
-                        <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--primary-color);">
-                            <span>${i + 1}. ${e.rule}</span>
-                            <span style="color:#b91c1c;">+${e.score}</span>
-                        </div>
-                        <div style="font-size:0.85em; color:var(--text-main); margin:2px 0;">${e.message}</div>
-                        <div style="font-size:0.8em; color:#64748b; font-family:monospace; background:#ffffff; padding:4px 6px; border:1px solid var(--border-color); border-radius:2px;">
-                            ${JSON.stringify(e.attributes)}
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            document.getElementById('session-modal').style.display = 'flex';
-        }
-
-        function closeSessionModal() {
-            document.getElementById('session-modal').style.display = 'none';
-        }
-
-        window.addEventListener('storage', (e) => {
-            if (e.key === STORAGE_KEY) renderDashboard();
-        });
-        window.addEventListener('sentinel:risk-event-appended', () => {
+            const report = evaluate(signals, { enforcementMode: 'SHADOW' });
+            await store.append(report);
             renderDashboard();
-        });
+        }
 
-        seedInitialDataIfEmpty();
+        async function simulateEvent(type) {
+            let signals = {};
+            if (type === 'webdriver') {
+                signals = { webdriver: true, burstCount10s: 45, telemetryObserved: true, observationDurationMs: 10000, isTrustedEventsCount: 0 };
+            } else if (type === 'burst') {
+                signals = { webdriver: false, burstCount10s: 65, telemetryObserved: true, observationDurationMs: 6000, isTrustedEventsCount: 0, touchMismatch: true };
+            }
+            const report = evaluate(signals, { enforcementMode: 'SHADOW' });
+            await store.append(report);
+            renderDashboard();
+        }
+
+        document.getElementById('btn-refresh').onclick = renderDashboard;
+        document.getElementById('btn-eval-browser').onclick = evaluateRealBrowser;
+        document.getElementById('btn-sim-bot').onclick = () => simulateEvent('webdriver');
+        document.getElementById('btn-sim-burst').onclick = () => simulateEvent('burst');
+        document.getElementById('btn-clear').onclick = async () => {
+            await store.clear();
+            renderDashboard();
+        };
+
+        document.getElementById('slider-webdriver').oninput = runPolicySimulation;
+        document.getElementById('slider-burst').oninput = runPolicySimulation;
+        document.getElementById('btn-close-modal').onclick = () => {
+            document.getElementById('session-modal').style.display = 'none';
+        };
+        document.getElementById('session-modal').onclick = (e) => {
+            if (e.target === document.getElementById('session-modal')) {
+                document.getElementById('session-modal').style.display = 'none';
+            }
+        };
+
+        window.addEventListener('storage', () => renderDashboard());
+        window.addEventListener('sentinel:risk-event-appended', () => renderDashboard());
+
         renderDashboard();
     </script>
 </body>
