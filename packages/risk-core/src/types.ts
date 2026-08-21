@@ -6,25 +6,15 @@ export enum SentinelAction {
   TEMPORARY_DENY = 'TEMPORARY_DENY'
 }
 
-export interface RuleAttributeMap {
-  [key: string]: string | number | boolean | null;
+export interface RuleAttributes {
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 export interface EvidenceItem {
   rule: string;
   score: number;
-  attributes: RuleAttributeMap;
+  attributes: RuleAttributes;
   message: string;
-}
-
-export interface SentinelRiskReport {
-  traceId: string;
-  score: number; // 0 ~ 100
-  confidence: number; // 0.00 ~ 1.00
-  action: SentinelAction;
-  policyVersion: string;
-  evidence: EvidenceItem[];
-  evaluatedAt: string;
 }
 
 export interface TelemetrySignals {
@@ -33,8 +23,20 @@ export interface TelemetrySignals {
   mousePhysicsVariance?: number;
   burstCount10s?: number;
   touchMismatch?: boolean;
+  suspiciousUA?: boolean;
   claimedBot?: string;
   verifiedBot?: boolean;
   hasSignedToken?: boolean;
   tokenFreshnessMs?: number;
+  customSignals?: Record<string, any>;
+}
+
+export interface SentinelRiskReport {
+  traceId: string;
+  score: number;           // 0 ~ 100
+  confidence: number;      // 0.00 ~ 1.00
+  action: SentinelAction;
+  policyVersion: string;
+  evidence: EvidenceItem[];
+  evaluatedAt: string;
 }

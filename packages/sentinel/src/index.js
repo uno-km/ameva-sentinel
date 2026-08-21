@@ -1,33 +1,21 @@
 import {
   SentinelAction,
-  SentinelRiskReport,
-  TelemetrySignals,
-  SentinelPolicy,
   defaultPolicy,
   evaluate,
   createPolicy,
   rules
-} from '@ameva/sentinel-risk-core';
+} from '../../risk-core/src/index.js';
 
 export {
   SentinelAction,
-  SentinelRiskReport,
-  TelemetrySignals,
-  SentinelPolicy,
+  defaultPolicy,
   createPolicy,
   rules,
   evaluate
 };
 
-export interface SentinelOptions {
-  policy?: SentinelPolicy;
-  salt?: string;
-}
-
 export class Sentinel {
-  private policy: SentinelPolicy;
-
-  constructor(options: SentinelOptions = {}) {
+  constructor(options = {}) {
     this.policy = options.policy || defaultPolicy;
   }
 
@@ -35,7 +23,7 @@ export class Sentinel {
    * 1-Line Signature API: Evaluates HTTP request and returns an explainable SentinelRiskReport
    * Pipeline: score() -> collect() -> verify() -> evaluate() -> recommend()
    */
-  async score(req: any): Promise<SentinelRiskReport> {
+  async score(req) {
     const ctx = await this.collect(req);
     const verified = await this.verify(ctx);
     const report = evaluate(verified, this.policy);
@@ -45,11 +33,11 @@ export class Sentinel {
   /**
    * 1. Collect: Extract signals from HTTP headers and client telemetry body
    */
-  async collect(req: any): Promise<TelemetrySignals> {
+  async collect(req) {
     if (!req) return {};
 
     const headers = req.headers || {};
-    const getHeader = (name: string): string => {
+    const getHeader = (name) => {
       if (typeof headers.get === 'function') return headers.get(name) || '';
       return headers[name.toLowerCase()] || headers[name] || '';
     };
@@ -58,7 +46,7 @@ export class Sentinel {
     const secChUaMobile = getHeader('sec-ch-ua-mobile');
 
     // Parse Body if present
-    let body: any = {};
+    let body = {};
     if (typeof req.json === 'function') {
       try { body = await req.json(); } catch (e) {}
     } else if (req.body) {
@@ -84,7 +72,7 @@ export class Sentinel {
   /**
    * 2. Verify: Validate token authenticity and replay protection
    */
-  async verify(signals: TelemetrySignals): Promise<TelemetrySignals> {
+  async verify(signals) {
     // In production, verifies token signature with HMAC secret
     return signals;
   }

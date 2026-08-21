@@ -8,9 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run --workspaces build",
-    "test": "npm run --workspaces test",
-    "lint": "npm run --workspaces lint"
+    "test": "node tests/engine.test.js && node tests/sentinel.test.js",
+    "build": "npm run --workspaces build"
   },
   "keywords": [
     "security",
