@@ -13,12 +13,13 @@
   "scripts": {
     "build": "npm run --workspaces build",
     "serve:test": "npx --no-install http-server . -p 4173 -c-1",
+    "test:types": "tsc --noEmit tests/typecheck.ts --target es2022 --module NodeNext --moduleResolution NodeNext",
     "test:unit": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js",
-    "test": "npm run build && npm run test:unit",
+    "test": "npm run build && npm run test:types && npm run test:unit",
     "test:e2e": "npm run build && playwright test",
-    "test:all": "npm run build && npm run test:unit && playwright test",
+    "test:all": "npm run build && npm run test:types && npm run test:unit && playwright test",
     "test:report": "node scripts/generate_test_report.js",
-    "verify": "npm run build && npm run test:unit && playwright test",
+    "verify": "npm run build && npm run test:types && npm run test:unit && playwright test",
     "export": "py scripts/export_source_code.py"
   },
   "devDependencies": {

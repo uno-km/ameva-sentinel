@@ -64,6 +64,13 @@ jobs:
           else
             npm publish --workspace @ameva/sentinel-risk-core --access public --tag "$DIST_TAG"
           fi
+          if [ "$DIST_TAG" != "latest" ]; then
+            CURRENT_LATEST=$(npm view @ameva/sentinel-risk-core dist-tags.latest 2>/dev/null || true)
+            if [ "$CURRENT_LATEST" = "$VERSION" ]; then
+              echo "Removing premature latest dist-tag for pre-release $VERSION..."
+              npm dist-tag rm "@ameva/sentinel-risk-core" latest || true
+            fi
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -77,6 +84,13 @@ jobs:
           else
             npm publish --workspace @ameva/sentinel-browser --access public --tag "$DIST_TAG"
           fi
+          if [ "$DIST_TAG" != "latest" ]; then
+            CURRENT_LATEST=$(npm view @ameva/sentinel-browser dist-tags.latest 2>/dev/null || true)
+            if [ "$CURRENT_LATEST" = "$VERSION" ]; then
+              echo "Removing premature latest dist-tag for pre-release $VERSION..."
+              npm dist-tag rm "@ameva/sentinel-browser" latest || true
+            fi
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -89,6 +103,13 @@ jobs:
             npm dist-tag add "@ameva/sentinel@$VERSION" "$DIST_TAG" || true
           else
             npm publish --workspace @ameva/sentinel --access public --tag "$DIST_TAG"
+          fi
+          if [ "$DIST_TAG" != "latest" ]; then
+            CURRENT_LATEST=$(npm view @ameva/sentinel dist-tags.latest 2>/dev/null || true)
+            if [ "$CURRENT_LATEST" = "$VERSION" ]; then
+              echo "Removing premature latest dist-tag for pre-release $VERSION..."
+              npm dist-tag rm "@ameva/sentinel" latest || true
+            fi
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
