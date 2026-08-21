@@ -249,7 +249,7 @@ const packageOutputs = [];
 for (const pkg of packages) {
   const pkgDir = path.join(ROOT, pkg);
   const pkgJsonPath = path.join(pkgDir, 'package.json');
-  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8').replace(/^\uFEFF/, ''));
   try {
     const packOut = execSync('npm pack --dry-run', { cwd: pkgDir, encoding: 'utf8' });
     packageOutputs.push({

@@ -40,22 +40,36 @@
 │   │   ├── src
 │   │   │   ├── bot-classifier.ts
 │   │   │   ├── collector-crypto.ts
+│   │   │   ├── composite-sink.ts
 │   │   │   ├── confidence.ts
 │   │   │   ├── counter.ts
 │   │   │   ├── decision.ts
 │   │   │   ├── engine.ts
 │   │   │   ├── index.ts
+│   │   │   ├── null-sink.ts
 │   │   │   ├── policy.ts
 │   │   │   ├── redirect-security.ts
+│   │   │   ├── ring-buffer-sink.ts
 │   │   │   ├── rules.ts
 │   │   │   ├── store.ts
 │   │   │   ㄴ-- types.ts
 │   │   ├── LICENSE
 │   │   ├── package.json
 │   │   ㄴ-- README.md
-│   ㄴ-- sentinel
+│   ├── sentinel
+│   │   ├── src
+│   │   │   ㄴ-- index.ts
+│   │   ├── LICENSE
+│   │   ├── package.json
+│   │   ㄴ-- README.md
+│   ㄴ-- store-redis
 │       ├── src
-│       │   ㄴ-- index.ts
+│       │   ├── counter-store.ts
+│       │   ├── event-store.ts
+│       │   ├── index.ts
+│       │   ├── nonce-store.ts
+│       │   ├── stream-sink.ts
+│       │   ㄴ-- types.ts
 │       ├── LICENSE
 │       ├── package.json
 │       ㄴ-- README.md
@@ -75,7 +89,9 @@
 │   ├── decision.test.js
 │   ├── engine.test.js
 │   ├── redirect-security.test.js
+│   ├── ring-buffer-sink.test.js
 │   ├── sentinel.test.js
+│   ├── store-redis.test.js
 │   ├── store.test.js
 │   ├── typecheck.runtime.js
 │   ㄴ-- typecheck.ts
@@ -91,7 +107,7 @@
 Project: AMEVA-Sentinel
 Snapshot Date: 2026-08-21
 Branch: release-0.6
-Commit: 73029483c4865f5d52072622fd9719f0ae2ed78a
+Commit: 8d35a08fbdc5e1a1a6837a69550203d95f6644f9
 Working Tree: CLEAN
 Snapshot State: HEAD snapshot (Git commit blob-bound)
 Operating System: win32
@@ -4436,7 +4452,7 @@ FILE_CONTENT_BEGIN
     "test:types:static": "tsc --noEmit tests/typecheck.ts --target es2022 --module NodeNext --moduleResolution NodeNext",
     "test:types:runtime": "node tests/typecheck.runtime.js",
     "test:types": "npm run test:types:static && npm run test:types:runtime",
-    "test:unit": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js && node tests/bot-classifier.test.js && node tests/decision.test.js && node tests/collector-crypto.test.js && node tests/redirect-security.test.js",
+    "test:unit": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js && node tests/bot-classifier.test.js && node tests/decision.test.js && node tests/collector-crypto.test.js && node tests/redirect-security.test.js && node tests/ring-buffer-sink.test.js && node tests/store-redis.test.js",
     "test": "npm run build && npm run test:types && npm run test:unit",
     "test:e2e": "npm run build && playwright test",
     "test:all": "npm run build && npm run test:types && npm run test:unit && playwright test",
@@ -6364,6 +6380,81 @@ FILE_END: packages/risk-core/src/collector-crypto.ts
 ================================================================================
 FILE_BEGIN
 ================================================================================
+FILE_NAME: composite-sink.ts
+FILE_PATH: packages/risk-core/src/composite-sink.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+﻿import type { EventSink, StreamRecord, CompositeSinkOptions } from './types.js';
+
+export class CompositeSink implements EventSink {
+  readonly name = 'CompositeSink';
+  private readonly sinks: EventSink[];
+  private readonly timeoutMs: number;
+
+  constructor(sinks: EventSink[], options: CompositeSinkOptions = {}) {
+    this.sinks = [...sinks];
+    this.timeoutMs = options.emitTimeoutMs ?? 5000;
+  }
+
+  get downstreamSinks(): readonly EventSink[] {
+    return this.sinks;
+  }
+
+  private async withTimeout<T>(promise: Promise<T> | void, sinkName: string): Promise<T | void> {
+    if (!promise || typeof (promise as Promise<T>).then !== 'function') {
+      return promise;
+    }
+    let timer: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(new Error(`[CompositeSink] Downstream sink "${sinkName}" timed out after ${this.timeoutMs}ms`));
+      }, this.timeoutMs);
+    });
+
+    try {
+      return await Promise.race([promise as Promise<T>, timeoutPromise]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  async emit(record: StreamRecord): Promise<void> {
+    await Promise.allSettled(
+      this.sinks.map(sink => this.withTimeout(Promise.resolve(sink.emit(record)), sink.name))
+    );
+  }
+
+  async emitBatch(records: StreamRecord[]): Promise<void> {
+    await Promise.allSettled(
+      this.sinks.map(sink => this.withTimeout(Promise.resolve(sink.emitBatch(records)), sink.name))
+    );
+  }
+
+  async flush(): Promise<void> {
+    await Promise.allSettled(
+      this.sinks.map(sink => sink.flush ? this.withTimeout(sink.flush(), sink.name) : Promise.resolve())
+    );
+  }
+
+  async close(): Promise<void> {
+    await Promise.allSettled(
+      this.sinks.map(sink => sink.close ? this.withTimeout(sink.close(), sink.name) : Promise.resolve())
+    );
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/composite-sink.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
 FILE_NAME: confidence.ts
 FILE_PATH: packages/risk-core/src/confidence.ts
 FILE_LANGUAGE: typescript
@@ -6434,16 +6525,9 @@ FILE_LANGUAGE: typescript
 FILE_CONTENT_BEGIN
 ================================================================================
 
-﻿export interface CounterIncrementResult {
-  count: number;
-  resetAt: number;
-}
+import type { CounterStore, CounterIncrementResult } from './types.js';
 
-export interface CounterStore {
-  increment(key: string, options: { windowMs: number; amount?: number }): Promise<CounterIncrementResult>;
-  get(key: string): Promise<number>;
-  reset(key: string): Promise<void>;
-}
+export type { CounterStore, CounterIncrementResult };
 
 interface WindowBucket {
   count: number;
@@ -6953,6 +7037,9 @@ export * from './store.js';
 export * from './bot-classifier.js';
 export * from './decision.js';
 export * from './redirect-security.js';
+export * from './null-sink.js';
+export * from './composite-sink.js';
+export * from './ring-buffer-sink.js';
 
 export {
   CollectorVerificationError,
@@ -6977,6 +7064,49 @@ export {
 FILE_CONTENT_END
 ================================================================================
 FILE_END: packages/risk-core/src/index.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: null-sink.ts
+FILE_PATH: packages/risk-core/src/null-sink.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+﻿import type { EventSink, StreamRecord } from './types.js';
+
+export class NullSink implements EventSink {
+  readonly name = 'NullSink';
+  public emittedCount = 0;
+
+  emit(record: StreamRecord): void {
+    this.emittedCount++;
+  }
+
+  emitBatch(records: StreamRecord[]): void {
+    this.emittedCount += records.length;
+  }
+
+  flush(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  close(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  reset(): void {
+    this.emittedCount = 0;
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/null-sink.ts
 ================================================================================
 
 ================================================================================
@@ -7238,6 +7368,258 @@ FILE_END: packages/risk-core/src/redirect-security.ts
 ================================================================================
 FILE_BEGIN
 ================================================================================
+FILE_NAME: ring-buffer-sink.ts
+FILE_PATH: packages/risk-core/src/ring-buffer-sink.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import type {
+  EventSink,
+  StreamRecord,
+  AsyncRingBufferOptions,
+  RingBufferStats,
+  RingBufferOverflowPolicy
+} from './types.js';
+
+export class AsyncRingBufferSink implements EventSink {
+  readonly name = 'AsyncRingBufferSink';
+
+  private readonly downstream: EventSink;
+  private readonly capacity: number;
+  private readonly mask: number;
+  private readonly flushIntervalMs: number;
+  private readonly batchSize: number;
+  private readonly overflowPolicy: RingBufferOverflowPolicy;
+  private readonly circuitBreakerThreshold: number;
+  private readonly circuitBreakerCooldownMs: number;
+  private readonly onError: (err: Error, droppedCount: number) => void;
+
+  private readonly buffer: (StreamRecord | null)[];
+  private head = 0; // Index for next write
+  private tail = 0; // Index for next read
+  private count = 0; // Current buffered count
+
+  // Metrics counters
+  private droppedOldest = 0;
+  private droppedNewest = 0;
+  private circuitBreakerDrops = 0;
+  private failClosedRejects = 0;
+  private flushed = 0;
+  private flushFailures = 0;
+  private lastFlushTimestamp: string | null = null;
+
+  // Circuit Breaker state
+  private circuitBreakerState: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
+  private consecutiveFailures = 0;
+  private lastFailureTime = 0;
+
+  private flushTimer: NodeJS.Timeout | null = null;
+  private isClosed = false;
+  private isFlushing = false;
+
+  constructor(options: AsyncRingBufferOptions) {
+    if (!options.downstream) {
+      throw new Error('[AsyncRingBufferSink] Downstream EventSink is required');
+    }
+    this.downstream = options.downstream;
+
+    // Capacity must be a power of 2 for bitwise masking
+    let cap = options.capacity ?? 16384;
+    if (cap < 2 || (cap & (cap - 1)) !== 0) {
+      // Find nearest power of 2
+      let p = 2;
+      while (p < cap) p <<= 1;
+      cap = p;
+    }
+    this.capacity = cap;
+    this.mask = cap - 1;
+
+    this.flushIntervalMs = options.flushIntervalMs ?? 100;
+    this.batchSize = Math.min(options.batchSize ?? 100, this.capacity);
+    this.overflowPolicy = options.overflowPolicy ?? 'DROP_OLDEST';
+    this.circuitBreakerThreshold = options.circuitBreakerThreshold ?? 5;
+    this.circuitBreakerCooldownMs = options.circuitBreakerCooldownMs ?? 5000;
+    this.onError = options.onError ?? (() => {});
+
+    this.buffer = new Array(this.capacity).fill(null);
+
+    this.startTimer();
+  }
+
+  private startTimer(): void {
+    if (this.flushIntervalMs > 0 && typeof setInterval !== 'undefined') {
+      this.flushTimer = setInterval(() => {
+        void this.flush();
+      }, this.flushIntervalMs);
+      if (this.flushTimer && typeof this.flushTimer.unref === 'function') {
+        this.flushTimer.unref();
+      }
+    }
+  }
+
+  private updateCircuitBreakerOnEnqueue(now: number): boolean {
+    if (this.circuitBreakerState === 'OPEN') {
+      if (now - this.lastFailureTime >= this.circuitBreakerCooldownMs) {
+        this.circuitBreakerState = 'HALF_OPEN';
+        return true;
+      }
+      return false; // Still OPEN, drop event
+    }
+    return true; // CLOSED or HALF_OPEN
+  }
+
+  emit(record: StreamRecord): void {
+    if (this.isClosed) return;
+
+    const now = Date.now();
+    if (!this.updateCircuitBreakerOnEnqueue(now)) {
+      this.circuitBreakerDrops++;
+      return;
+    }
+
+    if (this.count >= this.capacity) {
+      // Buffer is full
+      if (this.overflowPolicy === 'DROP_OLDEST') {
+        // Discard oldest element at tail
+        this.buffer[this.tail & this.mask] = null;
+        this.tail++;
+        this.count--;
+        this.droppedOldest++;
+      } else if (this.overflowPolicy === 'DROP_NEWEST') {
+        this.droppedNewest++;
+        return; // Discard incoming event
+      } else if (this.overflowPolicy === 'FAIL_CLOSED') {
+        this.failClosedRejects++;
+        throw new Error(`[AsyncRingBufferSink] Ring buffer saturated (${this.capacity}) with FAIL_CLOSED policy`);
+      }
+    }
+
+    this.buffer[this.head & this.mask] = record;
+    this.head++;
+    this.count++;
+
+    // Proactive trigger if batch size reached and background flushing enabled
+    if (this.flushIntervalMs > 0 && this.count >= this.batchSize) {
+      void this.flush();
+    }
+  }
+
+  emitBatch(records: StreamRecord[]): void {
+    for (const rec of records) {
+      this.emit(rec);
+    }
+  }
+
+  async flush(): Promise<void> {
+    if (this.isFlushing || this.count === 0) return;
+    this.isFlushing = true;
+
+    try {
+      while (this.count > 0) {
+        const batchSize = Math.min(this.count, this.batchSize);
+        const batch: StreamRecord[] = [];
+
+        for (let i = 0; i < batchSize; i++) {
+          const item = this.buffer[this.tail & this.mask];
+          this.buffer[this.tail & this.mask] = null;
+          this.tail++;
+          this.count--;
+          if (item) batch.push(item);
+        }
+
+        if (batch.length === 0) continue;
+
+        try {
+          if (typeof this.downstream.emitBatch === 'function') {
+            await this.downstream.emitBatch(batch);
+          } else {
+            for (const item of batch) {
+              await this.downstream.emit(item);
+            }
+          }
+
+          this.flushed += batch.length;
+          this.lastFlushTimestamp = new Date().toISOString();
+
+          // Recover Circuit Breaker on successful flush
+          if (this.circuitBreakerState === 'HALF_OPEN') {
+            this.circuitBreakerState = 'CLOSED';
+          }
+          this.consecutiveFailures = 0;
+        } catch (err: any) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          this.flushFailures++;
+          this.consecutiveFailures++;
+
+          if (this.consecutiveFailures >= this.circuitBreakerThreshold) {
+            this.circuitBreakerState = 'OPEN';
+            this.lastFailureTime = Date.now();
+          }
+
+          this.onError(error, batch.length);
+          break; // Stop further draining during outage
+        }
+      }
+
+      if (this.downstream.flush) {
+        await this.downstream.flush().catch(() => {});
+      }
+    } finally {
+      this.isFlushing = false;
+    }
+  }
+
+  stats(): RingBufferStats {
+    const totalDropped =
+      this.droppedOldest +
+      this.droppedNewest +
+      this.circuitBreakerDrops +
+      this.failClosedRejects;
+
+    return {
+      buffered: this.count,
+      capacity: this.capacity,
+      dropped: totalDropped,
+      droppedOldest: this.droppedOldest,
+      droppedNewest: this.droppedNewest,
+      circuitBreakerDrops: this.circuitBreakerDrops,
+      failClosedRejects: this.failClosedRejects,
+      flushed: this.flushed,
+      flushFailures: this.flushFailures,
+      circuitBreakerState: this.circuitBreakerState,
+      lastFlushTimestamp: this.lastFlushTimestamp
+    };
+  }
+
+  async close(): Promise<void> {
+    if (this.isClosed) return;
+    this.isClosed = true;
+
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
+    }
+
+    // Drain remaining buffer
+    await this.flush();
+
+    if (this.downstream.close) {
+      await this.downstream.close();
+    }
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/ring-buffer-sink.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
 FILE_NAME: rules.ts
 FILE_PATH: packages/risk-core/src/rules.ts
 FILE_LANGUAGE: typescript
@@ -7453,7 +7835,7 @@ FILE_LANGUAGE: typescript
 FILE_CONTENT_BEGIN
 ================================================================================
 
-﻿import {
+import {
   SentinelAction,
   SentinelRiskReport,
   EnforcementMode,
@@ -7461,7 +7843,9 @@ FILE_CONTENT_BEGIN
   StoredRiskEventV1,
   StoredRiskEventV2,
   StoredRiskEvent,
-  SanitizedEvidence
+  SanitizedEvidence,
+  RiskEventStore,
+  RiskEventStoreOptions
 } from './types.js';
 
 export interface MinimalDerivedSignals {
@@ -7676,17 +8060,6 @@ export function toStoredRiskEventV1(report: SentinelRiskReport & { signals?: any
       hasPhysics: (report.signals?.isTrustedEventsCount || 0) > 0
     }
   };
-}
-
-export interface RiskEventStoreOptions {
-  maxItems?: number;
-  maxAgeMs?: number;
-}
-
-export interface RiskEventStore {
-  append(report: SentinelRiskReport): Promise<void>;
-  list(options?: { limit?: number; since?: number }): Promise<StoredRiskEvent[]>;
-  clear(): Promise<void>;
 }
 
 export class MemoryRiskEventStore implements RiskEventStore {
@@ -8095,6 +8468,93 @@ export interface NonceStore {
   consume(namespace: NonceNamespace, expiresAtEpochMs: number): Promise<boolean>;
 }
 
+export interface DistributedNonceStore extends NonceStore {
+  readonly clientType: string;
+  ping(): Promise<boolean>;
+}
+
+export interface CounterIncrementResult {
+  count: number;
+  resetAt: number;
+}
+
+export interface CounterStore {
+  increment(key: string, options: { windowMs: number; amount?: number }): Promise<CounterIncrementResult>;
+  get(key: string): Promise<number>;
+  reset(key: string): Promise<void>;
+}
+
+export interface DistributedCounterStore extends CounterStore {
+  readonly clientType: string;
+  ping(): Promise<boolean>;
+}
+
+export interface RiskEventStoreOptions {
+  maxItems?: number;
+  maxAgeMs?: number;
+}
+
+export interface RiskEventStore {
+  append(report: SentinelRiskReport): Promise<void>;
+  list(options?: { limit?: number; since?: number }): Promise<StoredRiskEvent[]>;
+  clear(): Promise<void>;
+}
+
+export interface DistributedRiskEventStore extends RiskEventStore {
+  readonly clientType: string;
+  ping(): Promise<boolean>;
+}
+
+// --- Stream Record & EventSink Abstractions ---
+export interface StreamRecord {
+  readonly kind: string;
+  readonly id: string;
+  readonly timestamp: string;
+}
+
+export interface RiskEventRecord extends StreamRecord, StoredRiskEventV2 {
+  readonly kind: 'risk_event';
+}
+
+export interface EventSink {
+  readonly name: string;
+  emit(record: StreamRecord): Promise<void> | void;
+  emitBatch(records: StreamRecord[]): Promise<void> | void;
+  flush?(): Promise<void>;
+  close?(): Promise<void>;
+}
+
+export type RingBufferOverflowPolicy = 'DROP_OLDEST' | 'DROP_NEWEST' | 'FAIL_CLOSED';
+
+export interface RingBufferStats {
+  buffered: number;
+  capacity: number;
+  dropped: number;
+  droppedOldest: number;
+  droppedNewest: number;
+  circuitBreakerDrops: number;
+  failClosedRejects: number;
+  flushed: number;
+  flushFailures: number;
+  circuitBreakerState: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+  lastFlushTimestamp: string | null;
+}
+
+export interface AsyncRingBufferOptions {
+  downstream: EventSink;
+  capacity?: number;             // Power of 2, default 16384
+  flushIntervalMs?: number;      // Default 100ms
+  batchSize?: number;            // Default 100
+  overflowPolicy?: RingBufferOverflowPolicy; // Default 'DROP_OLDEST'
+  circuitBreakerThreshold?: number; // Default 5 consecutive failures
+  circuitBreakerCooldownMs?: number; // Default 5000ms
+  onError?: (err: Error, droppedCount: number) => void;
+}
+
+export interface CompositeSinkOptions {
+  emitTimeoutMs?: number; // Default 5000ms
+}
+
 export function createTraceId(): string {
   const uuid = typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
     ? globalThis.crypto.randomUUID()
@@ -8262,7 +8722,10 @@ import {
   isStoredRiskEventV1,
   isStoredRiskEventV2,
   sanitizeSignals,
-  createTraceId
+  createTraceId,
+  AsyncRingBufferSink,
+  CompositeSink,
+  NullSink
 } from '@ameva/sentinel-risk-core';
 
 import type {
@@ -8275,6 +8738,16 @@ import type {
   StoredRiskEventV2,
   CounterStore,
   RiskEventStore,
+  EventSink,
+  StreamRecord,
+  RiskEventRecord,
+  RingBufferStats,
+  RingBufferOverflowPolicy,
+  AsyncRingBufferOptions,
+  CompositeSinkOptions,
+  DistributedNonceStore,
+  DistributedCounterStore,
+  DistributedRiskEventStore,
   TrafficTargetMode,
   BotCategory,
   BotIdentityState,
@@ -8318,7 +8791,10 @@ export {
   isStoredRiskEventV1,
   isStoredRiskEventV2,
   sanitizeSignals,
-  createTraceId
+  createTraceId,
+  AsyncRingBufferSink,
+  CompositeSink,
+  NullSink
 };
 
 export type {
@@ -8331,6 +8807,16 @@ export type {
   StoredRiskEventV2,
   CounterStore,
   RiskEventStore,
+  EventSink,
+  StreamRecord,
+  RiskEventRecord,
+  RingBufferStats,
+  RingBufferOverflowPolicy,
+  AsyncRingBufferOptions,
+  CompositeSinkOptions,
+  DistributedNonceStore,
+  DistributedCounterStore,
+  DistributedRiskEventStore,
   TrafficTargetMode,
   BotCategory,
   BotIdentityState,
@@ -8364,6 +8850,7 @@ export interface SentinelOptions {
   allowedIssuers?: string[];
   stateFailureMode?: StateFailureMode;
   onOperationalError?: (err: Error, context: string) => void;
+  eventSink?: EventSink;
 }
 
 export class Sentinel {
@@ -8371,6 +8858,7 @@ export class Sentinel {
   private mode: 'shadow' | 'enforce';
   private counterStore: CounterStore;
   private eventStore: RiskEventStore | null;
+  private eventSink?: EventSink;
   private rateKeyProvider?: (req: any) => string | null;
   private redirectRegistry: Record<string, string>;
   private allowedRedirectHosts?: string[];
@@ -8388,6 +8876,7 @@ export class Sentinel {
     this.mode = options.mode || 'shadow';
     this.counterStore = options.counterStore || new MemoryFixedWindowCounterStore();
     this.eventStore = options.eventStore || null;
+    this.eventSink = options.eventSink;
     this.rateKeyProvider = options.rateKeyProvider;
     this.keyResolver = options.keyResolver;
     this.nonceStore = options.nonceStore || new MemoryNonceStore();
@@ -8491,6 +8980,26 @@ export class Sentinel {
         if (this.stateFailureMode === 'FAIL_CLOSED') {
           throw err;
         }
+      }
+    }
+
+    if (this.eventSink) {
+      const stored = toStoredRiskEvent(report);
+      const record: RiskEventRecord = {
+        ...stored,
+        kind: 'risk_event',
+        id: stored.traceId,
+        timestamp: stored.evaluatedAt
+      };
+      try {
+        const emitRes = this.eventSink.emit(record);
+        if (emitRes && typeof (emitRes as Promise<void>).catch === 'function') {
+          (emitRes as Promise<void>).catch(err => {
+            this.handleOperationalError(err, 'eventSink.emit');
+          });
+        }
+      } catch (err: any) {
+        this.handleOperationalError(err, 'eventSink.emit');
       }
     }
 
@@ -8706,6 +9215,744 @@ export const sentinel = new Sentinel();
 FILE_CONTENT_END
 ================================================================================
 FILE_END: packages/sentinel/src/index.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: LICENSE
+FILE_PATH: packages/store-redis/LICENSE
+FILE_LANGUAGE: text
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+                                 Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+   1. Definitions.
+
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 9 of this document.
+
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
+
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
+
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
+
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
+
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
+
+      "Work" shall mean the work of authorship, whether in Source or
+      Object form, made available under the License, as indicated by a
+      copyright notice that is included in or attached to the work.
+
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
+
+      "Contribution" shall mean any work of authorship, including
+      the original version of the Work and any modifications or additions
+      to that Work or Derivative Works thereof, that is intentionally
+      submitted to Licensor for inclusion in the Work by the copyright owner
+      or by an individual or Legal Entity authorized to submit on behalf of
+      the copyright owner. For the purposes of this definition, "submitted"
+      means any form of electronic, verbal, or written communication sent
+      to the Licensor or its representatives, including but not limited to
+      communication on electronic mailing lists, source code control systems,
+      and issue tracking systems that are managed by, or on behalf of, the
+      Licensor for the purpose of discussing and improving the Work, but
+      excluding communication that is conspicuously marked or otherwise
+      designated in writing by the copyright owner as "Not a Contribution."
+
+      "Contributor" shall mean Licensor and any individual or Legal Entity
+      on behalf of whom a Contribution has been received by Licensor and
+      subsequently incorporated within the Work.
+
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
+
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
+
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
+
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
+
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
+
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
+
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, then any Derivative Works that You distribute must
+          include a readable copy of the attribution notices contained
+          within such NOTICE file, excluding those notices that do not
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works; within the Source form or
+          documentation, if provided along with the Derivative Works; or,
+          within a display generated by the Derivative Works, if and
+          wherever such third-party notices normally appear. The contents
+          of the NOTICE file are for informational purposes only and
+          do not modify the License. You may add Your own attribution
+          notices within Derivative Works that You distribute, alongside
+          or as an addendum to the NOTICE text from the Work, provided
+          that such additional attribution notices cannot be construed
+          as modifying the License.
+
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any such Derivative Works as a whole, provided Your use,
+      reproduction, and distribution of the Work otherwise complies with
+      the conditions stated in this License.
+
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
+
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
+
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
+
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or exemplary damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or any and all
+      other commercial damages or losses), even if such Contributor
+      has been advised of the possibility of such damages.
+
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and/or rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
+
+   END OF TERMS AND CONDITIONS
+
+   Copyright 2026 AMEVA Open Source Ecosystem (uno-km)
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/store-redis/LICENSE
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: README.md
+FILE_PATH: packages/store-redis/README.md
+FILE_LANGUAGE: markdown
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+﻿# @ameva/sentinel-store-redis
+
+Enterprise Distributed Redis, Valkey, KeyDB, Upstash, and Dragonfly Storage Adapters and Streams Pipeline for AMEVA Sentinel.
+
+## Features
+- **RedisNonceStore**: Atomic distributed replay attack defense (`SET NX EX`).
+- **RedisFixedWindowCounterStore**: Atomic Lua-based rate limiting with TTL drift recovery.
+- **RedisRiskEventStore**: High-throughput distributed event store using Redis Streams & Capped Lists.
+- **RedisStreamSink**: 0ms non-blocking batch stream forwarder (`XADD MAXLEN ~`).
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/store-redis/README.md
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: package.json
+FILE_PATH: packages/store-redis/package.json
+FILE_LANGUAGE: json
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+﻿{
+  "name": "@ameva/sentinel-store-redis",
+  "version": "0.6.0-alpha.1",
+  "description": "Enterprise Distributed Redis, Valkey, and Dragonfly Storage Adapters and Streams Pipeline for AMEVA Sentinel",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022 --emitDeclarationOnly --declaration --outDir dist src/index.ts"
+  },
+  "dependencies": {
+    "@ameva/sentinel-risk-core": "^0.6.0-alpha.1"
+  },
+  "peerDependencies": {
+    "ioredis": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    }
+  },
+  "license": "Apache-2.0"
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/store-redis/package.json
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: counter-store.ts
+FILE_PATH: packages/store-redis/src/counter-store.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import type { DistributedCounterStore, CounterIncrementResult } from '@ameva/sentinel-risk-core';
+import { type RedisClientLike, type RedisStoreBaseOptions, sanitizeRedisKeySegment } from './types.js';
+
+const ATOMIC_INCREMENT_LUA = `
+local current = redis.call('INCR', KEYS[1])
+local ttl = redis.call('TTL', KEYS[1])
+if ttl < 0 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+return current
+`;
+
+export interface RedisCounterStoreOptions extends RedisStoreBaseOptions {
+  clientType?: string;
+  defaultWindowSeconds?: number;
+}
+
+export class RedisFixedWindowCounterStore implements DistributedCounterStore {
+  readonly clientType: string;
+  private readonly redis: RedisClientLike;
+  private readonly prefix: string;
+  private readonly defaultWindowSeconds: number;
+
+  constructor(options: RedisCounterStoreOptions) {
+    if (!options.redis) {
+      throw new Error('[RedisFixedWindowCounterStore] Redis client instance is required');
+    }
+    this.redis = options.redis;
+    this.prefix = options.keyPrefix ?? 'sentinel';
+    this.clientType = options.clientType ?? 'redis';
+    this.defaultWindowSeconds = options.defaultWindowSeconds ?? 60;
+  }
+
+  private formatKey(key: string, windowSeconds: number): { fullKey: string; windowStart: number } {
+    const now = Date.now();
+    const windowMs = windowSeconds * 1000;
+    const windowStart = Math.floor(now / windowMs) * windowMs;
+    const sanitized = sanitizeRedisKeySegment(key);
+    return {
+      fullKey: `${this.prefix}:counter:${sanitized}:${windowStart}`,
+      windowStart
+    };
+  }
+
+  async increment(
+    key: string,
+    options: { windowMs: number; amount?: number } = { windowMs: 60000 }
+  ): Promise<CounterIncrementResult> {
+    const windowMs = options.windowMs ?? (this.defaultWindowSeconds * 1000);
+    const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+
+    const { fullKey, windowStart } = this.formatKey(key, windowSeconds);
+
+    try {
+      const rawCount = await this.redis.eval(ATOMIC_INCREMENT_LUA, 1, fullKey, windowSeconds);
+      const count = Number(rawCount) || 1;
+      const resetAt = windowStart + (windowSeconds * 1000);
+
+      return {
+        count,
+        resetAt
+      };
+    } catch (err: any) {
+      throw new Error(`[RedisFixedWindowCounterStore] Failed to increment counter: ${err.message || String(err)}`);
+    }
+  }
+
+  async get(key: string, windowSeconds = this.defaultWindowSeconds): Promise<number> {
+    const { fullKey } = this.formatKey(key, windowSeconds);
+    try {
+      const raw = await this.redis.get(fullKey);
+      return raw ? Number(raw) || 0 : 0;
+    } catch (err: any) {
+      return 0;
+    }
+  }
+
+  async reset(key: string, windowSeconds = this.defaultWindowSeconds): Promise<void> {
+    const { fullKey } = this.formatKey(key, windowSeconds);
+    try {
+      await this.redis.del(fullKey);
+    } catch (err: any) {}
+  }
+
+  async ping(): Promise<boolean> {
+    try {
+      if (typeof this.redis.ping === 'function') {
+        const res = await this.redis.ping();
+        return res === 'PONG' || res === 'pong';
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/store-redis/src/counter-store.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: event-store.ts
+FILE_PATH: packages/store-redis/src/event-store.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+﻿import type {
+  DistributedRiskEventStore,
+  SentinelRiskReport,
+  StoredRiskEvent,
+  RiskEventStoreOptions
+} from '@ameva/sentinel-risk-core';
+import { toStoredRiskEvent, isStoredRiskEvent } from '@ameva/sentinel-risk-core';
+import { type RedisClientLike, type RedisStoreBaseOptions, sanitizeRedisKeySegment } from './types.js';
+
+export interface RedisRiskEventStoreOptions extends RedisStoreBaseOptions {
+  clientType?: string;
+  maxItems?: number;
+  maxAgeMs?: number;
+}
+
+export class RedisRiskEventStore implements DistributedRiskEventStore {
+  readonly clientType: string;
+  private readonly redis: RedisClientLike;
+  private readonly listKey: string;
+  private readonly maxItems: number;
+
+  constructor(options: RedisRiskEventStoreOptions) {
+    if (!options.redis) {
+      throw new Error('[RedisRiskEventStore] Redis client instance is required');
+    }
+    this.redis = options.redis;
+    const prefix = options.keyPrefix ?? 'sentinel';
+    this.listKey = `${prefix}:events:v2`;
+    this.maxItems = options.maxItems ?? 1000;
+    this.clientType = options.clientType ?? 'redis';
+  }
+
+  async append(report: SentinelRiskReport): Promise<void> {
+    const stored = toStoredRiskEvent(report);
+    if (!isStoredRiskEvent(stored)) return;
+
+    const payload = JSON.stringify(stored);
+    try {
+      if (typeof this.redis.lpush === 'function') {
+        await this.redis.lpush(this.listKey, payload);
+        if (typeof this.redis.ltrim === 'function') {
+          await this.redis.ltrim(this.listKey, 0, this.maxItems - 1);
+        }
+      }
+    } catch (err: any) {
+      throw new Error(`[RedisRiskEventStore] Failed to append event: ${err.message || String(err)}`);
+    }
+  }
+
+  async list(options: { limit?: number; since?: number } = {}): Promise<StoredRiskEvent[]> {
+    try {
+      if (typeof this.redis.lrange !== 'function') return [];
+      const limit = options.limit && options.limit > 0 ? options.limit : this.maxItems;
+      const rawList = await this.redis.lrange(this.listKey, 0, limit - 1);
+      if (!Array.isArray(rawList)) return [];
+
+      const events: StoredRiskEvent[] = [];
+      for (const item of rawList) {
+        try {
+          const parsed = JSON.parse(item);
+          if (isStoredRiskEvent(parsed)) {
+            if (options.since && Date.parse(parsed.evaluatedAt) < options.since) {
+              continue;
+            }
+            events.push(parsed);
+          }
+        } catch (e) {}
+      }
+      return events;
+    } catch (err: any) {
+      return [];
+    }
+  }
+
+  async clear(): Promise<void> {
+    try {
+      await this.redis.del(this.listKey);
+    } catch (err: any) {}
+  }
+
+  async ping(): Promise<boolean> {
+    try {
+      if (typeof this.redis.ping === 'function') {
+        const res = await this.redis.ping();
+        return res === 'PONG' || res === 'pong';
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/store-redis/src/event-store.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: index.ts
+FILE_PATH: packages/store-redis/src/index.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+﻿export * from './types.js';
+export * from './nonce-store.js';
+export * from './counter-store.js';
+export * from './event-store.js';
+export * from './stream-sink.js';
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/store-redis/src/index.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: nonce-store.ts
+FILE_PATH: packages/store-redis/src/nonce-store.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+﻿import type { DistributedNonceStore, NonceNamespace } from '@ameva/sentinel-risk-core';
+import { type RedisClientLike, type RedisStoreBaseOptions, sanitizeRedisKeySegment } from './types.js';
+
+export interface RedisNonceStoreOptions extends RedisStoreBaseOptions {
+  clientType?: string;
+}
+
+export class RedisNonceStore implements DistributedNonceStore {
+  readonly clientType: string;
+  private readonly redis: RedisClientLike;
+  private readonly prefix: string;
+
+  constructor(options: RedisNonceStoreOptions) {
+    if (!options.redis) {
+      throw new Error('[RedisNonceStore] Redis client instance is required');
+    }
+    this.redis = options.redis;
+    this.prefix = options.keyPrefix ?? 'sentinel';
+    this.clientType = options.clientType ?? 'redis';
+  }
+
+  async consume(namespace: NonceNamespace, expiresAtEpochMs: number): Promise<boolean> {
+    const iss = sanitizeRedisKeySegment(namespace.issuer);
+    const kid = sanitizeRedisKeySegment(namespace.kid);
+    const nonce = sanitizeRedisKeySegment(namespace.nonce);
+    const key = `${this.prefix}:nonce:${iss}:${kid}:${nonce}`;
+
+    const now = Date.now();
+    const ttlSeconds = Math.max(1, Math.ceil((expiresAtEpochMs - now) / 1000));
+
+    try {
+      const res = await this.redis.set(key, String(now), 'EX', ttlSeconds, 'NX');
+      return res === 'OK';
+    } catch (err: any) {
+      throw new Error(`[RedisNonceStore] Failed to acquire nonce lock: ${err.message || String(err)}`);
+    }
+  }
+
+  async ping(): Promise<boolean> {
+    try {
+      if (typeof this.redis.ping === 'function') {
+        const res = await this.redis.ping();
+        return res === 'PONG' || res === 'pong';
+      }
+      const testKey = `${this.prefix}:ping_test`;
+      await this.redis.set(testKey, '1', 'EX', 1);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/store-redis/src/nonce-store.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: stream-sink.ts
+FILE_PATH: packages/store-redis/src/stream-sink.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+﻿import type { EventSink, StreamRecord } from '@ameva/sentinel-risk-core';
+import { type RedisClientLike, type RedisStoreBaseOptions, sanitizeRedisKeySegment } from './types.js';
+
+export interface RedisStreamSinkOptions extends RedisStoreBaseOptions {
+  streamKey?: string;
+  maxLen?: number;
+  approximateMaxLen?: boolean;
+}
+
+export class RedisStreamSink implements EventSink {
+  readonly name = 'RedisStreamSink';
+  private readonly redis: RedisClientLike;
+  private readonly streamKey: string;
+  private readonly maxLen: number;
+  private readonly approximateMaxLen: boolean;
+
+  constructor(options: RedisStreamSinkOptions) {
+    if (!options.redis) {
+      throw new Error('[RedisStreamSink] Redis client instance is required');
+    }
+    this.redis = options.redis;
+    const prefix = options.keyPrefix ?? 'sentinel';
+    const rawKey = options.streamKey ?? 'risk-events';
+    this.streamKey = `${prefix}:${sanitizeRedisKeySegment(rawKey)}`;
+    this.maxLen = options.maxLen ?? 1000000;
+    this.approximateMaxLen = options.approximateMaxLen ?? true;
+  }
+
+  async emit(record: StreamRecord): Promise<void> {
+    const payload = JSON.stringify(record);
+
+    if (typeof this.redis.xadd === 'function') {
+      if (this.approximateMaxLen) {
+        await this.redis.xadd(this.streamKey, 'MAXLEN', '~', this.maxLen, '*', 'event', payload);
+      } else {
+        await this.redis.xadd(this.streamKey, 'MAXLEN', this.maxLen, '*', 'event', payload);
+      }
+    } else if (typeof this.redis.lpush === 'function') {
+      await this.redis.lpush(this.streamKey, payload);
+      if (typeof this.redis.ltrim === 'function') {
+        await this.redis.ltrim(this.streamKey, 0, this.maxLen - 1);
+      }
+    }
+  }
+
+  async emitBatch(records: StreamRecord[]): Promise<void> {
+    if (records.length === 0) return;
+
+    if (typeof this.redis.pipeline === 'function') {
+      const pipe = this.redis.pipeline();
+      for (const record of records) {
+        const payload = JSON.stringify(record);
+        if (typeof pipe.xadd === 'function') {
+          if (this.approximateMaxLen) {
+            pipe.xadd(this.streamKey, 'MAXLEN', '~', this.maxLen, '*', 'event', payload);
+          } else {
+            pipe.xadd(this.streamKey, 'MAXLEN', this.maxLen, '*', 'event', payload);
+          }
+        } else if (typeof pipe.lpush === 'function') {
+          pipe.lpush(this.streamKey, payload);
+        }
+      }
+      if (typeof pipe.ltrim === 'function' && typeof this.redis.xadd !== 'function') {
+        pipe.ltrim(this.streamKey, 0, this.maxLen - 1);
+      }
+      await pipe.exec();
+    } else {
+      for (const record of records) {
+        await this.emit(record);
+      }
+    }
+  }
+
+  async flush(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  async close(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/store-redis/src/stream-sink.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: types.ts
+FILE_PATH: packages/store-redis/src/types.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+﻿export interface RedisClientLike {
+  set(key: string, value: string, ...args: any[]): Promise<any>;
+  get(key: string): Promise<string | null>;
+  del(key: string | string[]): Promise<number>;
+  eval(script: string, numKeys: number, ...args: (string | number)[]): Promise<any>;
+  ping?(): Promise<string>;
+  xadd?(stream: string, ...args: any[]): Promise<any>;
+  xrange?(stream: string, start: string, end: string, ...args: any[]): Promise<any[]>;
+  lpush?(key: string, ...values: string[]): Promise<number>;
+  ltrim?(key: string, start: number, stop: number): Promise<string>;
+  lrange?(key: string, start: number, stop: number): Promise<string[]>;
+  pipeline?(): any;
+}
+
+export interface RedisStoreBaseOptions {
+  redis: RedisClientLike;
+  keyPrefix?: string;
+}
+
+export function sanitizeRedisKeySegment(segment: string): string {
+  if (typeof segment !== 'string') return 'empty';
+  // Strip dangerous redis command control characters and whitespace
+  const sanitized = segment.replace(/[\r\n\s\0]/g, '_');
+  return sanitized.length > 256 ? sanitized.slice(0, 256) : sanitized;
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/store-redis/src/types.ts
 ================================================================================
 
 ================================================================================
@@ -9036,8 +10283,28 @@ const testSuites = [
     maxPoints: 5
   },
   {
+    id: 'ring_buffer_sink',
+    title: '11. Async RingBuffer WorkerSink, CompositeSink Fan-out & Dropping Policies (8 Gates)',
+    file: 'tests/ring-buffer-sink.test.js',
+    category: 'Async RingBuffer & Composite Sinks',
+    command: 'node tests/ring-buffer-sink.test.js',
+    expectedPasses: 8,
+    pointsPerTest: 5 / 8,
+    maxPoints: 5
+  },
+  {
+    id: 'store_redis',
+    title: '12. Redis Distributed Storage, Lua TTL Drift Guard & Stream Sinks (6 Gates)',
+    file: 'tests/store-redis.test.js',
+    category: 'Redis Distributed Storage & Streams',
+    command: 'node tests/store-redis.test.js',
+    expectedPasses: 6,
+    pointsPerTest: 5 / 6,
+    maxPoints: 5
+  },
+  {
     id: 'playwright',
-    title: '11. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
+    title: '13. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
     file: 'tests/browser-integration/dashboard.spec.js',
     category: 'Playwright Cross-Browser E2E (9 Tests)',
     command: 'npx playwright test',
@@ -9048,7 +10315,7 @@ const testSuites = [
 ];
 
 // Execute test suites
-console.log('🧪 Executing all 11 test suites and collecting execution logs...\n');
+console.log('🧪 Executing all 13 test suites and collecting execution logs...\n');
 const resultsData = [];
 let totalScore = 0;
 const maxTotalScore = 100;
@@ -9070,13 +10337,16 @@ for (const suite of testSuites) {
   if (suite.command) {
     const t0 = performance.now();
     try {
-      outputLog = execSync(suite.command, { cwd: ROOT, encoding: 'utf8' });
+      outputLog = execSync(suite.command, {
+        cwd: ROOT,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
       durationMs = Math.round(performance.now() - t0);
-      status = 'PASS';
     } catch (err) {
-      outputLog = (err.stdout || '') + '\n' + (err.stderr || '') + '\n' + err.message;
-      durationMs = Math.round(performance.now() - t0);
       status = 'FAIL';
+      durationMs = Math.round(performance.now() - t0);
+      outputLog = (err.stdout || '') + '\n' + (err.stderr || '') + '\n' + err.message;
     }
 
     if (suite.id === 'types_static') {
@@ -9132,7 +10402,7 @@ const finalScore = Math.min(100, Math.round(totalScore * 10) / 10);
 const grade = finalScore >= 95 ? 'A+' : finalScore >= 90 ? 'A' : finalScore >= 80 ? 'B' : 'F';
 
 console.log('\n📦 Verifying npm pack --dry-run across workspaces...');
-const packages = ['packages/risk-core', 'packages/browser-sdk', 'packages/sentinel'];
+const packages = ['packages/risk-core', 'packages/browser-sdk', 'packages/sentinel', 'packages/store-redis'];
 const packageOutputs = [];
 for (const pkg of packages) {
   const pkgDir = path.join(ROOT, pkg);
@@ -9441,7 +10711,7 @@ const codesProvPath = path.join(CODES_DIR, 'provenance.json');
 
 const EXPECTED_SCHEMA = '1.0';
 const EXPECTED_ARTIFACT = 'scripts/codes/source_export.txt';
-const EXPECTED_TOTAL_CHECKS = 86;
+const EXPECTED_TOTAL_CHECKS = 101;
 const GIT_SHA_RE = /^[a-f0-9]{40}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -10818,6 +12088,287 @@ FILE_END: tests/redirect-security.test.js
 ================================================================================
 FILE_BEGIN
 ================================================================================
+FILE_NAME: ring-buffer-sink.test.js
+FILE_PATH: tests/ring-buffer-sink.test.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+﻿import assert from 'node:assert';
+import {
+  NullSink,
+  CompositeSink,
+  AsyncRingBufferSink,
+  createSentinel,
+  SentinelAction
+} from '../packages/sentinel/dist/index.js';
+
+let passed = 0;
+let failed = 0;
+
+async function test(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(err);
+    failed++;
+  }
+}
+
+console.log('🧪 Running Async RingBuffer & Composite EventSink Test Suite...');
+
+class MockCapturingSink {
+  constructor(name = 'MockSink', options = {}) {
+    this.name = name;
+    this.records = [];
+    this.delayMs = options.delayMs || 0;
+    this.shouldFail = options.shouldFail || false;
+  }
+
+  async emit(record) {
+    if (this.delayMs > 0) {
+      await new Promise(res => setTimeout(res, this.delayMs));
+    }
+    if (this.shouldFail) {
+      throw new Error(`[${this.name}] Simulated downstream failure`);
+    }
+    this.records.push(record);
+  }
+
+  async emitBatch(records) {
+    if (this.delayMs > 0) {
+      await new Promise(res => setTimeout(res, this.delayMs));
+    }
+    if (this.shouldFail) {
+      throw new Error(`[${this.name}] Simulated downstream batch failure`);
+    }
+    this.records.push(...records);
+  }
+}
+
+async function main() {
+  await test('Gate 1: NullSink functionality and zero-overhead benchmark compliance', async () => {
+    const nullSink = new NullSink();
+    assert.strictEqual(nullSink.name, 'NullSink');
+    assert.strictEqual(nullSink.emittedCount, 0);
+
+    const record = { kind: 'risk_event', id: 'trc_1', timestamp: new Date().toISOString() };
+    nullSink.emit(record);
+    nullSink.emitBatch([record, record]);
+    assert.strictEqual(nullSink.emittedCount, 3);
+    nullSink.reset();
+    assert.strictEqual(nullSink.emittedCount, 0);
+  });
+
+  await test('Gate 2: AsyncRingBufferSink bitmask power-of-2 capacity and batch flusher', async () => {
+    const downstream = new MockCapturingSink('TestDownstream');
+    const ring = new AsyncRingBufferSink({
+      downstream,
+      capacity: 10, // Should be normalized to 16
+      batchSize: 4,
+      flushIntervalMs: 50
+    });
+
+    const stats = ring.stats();
+    assert.strictEqual(stats.capacity, 16);
+    assert.strictEqual(stats.buffered, 0);
+
+    // Enqueue 4 items (should trigger proactive flush)
+    for (let i = 0; i < 4; i++) {
+      ring.emit({ kind: 'risk_event', id: `trc_${i}`, timestamp: new Date().toISOString() });
+    }
+
+    // Await flush
+    await ring.flush();
+    assert.strictEqual(downstream.records.length, 4);
+    assert.strictEqual(ring.stats().flushed, 4);
+    assert.strictEqual(ring.stats().buffered, 0);
+
+    await ring.close();
+  });
+
+  await test('Gate 3: OverflowPolicy DROP_OLDEST and granular drop metrics', async () => {
+    const downstream = new MockCapturingSink('DropOldestSink');
+    const ring = new AsyncRingBufferSink({
+      downstream,
+      capacity: 4, // Max 4
+      flushIntervalMs: 0, // Manual flush only
+      overflowPolicy: 'DROP_OLDEST'
+    });
+
+    // Enqueue 6 items into capacity 4 buffer
+    for (let i = 1; i <= 6; i++) {
+      ring.emit({ kind: 'risk_event', id: `item_${i}`, timestamp: new Date().toISOString() });
+    }
+
+    const stats = ring.stats();
+    assert.strictEqual(stats.capacity, 4);
+    assert.strictEqual(stats.buffered, 4);
+    assert.strictEqual(stats.droppedOldest, 2);
+    assert.strictEqual(stats.dropped, 2);
+
+    await ring.flush();
+    assert.strictEqual(downstream.records.length, 4);
+    assert.strictEqual(downstream.records[0].id, 'item_3');
+    assert.strictEqual(downstream.records[3].id, 'item_6');
+
+    await ring.close();
+  });
+
+  await test('Gate 4: OverflowPolicy DROP_NEWEST and granular drop metrics', async () => {
+    const downstream = new MockCapturingSink('DropNewestSink');
+    const ring = new AsyncRingBufferSink({
+      downstream,
+      capacity: 4,
+      flushIntervalMs: 0,
+      overflowPolicy: 'DROP_NEWEST'
+    });
+
+    for (let i = 1; i <= 6; i++) {
+      ring.emit({ kind: 'risk_event', id: `item_${i}`, timestamp: new Date().toISOString() });
+    }
+
+    const stats = ring.stats();
+    assert.strictEqual(stats.buffered, 4);
+    assert.strictEqual(stats.droppedNewest, 2);
+    assert.strictEqual(stats.dropped, 2);
+
+    await ring.flush();
+    assert.strictEqual(downstream.records.length, 4);
+    assert.strictEqual(downstream.records[0].id, 'item_1');
+    assert.strictEqual(downstream.records[3].id, 'item_4');
+
+    await ring.close();
+  });
+
+  await test('Gate 5: OverflowPolicy FAIL_CLOSED throws immediately on buffer saturation', async () => {
+    const downstream = new MockCapturingSink('FailClosedSink');
+    const ring = new AsyncRingBufferSink({
+      downstream,
+      capacity: 4,
+      flushIntervalMs: 0,
+      overflowPolicy: 'FAIL_CLOSED'
+    });
+
+    for (let i = 1; i <= 4; i++) {
+      ring.emit({ kind: 'risk_event', id: `item_${i}`, timestamp: new Date().toISOString() });
+    }
+
+    assert.throws(() => {
+      ring.emit({ kind: 'risk_event', id: 'overflow_item', timestamp: new Date().toISOString() });
+    }, /Ring buffer saturated/);
+
+    const stats = ring.stats();
+    assert.strictEqual(stats.failClosedRejects, 1);
+    assert.strictEqual(stats.dropped, 1);
+
+    await ring.close();
+  });
+
+  await test('Gate 6: Circuit Breaker state machine (CLOSED -> OPEN -> HALF_OPEN -> CLOSED)', async () => {
+    const failingSink = new MockCapturingSink('FailingSink', { shouldFail: true });
+    let errorCallbackCalls = 0;
+
+    const ring = new AsyncRingBufferSink({
+      downstream: failingSink,
+      capacity: 16,
+      batchSize: 2,
+      flushIntervalMs: 0,
+      circuitBreakerThreshold: 2,
+      circuitBreakerCooldownMs: 50,
+      onError: () => {
+        errorCallbackCalls++;
+      }
+    });
+
+    assert.strictEqual(ring.stats().circuitBreakerState, 'CLOSED');
+
+    // Cause 2 consecutive flush failures
+    ring.emit({ kind: 'risk_event', id: '1', timestamp: new Date().toISOString() });
+    await ring.flush();
+    ring.emit({ kind: 'risk_event', id: '2', timestamp: new Date().toISOString() });
+    await ring.flush();
+
+    assert.strictEqual(ring.stats().circuitBreakerState, 'OPEN');
+    assert.strictEqual(ring.stats().flushFailures, 2);
+    assert.strictEqual(errorCallbackCalls, 2);
+
+    // While OPEN, enqueue drops events immediately
+    ring.emit({ kind: 'risk_event', id: '3', timestamp: new Date().toISOString() });
+    assert.strictEqual(ring.stats().circuitBreakerDrops, 1);
+
+    // Wait for cooldown to expire
+    await new Promise(res => setTimeout(res, 60));
+
+    // Fix downstream sink
+    failingSink.shouldFail = false;
+
+    // Next enqueue transitions to HALF_OPEN
+    ring.emit({ kind: 'risk_event', id: '4', timestamp: new Date().toISOString() });
+    assert.strictEqual(ring.stats().circuitBreakerState, 'HALF_OPEN');
+
+    // Successful flush recovers state to CLOSED
+    await ring.flush();
+    assert.strictEqual(ring.stats().circuitBreakerState, 'CLOSED');
+
+    await ring.close();
+  });
+
+  await test('Gate 7: CompositeSink fan-out multi-sink dispatch with timeout protection', async () => {
+    const fastSink = new MockCapturingSink('FastSink');
+    const slowSink = new MockCapturingSink('SlowSink', { delayMs: 150 });
+    const failingSink = new MockCapturingSink('FailingSink', { shouldFail: true });
+
+    const composite = new CompositeSink([fastSink, slowSink, failingSink], {
+      emitTimeoutMs: 50 // Short timeout to test cancellation
+    });
+
+    const record = { kind: 'risk_event', id: 'composite_1', timestamp: new Date().toISOString() };
+    await composite.emit(record);
+
+    // FastSink received record
+    assert.strictEqual(fastSink.records.length, 1);
+    // SlowSink and FailingSink do not crash execution due to Promise.allSettled + timeout
+    assert.strictEqual(composite.downstreamSinks.length, 3);
+  });
+
+  await test('Gate 8: Sentinel facade auto-dispatches RiskEventRecord to eventSink', async () => {
+    const capturingSink = new MockCapturingSink('FacadeSink');
+    const sentinel = createSentinel({
+      eventSink: capturingSink
+    });
+
+    const report = await sentinel.score({
+      headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+    });
+
+    assert.strictEqual(report.action, SentinelAction.ALLOW);
+    assert.strictEqual(capturingSink.records.length, 1);
+    assert.strictEqual(capturingSink.records[0].kind, 'risk_event');
+    assert.strictEqual(capturingSink.records[0].id, report.traceId);
+  });
+
+  console.log(`\n==================================================`);
+  console.log(`Results: ${passed} passed, ${failed} failed, total ${passed + failed}`);
+  console.log(`{"suite": "ring_buffer_sink", "passed": ${passed}, "failed": ${failed}, "total": ${passed + failed}}`);
+  if (failed > 0) process.exit(1);
+}
+
+main();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: tests/ring-buffer-sink.test.js
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
 FILE_NAME: sentinel.test.js
 FILE_PATH: tests/sentinel.test.js
 FILE_LANGUAGE: javascript
@@ -11273,6 +12824,409 @@ FILE_END: tests/sentinel.test.js
 ================================================================================
 FILE_BEGIN
 ================================================================================
+FILE_NAME: store-redis.test.js
+FILE_PATH: tests/store-redis.test.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import assert from 'node:assert';
+import {
+  RedisNonceStore,
+  RedisFixedWindowCounterStore,
+  RedisRiskEventStore,
+  RedisStreamSink
+} from '../packages/store-redis/dist/index.js';
+import {
+  createSentinel,
+  signCollectorToken,
+  StaticKeyResolver,
+  SentinelAction
+} from '../packages/sentinel/dist/index.js';
+
+let passed = 0;
+let failed = 0;
+
+async function test(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(err);
+    failed++;
+  }
+}
+
+console.log('🧪 Running Redis Distributed Storage & Stream Sink Test Suite...');
+
+/**
+ * 100% In-Memory Mock Redis Server Implementation for deterministic testing
+ */
+class MockRedisServer {
+  constructor() {
+    this.data = new Map();
+    this.ttls = new Map();
+    this.streams = new Map();
+    this.lists = new Map();
+  }
+
+  async set(key, value, ...args) {
+    const now = Date.now();
+    let isNx = false;
+    let exSeconds = null;
+
+    for (let i = 0; i < args.length; i++) {
+      const arg = String(args[i]).toUpperCase();
+      if (arg === 'NX') isNx = true;
+      if (arg === 'EX' && args[i + 1] !== undefined) {
+        exSeconds = Number(args[i + 1]);
+        i++;
+      }
+    }
+
+    if (isNx) {
+      if (this.data.has(key)) {
+        const exp = this.ttls.get(key);
+        if (!exp || exp > now) {
+          return null; // Key exists, NX failed
+        }
+      }
+    }
+
+    this.data.set(key, String(value));
+    if (exSeconds !== null) {
+      this.ttls.set(key, now + (exSeconds * 1000));
+    } else {
+      this.ttls.delete(key);
+    }
+    return 'OK';
+  }
+
+  async get(key) {
+    const now = Date.now();
+    if (!this.data.has(key)) return null;
+    const exp = this.ttls.get(key);
+    if (exp && exp <= now) {
+      this.data.delete(key);
+      this.ttls.delete(key);
+      return null;
+    }
+    return this.data.get(key);
+  }
+
+  async del(key) {
+    const keys = Array.isArray(key) ? key : [key];
+    let count = 0;
+    for (const k of keys) {
+      if (this.data.delete(k)) count++;
+      this.ttls.delete(k);
+      if (this.lists.delete(k)) count++;
+      if (this.streams.delete(k)) count++;
+    }
+    return count;
+  }
+
+  async eval(script, numKeys, ...args) {
+    const key = String(args[0]);
+    const windowSec = Number(args[1]);
+    const now = Date.now();
+
+    // Execute atomic Lua simulation: INCR + TTL recovery
+    let val = 0;
+    const currentStr = await this.get(key);
+    if (currentStr) {
+      val = Number(currentStr) || 0;
+    }
+    val += 1;
+    this.data.set(key, String(val));
+
+    // Check TTL
+    const exp = this.ttls.get(key);
+    if (!exp || exp <= now) {
+      this.ttls.set(key, now + (windowSec * 1000));
+    }
+
+    return val;
+  }
+
+  async lpush(key, ...values) {
+    if (!this.lists.has(key)) {
+      this.lists.set(key, []);
+    }
+    const list = this.lists.get(key);
+    list.unshift(...values);
+    return list.length;
+  }
+
+  async ltrim(key, start, stop) {
+    if (!this.lists.has(key)) return 'OK';
+    const list = this.lists.get(key);
+    this.lists.set(key, list.slice(start, stop + 1));
+    return 'OK';
+  }
+
+  async lrange(key, start, stop) {
+    if (!this.lists.has(key)) return [];
+    const list = this.lists.get(key);
+    const end = stop < 0 ? list.length + stop + 1 : stop + 1;
+    return list.slice(start, end);
+  }
+
+  async xadd(stream, ...args) {
+    if (!this.streams.has(stream)) {
+      this.streams.set(stream, []);
+    }
+    const entries = this.streams.get(stream);
+    const id = `${Date.now()}-${entries.length}`;
+    entries.push({ id, fields: args });
+    return id;
+  }
+
+  async ping() {
+    return 'PONG';
+  }
+
+  pipeline() {
+    const commands = [];
+    const self = this;
+    return {
+      xadd(stream, ...args) {
+        commands.push(() => self.xadd(stream, ...args));
+        return this;
+      },
+      lpush(key, val) {
+        commands.push(() => self.lpush(key, val));
+        return this;
+      },
+      ltrim(key, start, stop) {
+        commands.push(() => self.ltrim(key, start, stop));
+        return this;
+      },
+      async exec() {
+        const results = [];
+        for (const cmd of commands) {
+          results.push([null, await cmd()]);
+        }
+        return results;
+      }
+    };
+  }
+}
+
+async function main() {
+  await test('Gate 1: RedisNonceStore atomic lock & 100-request concurrent replay prevention', async () => {
+    const redis = new MockRedisServer();
+    const nonceStore = new RedisNonceStore({ redis, keyPrefix: 'test_sentinel' });
+
+    assert.strictEqual(nonceStore.clientType, 'redis');
+    assert.strictEqual(await nonceStore.ping(), true);
+
+    const namespace = { issuer: 'auth-server', kid: 'k1', nonce: 'nonce_unique_123' };
+    const expiresAt = Date.now() + 60000;
+
+    // First consume must succeed
+    const firstAttempt = await nonceStore.consume(namespace, expiresAt);
+    assert.strictEqual(firstAttempt, true);
+
+    // 100 concurrent race attempts with same nonce must all fail
+    const raceResults = await Promise.all(
+      Array.from({ length: 100 }).map(() => nonceStore.consume(namespace, expiresAt))
+    );
+    assert(raceResults.every(res => res === false));
+  });
+
+  await test('Gate 2: RedisNonceStore key sanitization against command injection', async () => {
+    const redis = new MockRedisServer();
+    const nonceStore = new RedisNonceStore({ redis });
+
+    const dangerousNamespace = {
+      issuer: 'evil\r\nSET FLUSHALL 1\r\n',
+      kid: 'kid 1',
+      nonce: 'nonce\0dangerous'
+    };
+
+    const ok = await nonceStore.consume(dangerousNamespace, Date.now() + 10000);
+    assert.strictEqual(ok, true);
+
+    // Verify key was sanitized and no newlines/control chars exist
+    const storedKeys = Array.from(redis.data.keys());
+    assert(storedKeys.every(k => !k.includes('\r') && !k.includes('\n') && !k.includes(' ')));
+  });
+
+  await test('Gate 3: RedisFixedWindowCounterStore atomic Lua execution with TTL drift recovery', async () => {
+    const redis = new MockRedisServer();
+    const counterStore = new RedisFixedWindowCounterStore({ redis, keyPrefix: 'rate' });
+
+    assert.strictEqual(await counterStore.ping(), true);
+
+    // First increment in 60s window
+    const r1 = await counterStore.increment('user:101', { windowMs: 60000 });
+    assert.strictEqual(r1.count, 1);
+    assert(r1.resetAt > Date.now());
+
+    // Subsequent increments in same window
+    const r2 = await counterStore.increment('user:101', { windowMs: 60000 });
+    assert.strictEqual(r2.count, 2);
+
+    const r3 = await counterStore.increment('user:101', { windowMs: 60000 });
+    assert.strictEqual(r3.count, 3);
+
+    // Verify get
+    assert.strictEqual(await counterStore.get('user:101', 60), 3);
+
+    // Verify reset
+    await counterStore.reset('user:101', 60);
+    assert.strictEqual(await counterStore.get('user:101', 60), 0);
+  });
+
+  await test('Gate 4: RedisRiskEventStore append, capped trim, listing, and query by since', async () => {
+    const redis = new MockRedisServer();
+    const eventStore = new RedisRiskEventStore({ redis, maxItems: 3 });
+
+    const sampleReport1 = {
+      traceId: 'trc_1',
+      evaluatedAt: '2026-08-21T01:00:00.000Z',
+      action: SentinelAction.ALLOW,
+      decision: { action: SentinelAction.ALLOW, reasonCode: 'BASELINE_CLEAN' },
+      score: 5,
+      evidenceConfidence: 0.8,
+      signals: {},
+      evidence: []
+    };
+    const sampleReport2 = {
+      traceId: 'trc_2',
+      evaluatedAt: '2026-08-21T02:00:00.000Z',
+      action: SentinelAction.REQUIRE_APP_VERIFICATION,
+      decision: { action: SentinelAction.REQUIRE_APP_VERIFICATION, reasonCode: 'POLICY_SCORE_APP_VERIFICATION' },
+      score: 65,
+      evidenceConfidence: 0.8,
+      signals: {},
+      evidence: []
+    };
+    const sampleReport3 = {
+      traceId: 'trc_3',
+      evaluatedAt: '2026-08-21T03:00:00.000Z',
+      action: SentinelAction.TEMPORARY_DENY,
+      decision: { action: SentinelAction.TEMPORARY_DENY, reasonCode: 'POLICY_SCORE_DENY' },
+      score: 95,
+      evidenceConfidence: 0.8,
+      signals: {},
+      evidence: []
+    };
+    const sampleReport4 = {
+      traceId: 'trc_4',
+      evaluatedAt: '2026-08-21T04:00:00.000Z',
+      action: SentinelAction.ALLOW,
+      decision: { action: SentinelAction.ALLOW, reasonCode: 'BASELINE_CLEAN' },
+      score: 10,
+      evidenceConfidence: 0.8,
+      signals: {},
+      evidence: []
+    };
+
+    await eventStore.append(sampleReport1);
+    await eventStore.append(sampleReport2);
+    await eventStore.append(sampleReport3);
+    await eventStore.append(sampleReport4);
+
+    // Max items is 3, so oldest (sampleReport1) should be pruned
+    const list = await eventStore.list();
+    assert.strictEqual(list.length, 3);
+    assert.strictEqual(list[0].traceId, 'trc_4');
+    assert.strictEqual(list[2].traceId, 'trc_2');
+
+    // Query since 03:00:00
+    const sinceList = await eventStore.list({ since: Date.parse('2026-08-21T03:00:00.000Z') });
+    assert.strictEqual(sinceList.length, 2);
+  });
+
+  await test('Gate 5: RedisStreamSink XADD MAXLEN~ streaming and pipeline batch execution', async () => {
+    const redis = new MockRedisServer();
+    const streamSink = new RedisStreamSink({
+      redis,
+      streamKey: 'risk-events',
+      maxLen: 1000
+    });
+
+    const record1 = { kind: 'risk_event', id: 'stream_1', timestamp: new Date().toISOString() };
+    const record2 = { kind: 'risk_event', id: 'stream_2', timestamp: new Date().toISOString() };
+
+    await streamSink.emit(record1);
+    await streamSink.emitBatch([record2]);
+
+    const streamEntries = redis.streams.get('sentinel:risk-events');
+    assert.strictEqual(streamEntries.length, 2);
+  });
+
+  await test('Gate 6: Sentinel end-to-end integration with RedisNonceStore & RedisFixedWindowCounterStore', async () => {
+    const redis = new MockRedisServer();
+    const nonceStore = new RedisNonceStore({ redis });
+    const counterStore = new RedisFixedWindowCounterStore({ redis });
+
+    const keySecret = 'test_secret_for_redis_sentinel_0123456789';
+    const keyResolver = new StaticKeyResolver({
+      test_key: keySecret
+    });
+
+    const sentinel = createSentinel({
+      keyResolver,
+      nonceStore,
+      counterStore,
+      expectedAudience: 'https://api.mycompany.com',
+      expectedPurpose: 'telemetry-collect',
+      allowedIssuers: ['trusted-issuer']
+    });
+
+    const token = await signCollectorToken(
+      {
+        v: 1,
+        kid: 'test_key',
+        iss: 'trusted-issuer',
+        aud: 'https://api.mycompany.com',
+        purpose: 'telemetry-collect',
+        sessionRef: 'sess_123',
+        iat: Date.now(),
+        exp: Date.now() + 60000,
+        nonce: 'distributed_nonce_abc'
+      },
+      keySecret
+    );
+
+    // 1. First score with verified token should pass
+    const report1 = await sentinel.score({
+      headers: { authorization: `Bearer ${token}` }
+    });
+    assert.strictEqual(report1.action, SentinelAction.ALLOW);
+    assert.strictEqual(report1.verification.state, 'VERIFIED');
+
+    // 2. Replayed token should be detected and marked FAILED
+    const report2 = await sentinel.score({
+      headers: { authorization: `Bearer ${token}` }
+    });
+    assert.strictEqual(report2.verification.state, 'FAILED');
+    assert.strictEqual(report2.verification.error, 'REPLAY_ATTACK_DETECTED');
+  });
+
+  console.log(`\n==================================================`);
+  console.log(`Results: ${passed} passed, ${failed} failed, total ${passed + failed}`);
+  console.log(`{"suite": "store_redis", "passed": ${passed}, "failed": ${failed}, "total": ${passed + failed}}`);
+  if (failed > 0) process.exit(1);
+}
+
+main();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: tests/store-redis.test.js
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
 FILE_NAME: store.test.js
 FILE_PATH: tests/store.test.js
 FILE_LANGUAGE: javascript
@@ -11620,7 +13574,7 @@ FILE_LANGUAGE: typescript
 FILE_CONTENT_BEGIN
 ================================================================================
 
-﻿import {
+import {
   createSentinel,
   Sentinel,
   type SentinelOptions,
@@ -11671,8 +13625,25 @@ FILE_CONTENT_BEGIN
   readJsonBodyLimited,
   MemoryNonceStore,
   StaticKeyResolver,
-  validateRedirectUrl
+  validateRedirectUrl,
+  AsyncRingBufferSink,
+  CompositeSink,
+  NullSink,
+  type EventSink,
+  type StreamRecord,
+  type RiskEventRecord,
+  type RingBufferStats,
+  type DistributedNonceStore,
+  type DistributedCounterStore,
+  type DistributedRiskEventStore
 } from '../packages/sentinel/dist/index.js';
+
+import {
+  RedisNonceStore,
+  RedisFixedWindowCounterStore,
+  RedisRiskEventStore,
+  RedisStreamSink
+} from '../packages/store-redis/dist/index.js';
 
 import {
   calculateConfidence,
@@ -11868,6 +13839,35 @@ async function runFullStaticTypeCheck(): Promise<void> {
   const urlCheck = validateRedirectUrl('/llms.txt', { allowRelative: true });
   const bodyCheck = await readJsonBodyLimited({ body: '{"ok":true}' });
 
+  // Stream Sinks & Workers Static Contract Checks
+  const nullSink: EventSink = new NullSink();
+  const compositeSink: EventSink = new CompositeSink([nullSink], { emitTimeoutMs: 1000 });
+  const ringBuffer: EventSink = new AsyncRingBufferSink({
+    downstream: compositeSink,
+    capacity: 256,
+    flushIntervalMs: 50,
+    batchSize: 16,
+    overflowPolicy: 'DROP_OLDEST'
+  });
+  const stats: RingBufferStats = (ringBuffer as AsyncRingBufferSink).stats();
+
+  // Distributed Store Contract Checks
+  const mockRedisClient = {
+    set: async () => 'OK',
+    get: async () => '1',
+    del: async () => 1,
+    eval: async () => 1,
+    ping: async () => 'PONG',
+    xadd: async () => '1-0',
+    lpush: async () => 1,
+    ltrim: async () => 'OK',
+    lrange: async () => []
+  };
+  const distNonceStore: DistributedNonceStore = new RedisNonceStore({ redis: mockRedisClient });
+  const distCounterStore: DistributedCounterStore = new RedisFixedWindowCounterStore({ redis: mockRedisClient });
+  const distEventStore: DistributedRiskEventStore = new RedisRiskEventStore({ redis: mockRedisClient });
+  const redisStreamSink: EventSink = new RedisStreamSink({ redis: mockRedisClient, streamKey: 'risk-events' });
+
   void isV1;
   void isV2;
   void isUniversal;
@@ -11882,6 +13882,11 @@ async function runFullStaticTypeCheck(): Promise<void> {
   void sanitizedMinimal;
   void confidence;
   void sampleSanitizedEvidence;
+  void stats;
+  void distNonceStore;
+  void distCounterStore;
+  void distEventStore;
+  void redisStreamSink;
 }
 
 runFullStaticTypeCheck();

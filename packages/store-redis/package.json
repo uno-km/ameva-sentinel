@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@ameva/sentinel-store-redis",
   "version": "0.6.0-alpha.1",
   "description": "Enterprise Distributed Redis, Valkey, and Dragonfly Storage Adapters and Streams Pipeline for AMEVA Sentinel",
