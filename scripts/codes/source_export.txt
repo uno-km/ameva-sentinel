@@ -91,9 +91,9 @@
 Project: AMEVA-Sentinel
 Snapshot Date: 2026-08-21
 Branch: release-0.6
-Commit: f537783936ed21f19b2b1524e6e5349e52a59921
-Working Tree: DIRTY
-Snapshot State: HEAD + working tree snapshot
+Commit: 8c201db16f2331d7d98a95d1210a76a4d857b8ab
+Working Tree: CLEAN
+Snapshot State: HEAD snapshot
 Operating System: win32
 Python Version: 3.12.0
 Node Version: v24.16.0
@@ -8831,8 +8831,8 @@ def main():
     # Assess clean state based on tracked source files
     porcelain_raw = cmd(["git", "status", "--porcelain"]) or ""
     source_changes = [
-        line for line in porcelain_raw.splitlines()
-        if not line[3:].startswith("reports/") and not line[3:].startswith("scripts/codes/")
+        line.strip() for line in porcelain_raw.splitlines()
+        if line.strip() and not line.strip().split(None, 1)[-1].startswith("reports/") and not line.strip().split(None, 1)[-1].startswith("scripts/codes/")
     ]
     is_clean = len(source_changes) == 0
     working_tree_state = "CLEAN" if is_clean else "DIRTY"
@@ -9164,7 +9164,9 @@ try {
   gitBranch = execSync('git branch --show-current', { cwd: ROOT, encoding: 'utf8' }).trim() || 'release-0.6';
   gitCommit = execSync('git rev-parse HEAD', { cwd: ROOT, encoding: 'utf8' }).trim() || 'HEAD';
   const porcelain = execSync('git status --porcelain', { cwd: ROOT, encoding: 'utf8' }).trim();
-  const sourceChanges = porcelain.split('\n').filter(l => l.trim() && !l.slice(3).startsWith('reports/') && !l.slice(3).startsWith('scripts/codes/'));
+  const sourceChanges = porcelain.split('\n')
+    .map(l => l.trim())
+    .filter(l => l && !l.replace(/^[MADRCU?\s]+\s+/, '').startsWith('reports/') && !l.replace(/^[MADRCU?\s]+\s+/, '').startsWith('scripts/codes/'));
   isWorkingTreeClean = sourceChanges.length === 0;
 } catch (e) {}
 
