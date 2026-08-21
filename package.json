@@ -1,0 +1,32 @@
+{
+  "name": "ameva-sentinel-monorepo",
+  "version": "1.0.0",
+  "description": "Privacy-first Security Observability Layer for Web Applications",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run --workspaces build",
+    "test": "npm run --workspaces test",
+    "lint": "npm run --workspaces lint"
+  },
+  "keywords": [
+    "security",
+    "observability",
+    "bot-detection",
+    "risk-scoring",
+    "privacy-first",
+    "telemetry",
+    "edge-native",
+    "self-hosted",
+    "policy-as-code"
+  ],
+  "author": "Eunho Kim (@uno-km) <zhflick014745@naver.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uno-km/AMEVA-Sentinel.git"
+  }
+}
