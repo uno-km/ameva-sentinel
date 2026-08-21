@@ -4,8 +4,8 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-EXCLUDE_DIRS = {'.git', '.venv', 'node_modules', 'dist', 'build', 'coverage', '__pycache__', 'releases', 'tools', 'codes'}
-EXCLUDE_FILES = {'package-lock.json', 'pnpm-lock.yaml', '*.whl', '*.tar.gz', '*.tgz', '*.png', '*.jpg', '*.jpeg', '*.gif', '*.mp4', '*.mp3', '.env*', '*.pem', '*.key', '*.cert', 'API token', '비밀번호', '개인키', '인증서'}
+EXCLUDE_DIRS = {'.git', '.venv', 'node_modules', 'dist', 'build', 'coverage', '__pycache__', 'releases', 'tools', 'codes', 'reports', 'test-results', 'playwright-report'}
+EXCLUDE_FILES = {'package-lock.json', 'pnpm-lock.yaml', '*.whl', '*.tar.gz', '*.tgz', '*.png', '*.jpg', '*.jpeg', '*.gif', '*.mp4', '*.mp3', '.env*', '*.pem', '*.key', '*.cert', 'API token', '비밀번호', '개인키', '인증서', '*_export.txt', 'source_export.txt', '*_test_report.txt', 'TEST_SUITE_AND_RESULTS.txt'}
 LANG_MAP = {'.py': 'python', '.ts': 'typescript', '.js': 'javascript', '.md': 'markdown', '.json': 'json', '.html': 'html', '.css': 'css', '.wgsl': 'wgsl'}
 
 def cmd(args: list[str]) -> str:
@@ -46,37 +46,59 @@ def main():
 
     out_file = out_dir / "source_export.txt"
 
-    branch, commit, porcelain = cmd(["git", "branch", "--show-current"]) or "master", cmd(["git", "rev-parse", "HEAD"]) or "HEAD", cmd(["git", "status", "--porcelain"])
+    branch = cmd(["git", "branch", "--show-current"]) or "master"
+    commit = cmd(["git", "rev-parse", "HEAD"]) or "HEAD"
+    
+    # Assess clean state based on tracked source files
+    porcelain_raw = cmd(["git", "status", "--porcelain"]) or ""
+    source_changes = [
+        line for line in porcelain_raw.splitlines()
+        if not line[3:].startswith("reports/") and not line[3:].startswith("scripts/codes/")
+    ]
+    is_clean = len(source_changes) == 0
+    working_tree_state = "CLEAN" if is_clean else "DIRTY"
+
     sep = "=" * 80
 
     header = (
         f"# 프로젝트 디렉터리\n#root\n{generate_tree(root)}\n\n\n"
         f"# PROJECT_METADATA\nProject: AMEVA-Sentinel\nSnapshot Date: {now:%Y-%m-%d}\nBranch: {branch}\nCommit: {commit}\n"
-        f"Working Tree: {'DIRTY' if porcelain else 'CLEAN'}\nSnapshot State: {'HEAD + working tree snapshot' if porcelain else 'HEAD snapshot'}\n"
+        f"Working Tree: {working_tree_state}\nSnapshot State: {'HEAD snapshot' if is_clean else 'HEAD + working tree snapshot'}\n"
         f"Operating System: {sys.platform}\nPython Version: {sys.version.split()[0]}\nNode Version: {cmd(['node', '-v']) or 'Unknown'}\n"
         f"Package Manager: npm\nCurrent Stage: v0.6.0-alpha.1 Target Discrimination & Trust Boundary\nTarget Release: 1.0.0 OSS Release\n\n\n"
     )
 
-    with open(out_file, "w", encoding="utf-8") as out:
-        out.write(header)
+    # Collect source files via git ls-files (or directory fallback)
+    tracked_output = cmd(["git", "ls-files"])
+    if tracked_output:
+        all_relative_paths = sorted(tracked_output.splitlines())
+    else:
+        all_relative_paths = []
         for root_dir, dirnames, filenames in os.walk(root):
             dirnames[:] = sorted([d for d in dirnames if d not in EXCLUDE_DIRS])
             for f in sorted(filenames):
-                p = Path(root_dir) / f
-                if any(p.match(pat) for pat in EXCLUDE_FILES) or f.endswith("_export.txt") or f == "source_export.txt":
-                    continue
-                rel_path = p.relative_to(root).as_posix()
-                lang = LANG_MAP.get(p.suffix.lower(), "text")
-                try:
-                    content = p.read_text(encoding="utf-8")
-                except Exception as e:
-                    content = f"<에러 발생 또는 바이너리 파일: {e}>"
-                out.write(
-                    f"{sep}\nFILE_BEGIN\n{sep}\nFILE_NAME: {f}\nFILE_PATH: {rel_path}\n"
-                    f"FILE_LANGUAGE: {lang}\n{sep}\nFILE_CONTENT_BEGIN\n{sep}\n\n"
-                    f"{content}{'' if content.endswith(chr(10)) else chr(10)}\n"
-                    f"{sep}\nFILE_CONTENT_END\n{sep}\nFILE_END: {rel_path}\n{sep}\n\n"
-                )
+                all_relative_paths.append((Path(root_dir) / f).relative_to(root).as_posix())
+
+    with open(out_file, "w", encoding="utf-8") as out:
+        out.write(header)
+        for rel_posix in all_relative_paths:
+            p = root / rel_posix
+            parts = p.relative_to(root).parts
+            if any(part in EXCLUDE_DIRS for part in parts):
+                continue
+            if any(p.match(pat) for pat in EXCLUDE_FILES):
+                continue
+            lang = LANG_MAP.get(p.suffix.lower(), "text")
+            try:
+                content = p.read_text(encoding="utf-8")
+            except Exception as e:
+                content = f"<에러 발생 또는 바이너리 파일: {e}>"
+            out.write(
+                f"{sep}\nFILE_BEGIN\n{sep}\nFILE_NAME: {p.name}\nFILE_PATH: {rel_posix}\n"
+                f"FILE_LANGUAGE: {lang}\n{sep}\nFILE_CONTENT_BEGIN\n{sep}\n\n"
+                f"{content}{'' if content.endswith(chr(10)) else chr(10)}\n"
+                f"{sep}\nFILE_CONTENT_END\n{sep}\nFILE_END: {rel_posix}\n{sep}\n\n"
+            )
 
     print(f"소스코드 추출이 완료되었습니다: {out_file}")
 

@@ -22,8 +22,8 @@
     "test:all": "npm run build && npm run test:types && npm run test:unit && playwright test",
     "test:report": "node scripts/generate_test_report.js",
     "verify": "npm run build && npm run test:types && npm run test:unit && playwright test",
-    "verify:release": "py scripts/export_source_code.py && node scripts/generate_test_report.js && node scripts/verify_provenance.js",
-    "export": "py scripts/export_source_code.py"
+    "verify:release": "node scripts/run_release_verification.js",
+    "export": "node scripts/run_release_verification.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.1",

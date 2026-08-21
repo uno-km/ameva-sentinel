@@ -45,10 +45,7 @@ jobs:
         run: npx playwright test
 
       - name: Run Fail-Closed Release Verification & Export Pipeline
-        run: |
-          python3 scripts/export_source_code.py || python scripts/export_source_code.py || py scripts/export_source_code.py
-          node scripts/generate_test_report.js
-          node scripts/verify_provenance.js
+        run: npm run verify:release
 
       - name: Upload Verification Artifacts
         if: always()

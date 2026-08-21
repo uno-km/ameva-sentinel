@@ -262,7 +262,8 @@ try {
   gitBranch = execSync('git branch --show-current', { cwd: ROOT, encoding: 'utf8' }).trim() || 'release-0.6';
   gitCommit = execSync('git rev-parse HEAD', { cwd: ROOT, encoding: 'utf8' }).trim() || 'HEAD';
   const porcelain = execSync('git status --porcelain', { cwd: ROOT, encoding: 'utf8' }).trim();
-  isWorkingTreeClean = porcelain.length === 0;
+  const sourceChanges = porcelain.split('\n').filter(l => l.trim() && !l.slice(3).startsWith('reports/') && !l.slice(3).startsWith('scripts/codes/'));
+  isWorkingTreeClean = sourceChanges.length === 0;
 } catch (e) {}
 
 // Calculate SHA-256 of source_export.txt if it exists
