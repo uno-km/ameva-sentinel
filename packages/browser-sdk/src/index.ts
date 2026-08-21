@@ -3,15 +3,17 @@
  * Privacy-first browser environment & user interaction telemetry collector
  * 
  * Guarantees:
+ * - Throttled pointer sampling (100ms interval) to protect main-thread FPS
  * - ZERO raw mouse coordinates collected
  * - ZERO keystroke contents or form values collected
- * - ZERO persistent PII or long-term tracking identifiers
+ * - Non-persistent per-tab ephemeral session identifier
  * - Clean lifecycle management with start() and destroy()
  */
 
 export interface BrowserTelemetryOptions {
   samplingWindowMs?: number;
   maxEventsCap?: number;
+  pointerSampleIntervalMs?: number;
   autoStart?: boolean;
 }
 
@@ -28,29 +30,46 @@ export interface BrowserTelemetrySnapshot {
   collectedAt: string;
 }
 
+/**
+ * Returns ephemeral per-tab session ID from sessionStorage.
+ * Disposed automatically when the tab closes.
+ */
+export function getLocalSessionId(): string {
+  if (typeof sessionStorage === 'undefined') return 'ephemeral_local_session';
+  const key = 'ameva:sentinel:session-id';
+  try {
+    const existing = sessionStorage.getItem(key);
+    if (existing) return existing;
+    const newId = 'sess_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+    sessionStorage.setItem(key, newId);
+    return newId;
+  } catch (e) {
+    return 'ephemeral_local_session';
+  }
+}
+
 export class BrowserTelemetryCollector {
   private startTime = Date.now();
   private isListening = false;
   private maxEventsCap: number;
+  private pointerIntervalMs: number;
+  private lastPointerSampleAt = 0;
   private abortController: AbortController | null = null;
 
-  // Granular interaction counters
+  // Interaction Counters
   private trustedEvents = 0;
   private pointerEvents = 0;
   private touchEvents = 0;
   private keyboardEvents = 0;
 
   constructor(options: BrowserTelemetryOptions = {}) {
-    this.maxEventsCap = options.maxEventsCap ?? 5000;
+    this.maxEventsCap = options.maxEventsCap ?? 500;
+    this.pointerIntervalMs = options.pointerSampleIntervalMs ?? 100;
     if (options.autoStart !== false) {
       this.start();
     }
   }
 
-  /**
-   * Starts collecting interaction signals with passive event listeners.
-   * Safe against duplicate invocations.
-   */
   start(): void {
     if (this.isListening || typeof window === 'undefined') return;
     this.isListening = true;
@@ -58,6 +77,12 @@ export class BrowserTelemetryCollector {
     const { signal } = this.abortController;
 
     const onPointer = (e: Event) => {
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      if (now - this.lastPointerSampleAt < this.pointerIntervalMs) {
+        return; // Throttled to prevent main-thread overhead
+      }
+      this.lastPointerSampleAt = now;
+
       if (this.pointerEvents < this.maxEventsCap) this.pointerEvents++;
       if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
         this.trustedEvents++;
@@ -84,9 +109,6 @@ export class BrowserTelemetryCollector {
     window.addEventListener('keydown', onKey, { passive: true, signal });
   }
 
-  /**
-   * Captures an immutable snapshot of current software-observed browser signals.
-   */
   snapshot(): BrowserTelemetrySnapshot {
     const isBrowser = typeof window !== 'undefined' && typeof navigator !== 'undefined';
     if (!isBrowser) {
@@ -125,20 +147,15 @@ export class BrowserTelemetryCollector {
     };
   }
 
-  /**
-   * Resets counter state.
-   */
   reset(): void {
     this.startTime = Date.now();
     this.trustedEvents = 0;
     this.pointerEvents = 0;
     this.touchEvents = 0;
     this.keyboardEvents = 0;
+    this.lastPointerSampleAt = 0;
   }
 
-  /**
-   * Cleans up all DOM listeners and aborts active controller.
-   */
   destroy(): void {
     if (this.abortController) {
       this.abortController.abort();

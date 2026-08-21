@@ -1,10 +1,26 @@
 // Pure ESM Module for @ameva/sentinel-browser
 
+export function getLocalSessionId() {
+  if (typeof sessionStorage === 'undefined') return 'ephemeral_local_session';
+  const key = 'ameva:sentinel:session-id';
+  try {
+    const existing = sessionStorage.getItem(key);
+    if (existing) return existing;
+    const newId = 'sess_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+    sessionStorage.setItem(key, newId);
+    return newId;
+  } catch (e) {
+    return 'ephemeral_local_session';
+  }
+}
+
 export class BrowserTelemetryCollector {
   constructor(options = {}) {
     this.startTime = Date.now();
     this.isListening = false;
-    this.maxEventsCap = options.maxEventsCap ?? 5000;
+    this.maxEventsCap = options.maxEventsCap ?? 500;
+    this.pointerIntervalMs = options.pointerSampleIntervalMs ?? 100;
+    this.lastPointerSampleAt = 0;
     this.abortController = null;
 
     this.trustedEvents = 0;
@@ -24,6 +40,12 @@ export class BrowserTelemetryCollector {
     const signal = this.abortController ? this.abortController.signal : undefined;
 
     const onPointer = (e) => {
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      if (now - this.lastPointerSampleAt < this.pointerIntervalMs) {
+        return;
+      }
+      this.lastPointerSampleAt = now;
+
       if (this.pointerEvents < this.maxEventsCap) this.pointerEvents++;
       if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
         this.trustedEvents++;
@@ -94,6 +116,7 @@ export class BrowserTelemetryCollector {
     this.pointerEvents = 0;
     this.touchEvents = 0;
     this.keyboardEvents = 0;
+    this.lastPointerSampleAt = 0;
   }
 
   destroy() {

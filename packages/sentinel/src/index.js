@@ -76,10 +76,20 @@ export class Sentinel {
    * In a distributed server architecture, this will be replaced by a server-side subnet HMAC hash.
    */
   deriveRateKey(req) {
-    if (!req) return 'anonymous-local-client';
+    if (!req) return 'ephemeral_local_session';
     if (req.sessionId) return `sess_${req.sessionId}`;
     if (req.testClientId) return `test_${req.testClientId}`;
-    return 'anonymous-local-client';
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        const key = 'ameva:sentinel:session-id';
+        const existing = sessionStorage.getItem(key);
+        if (existing) return existing;
+        const newId = 'sess_' + Math.random().toString(36).substring(2, 10);
+        sessionStorage.setItem(key, newId);
+        return newId;
+      } catch (e) {}
+    }
+    return 'ephemeral_local_session';
   }
 
   /**

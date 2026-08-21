@@ -1,8 +1,89 @@
-import { SentinelRiskReport } from './types.js';
+import { SentinelAction, SentinelRiskReport, EnforcementMode, EvidenceItem } from './types.js';
 
-export interface StoredRiskEvent extends SentinelRiskReport {
-  schemaVersion: string;
+export interface SanitizedEvidence {
+  rule: string;
+  score: number;
+  attributes: Record<string, string | number | boolean | null>;
+  message: string;
+}
+
+export interface MinimalDerivedSignals {
+  webdriverObserved?: boolean;
+  telemetryObserved?: boolean;
+  observationDurationMs?: number;
+  trustedInputCount?: number;
+  burstCount10s?: number;
+  touchMismatch?: boolean;
+  suspiciousUA?: boolean;
+}
+
+/**
+ * Strict Stored Event Schema (v1.0)
+ * Strictly isolates runtime internal state from persistent browser storage.
+ */
+export interface StoredRiskEventV1 {
+  schemaVersion: '1.0';
+  traceId: string;
+  evaluatedAt: string;
+  score: number;
+  evidenceConfidence: number;
+  action: SentinelAction;
+  recommendedAction: SentinelAction;
+  enforcementMode: EnforcementMode;
+  policyVersion: string;
+  minimalDerivedSignals: MinimalDerivedSignals;
+  evidence: SanitizedEvidence[];
   storedAt: string;
+}
+
+export function sanitizeSignals(signals: any = {}): MinimalDerivedSignals {
+  return {
+    webdriverObserved: !!signals.webdriver || !!signals.webdriverObserved,
+    telemetryObserved: !!signals.telemetryObserved,
+    observationDurationMs: typeof signals.observationDurationMs === 'number' ? signals.observationDurationMs : 0,
+    trustedInputCount: typeof signals.isTrustedEventsCount === 'number' ? signals.isTrustedEventsCount : (typeof signals.trustedInputCount === 'number' ? signals.trustedInputCount : 0),
+    burstCount10s: typeof signals.burstCount10s === 'number' ? signals.burstCount10s : 1,
+    touchMismatch: !!signals.touchMismatch,
+    suspiciousUA: !!signals.suspiciousUA
+  };
+}
+
+export function sanitizeEvidence(item: EvidenceItem): SanitizedEvidence {
+  const safeAttrs: Record<string, string | number | boolean | null> = {};
+  if (item.attributes && typeof item.attributes === 'object') {
+    for (const [k, v] of Object.entries(item.attributes)) {
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null) {
+        safeAttrs[k] = v;
+      }
+    }
+  }
+  return {
+    rule: String(item.rule || 'unknown'),
+    score: Number(item.score || 0),
+    attributes: safeAttrs,
+    message: String(item.message || '')
+  };
+}
+
+/**
+ * Explicit conversion function to produce a secure, sanitized persistent representation
+ */
+export function toStoredRiskEvent(report: SentinelRiskReport & { signals?: any }): StoredRiskEventV1 {
+  const now = Date.now();
+  return {
+    schemaVersion: '1.0',
+    traceId: report.traceId,
+    evaluatedAt: report.evaluatedAt || new Date(now).toISOString(),
+    score: report.score,
+    evidenceConfidence: report.evidenceConfidence,
+    action: report.action,
+    recommendedAction: report.recommendedAction,
+    enforcementMode: report.enforcementMode,
+    policyVersion: report.policyVersion,
+    minimalDerivedSignals: sanitizeSignals(report.signals),
+    evidence: (report.evidence || []).map(sanitizeEvidence),
+    storedAt: new Date(now).toISOString()
+  };
 }
 
 export interface RiskEventStoreOptions {
@@ -13,15 +94,12 @@ export interface RiskEventStoreOptions {
 
 export interface RiskEventStore {
   append(report: SentinelRiskReport): Promise<void>;
-  list(options?: { limit?: number; includeExpired?: boolean }): Promise<SentinelRiskReport[]>;
+  list(options?: { limit?: number; includeExpired?: boolean }): Promise<StoredRiskEventV1[]>;
   clear(): Promise<void>;
 }
 
-/**
- * In-Memory Event Store with Idempotency, FIFO Eviction, and TTL Pruning
- */
 export class MemoryRiskEventStore implements RiskEventStore {
-  private events: StoredRiskEvent[] = [];
+  private events: StoredRiskEventV1[] = [];
   private readonly maxItems: number;
   private readonly maxAgeMs: number;
 
@@ -32,26 +110,16 @@ export class MemoryRiskEventStore implements RiskEventStore {
 
   async append(report: SentinelRiskReport): Promise<void> {
     if (!report || !report.traceId) return;
-
     const now = Date.now();
-    const storedItem: StoredRiskEvent = {
-      ...report,
-      schemaVersion: '1.0',
-      evaluatedAt: report.evaluatedAt || new Date(now).toISOString(),
-      storedAt: new Date(now).toISOString()
-    };
+    const storedItem = toStoredRiskEvent(report);
 
-    // Idempotency: Remove existing item with same traceId if present
+    // Idempotency: Deduplicate by traceId
     this.events = this.events.filter(e => e.traceId !== report.traceId);
-
-    // Add new item to front
     this.events.unshift(storedItem);
-
-    // Prune Expired & FIFO Clamp
     this.prune(now);
   }
 
-  async list(options: { limit?: number; includeExpired?: boolean } = {}): Promise<SentinelRiskReport[]> {
+  async list(options: { limit?: number; includeExpired?: boolean } = {}): Promise<StoredRiskEventV1[]> {
     const now = Date.now();
     if (!options.includeExpired) {
       this.prune(now);
@@ -65,22 +133,17 @@ export class MemoryRiskEventStore implements RiskEventStore {
   }
 
   private prune(now: number): void {
-    // 1. Evict expired
     this.events = this.events.filter(e => {
       const itemTime = new Date(e.evaluatedAt).getTime();
       return (now - itemTime) <= this.maxAgeMs;
     });
 
-    // 2. FIFO Capacity limit
     if (this.events.length > this.maxItems) {
       this.events = this.events.slice(0, this.maxItems);
     }
   }
 }
 
-/**
- * Robust LocalStorage Event Store with Idempotency, Quota Recovery, and Cross-Tab Dispatch
- */
 export class LocalStorageRiskEventStore implements RiskEventStore {
   private readonly key: string;
   private readonly maxItems: number;
@@ -96,14 +159,7 @@ export class LocalStorageRiskEventStore implements RiskEventStore {
     if (typeof localStorage === 'undefined' || !report || !report.traceId) return;
 
     const current = await this.list({ limit: this.maxItems, includeExpired: false });
-    const now = Date.now();
-
-    const storedItem: StoredRiskEvent = {
-      ...report,
-      schemaVersion: '1.0',
-      evaluatedAt: report.evaluatedAt || new Date(now).toISOString(),
-      storedAt: new Date(now).toISOString()
-    };
+    const storedItem = toStoredRiskEvent(report);
 
     // Idempotency: Deduplicate by traceId
     const filtered = current.filter(e => e.traceId !== report.traceId);
@@ -111,15 +167,12 @@ export class LocalStorageRiskEventStore implements RiskEventStore {
 
     try {
       localStorage.setItem(this.key, JSON.stringify(next));
-      
-      // Dispatch intra-tab event for reactive UI updates
       if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
         try {
           window.dispatchEvent(new CustomEvent('sentinel:risk-event-appended', { detail: storedItem }));
         } catch (e) {}
       }
     } catch (err) {
-      // Storage quota exceeded fallback: trim by half and retry
       try {
         const halved = next.slice(0, Math.floor(this.maxItems / 2));
         localStorage.setItem(this.key, JSON.stringify(halved));
@@ -127,7 +180,7 @@ export class LocalStorageRiskEventStore implements RiskEventStore {
     }
   }
 
-  async list(options: { limit?: number; includeExpired?: boolean } = {}): Promise<SentinelRiskReport[]> {
+  async list(options: { limit?: number; includeExpired?: boolean } = {}): Promise<StoredRiskEventV1[]> {
     if (typeof localStorage === 'undefined') return [];
     const raw = localStorage.getItem(this.key);
     if (!raw) return [];
@@ -149,7 +202,6 @@ export class LocalStorageRiskEventStore implements RiskEventStore {
 
       return valid.slice(0, options.limit ?? this.maxItems);
     } catch (e) {
-      // Corrupt JSON recovery: clear corrupted state safely
       try { localStorage.removeItem(this.key); } catch (err) {}
       return [];
     }

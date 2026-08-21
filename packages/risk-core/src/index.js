@@ -39,6 +39,53 @@ export class MemoryCounterStore {
   }
 }
 
+export function sanitizeSignals(signals = {}) {
+  return {
+    webdriverObserved: !!signals.webdriver || !!signals.webdriverObserved,
+    telemetryObserved: !!signals.telemetryObserved,
+    observationDurationMs: typeof signals.observationDurationMs === 'number' ? signals.observationDurationMs : 0,
+    trustedInputCount: typeof signals.isTrustedEventsCount === 'number' ? signals.isTrustedEventsCount : (typeof signals.trustedInputCount === 'number' ? signals.trustedInputCount : 0),
+    burstCount10s: typeof signals.burstCount10s === 'number' ? signals.burstCount10s : 1,
+    touchMismatch: !!signals.touchMismatch,
+    suspiciousUA: !!signals.suspiciousUA
+  };
+}
+
+export function sanitizeEvidence(item) {
+  const safeAttrs = {};
+  if (item && item.attributes && typeof item.attributes === 'object') {
+    for (const [k, v] of Object.entries(item.attributes)) {
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null) {
+        safeAttrs[k] = v;
+      }
+    }
+  }
+  return {
+    rule: String(item?.rule || 'unknown'),
+    score: Number(item?.score || 0),
+    attributes: safeAttrs,
+    message: String(item?.message || '')
+  };
+}
+
+export function toStoredRiskEvent(report) {
+  const now = Date.now();
+  return {
+    schemaVersion: '1.0',
+    traceId: report.traceId,
+    evaluatedAt: report.evaluatedAt || new Date(now).toISOString(),
+    score: report.score,
+    evidenceConfidence: report.evidenceConfidence,
+    action: report.action,
+    recommendedAction: report.recommendedAction,
+    enforcementMode: report.enforcementMode,
+    policyVersion: report.policyVersion,
+    minimalDerivedSignals: sanitizeSignals(report.signals),
+    evidence: (report.evidence || []).map(sanitizeEvidence),
+    storedAt: new Date(now).toISOString()
+  };
+}
+
 export class MemoryRiskEventStore {
   constructor(options = {}) {
     this.events = [];
@@ -48,12 +95,7 @@ export class MemoryRiskEventStore {
   async append(report) {
     if (!report || !report.traceId) return;
     const now = Date.now();
-    const storedItem = {
-      ...report,
-      schemaVersion: '1.0',
-      evaluatedAt: report.evaluatedAt || new Date(now).toISOString(),
-      storedAt: new Date(now).toISOString()
-    };
+    const storedItem = toStoredRiskEvent(report);
     this.events = this.events.filter(e => e.traceId !== report.traceId);
     this.events.unshift(storedItem);
     this.prune(now);
@@ -86,13 +128,7 @@ export class LocalStorageRiskEventStore {
   async append(report) {
     if (typeof localStorage === 'undefined' || !report || !report.traceId) return;
     const current = await this.list({ limit: this.maxItems, includeExpired: false });
-    const now = Date.now();
-    const storedItem = {
-      ...report,
-      schemaVersion: '1.0',
-      evaluatedAt: report.evaluatedAt || new Date(now).toISOString(),
-      storedAt: new Date(now).toISOString()
-    };
+    const storedItem = toStoredRiskEvent(report);
     const filtered = current.filter(e => e.traceId !== report.traceId);
     const next = [storedItem, ...filtered].slice(0, this.maxItems);
     try {

@@ -231,7 +231,7 @@
         <div class="tomcat-grid">
             <div class="tomcat-card">
                 <div class="card-label">Observed Sessions</div>
-                <div class="card-value" id="stat-total">0</div>
+                <div class="card-value" id="stat-total" data-testid="event-count">0</div>
                 <div class="card-sub">LocalStorage events (deduplicated)</div>
             </div>
             <div class="tomcat-card">
@@ -584,10 +584,11 @@
                     const pillCls = r.recommendedAction === 'ALLOW' ? 'pill-allow' : r.recommendedAction === 'RATE_LIMIT' ? 'pill-deny' : r.recommendedAction === 'REQUIRE_APP_VERIFICATION' ? 'pill-verify' : 'pill-observe';
                     const evidenceSummary = (r.evidence || []).map(e => `<code>${e.rule.split('.')[1] || e.rule} (+${e.score})</code>`).join(', ') || '<span style="color:#16a34a;">Clean</span>';
                     const timeAgo = formatTimeAgo(new Date(r.evaluatedAt));
+                    const latestAttr = idx === 0 ? 'data-testid="latest-trace-id"' : '';
 
                     return `
-                        <tr onclick="showReportDetail(${idx})">
-                            <td><code>${r.traceId}</code></td>
+                        <tr onclick="showReportDetail(${idx})" data-trace-id="${r.traceId}">
+                            <td><code ${latestAttr}>${r.traceId}</code></td>
                             <td><span class="score-box ${scoreCls}">${r.score}</span></td>
                             <td style="font-family:monospace;">${r.evidenceConfidence || 0.85}</td>
                             <td><span class="pill-action pill-observe">${r.action}</span></td>
