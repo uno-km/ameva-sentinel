@@ -36,7 +36,15 @@ def main():
     now = datetime.now()
     out_dir = root / 'scripts' / 'codes'
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"{now:%Y%m%d_%H%M%S}_{now.microsecond // 1000:03d}_export.txt"
+
+    # Clean up old export files in scripts/codes
+    for old_file in out_dir.glob("*_export.txt"):
+        try:
+            old_file.unlink()
+        except Exception:
+            pass
+
+    out_file = out_dir / "source_export.txt"
 
     branch, commit, porcelain = cmd(["git", "branch", "--show-current"]) or "master", cmd(["git", "rev-parse", "HEAD"]) or "HEAD", cmd(["git", "status", "--porcelain"])
     sep = "=" * 80
@@ -55,7 +63,7 @@ def main():
             dirnames[:] = sorted([d for d in dirnames if d not in EXCLUDE_DIRS])
             for f in sorted(filenames):
                 p = Path(root_dir) / f
-                if any(p.match(pat) for pat in EXCLUDE_FILES) or f.endswith("_export.txt"):
+                if any(p.match(pat) for pat in EXCLUDE_FILES) or f.endswith("_export.txt") or f == "source_export.txt":
                     continue
                 rel_path = p.relative_to(root).as_posix()
                 lang = LANG_MAP.get(p.suffix.lower(), "text")
