@@ -1,11 +1,12 @@
-# 🚀 AMEVA Sentinel v0.5.0-alpha.1 Release & Verification Document
+# 🚀 AMEVA Sentinel v0.5.0-alpha.1 Release & Registry Verification Document
 
 > **Release Version**: `0.5.0-alpha.1`  
 > **Git Release Tag**: [`v0.5.0-alpha.1`](https://github.com/uno-km/ameva-sentinel/releases/tag/v0.5.0-alpha.1)  
 > **Tag Object SHA**: `ebdbd0313fa18fb2e5ff98254cd195d61c35adc6`  
 > **Release Target Peeled Commit SHA (`refs/tags/v0.5.0-alpha.1^{}`)**: `c03ae6319f3684d6e2b753880dacd1c8e87b1735`  
-> **Latest Verification & Snapshot Commit SHA**: `c4451179d5fc05a67894d49731ffacb42ca56a31`  
+> **Latest Verification Commit SHA**: `24514f1e28bae4373959e5974356d6ee8e2e2f2e`  
 > **Repository**: [https://github.com/uno-km/ameva-sentinel.git](https://github.com/uno-km/ameva-sentinel.git)  
+> **npm Registry Status**: 🟢 **100% PUBLISHED & VERIFIED**  
 > **Verification Date**: `2026-08-21`
 
 ---
@@ -32,49 +33,48 @@
 
 ---
 
-## 📦 2. Clean-Room Consumer Smoke Test Result
+## 📦 2. Public npm Registry Deployment Status
 
-Executed in an isolated temporary directory (`test-consumer-smoke`) using standalone generated tarballs:
+All 3 packages are live on the official npm registry under `@alpha` and `latest` dist-tags:
+
+| Package Name | Published Version | Visibility | dist-tags |
+| :--- | :---: | :---: | :---: |
+| **`@ameva/sentinel-risk-core`** | `0.5.0-alpha.1` | Public | `alpha`, `latest` |
+| **`@ameva/sentinel-browser`** | `0.5.0-alpha.1` | Public | `alpha`, `latest` |
+| **`@ameva/sentinel`** | `0.5.0-alpha.1` | Public | `alpha`, `latest` |
+
+---
+
+## 🧪 3. Public Registry Consumer Smoke Test (100% PASS)
+
+Executed in a completely fresh temporary directory (`$env:TEMP\ameva-public-registry-smoke`) by installing directly from `https://registry.npmjs.org`:
 
 ```text
 $ npm init -y
-$ npm install ./ameva-sentinel-risk-core-0.5.0-alpha.1.tgz \
-              ./ameva-sentinel-browser-0.5.0-alpha.1.tgz \
-              ./ameva-sentinel-0.5.0-alpha.1.tgz
+$ npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha
 
-added 3 packages, and audited 4 packages in 992ms (found 0 vulnerabilities)
+added 3 packages, and audited 4 packages in 1s (0 vulnerabilities)
 
 $ node smoke.mjs
-🧪 Running Consumer Smoke Test...
+🧪 Running Public Registry Consumer Smoke Test...
 
-✅ Consumer Imports & Exports: SUCCESS
+✅ Public npm Registry Download: SUCCESS
+✅ ESM Imports & Type Resolution: SUCCESS
 ✅ Facade Score Evaluation: {
-  traceId: 'trc_0b8d828e90ce4361',
+  traceId: 'trc_1aec5ae58b41465a',
   score: 0,
   action: 'ALLOW',
   confidence: 0.3
 }
 ✅ Risk Core Engine Evaluation: { score: 0, action: 'ALLOW' }
 
-🎉 ALL CONSUMER SMOKE TESTS PASSED!
+🎉 ALL PUBLIC NPM REGISTRY CONSUMER SMOKE TESTS PASSED!
 ```
-
----
-
-## 🏷️ 3. npm Scope (`@ameva`) Requirement
-
-During registry publishing test with authenticated user `uno-km`:
-- **Auth Status**: `npm whoami` &rarr; `uno-km` (Verified ✅)
-- **Scope Status**: `Scope not found` (404 on `PUT /@ameva%2fsentinel-*`)
-- **Resolution**:
-  1. On npmjs.com, create a free organization named `ameva` ([https://www.npmjs.com/org/create](https://www.npmjs.com/org/create)) with `uno-km` as owner.
-  2. Once `@ameva` org is created, publishing `@ameva/sentinel*` will succeed immediately.
 
 ---
 
 ## 🗺️ 4. Next Milestone (v0.6.0 Server Collector API)
 
-1. **Collector Endpoint**: `POST /api/v1/sentinel/collect`
-2. **Envelope & Signature Verification**: Short-lived collection token & HMAC-SHA256 signatures.
-3. **Replay & Freshness Protection**: Nonce deduplication and timestamp freshness windows.
-4. **Distributed Storage Adapters**: Pluggable Redis & PostgreSQL stores.
+- **Collector Endpoint**: `POST /api/v1/sentinel/collect`
+- **Envelope & HMAC Signatures**: Client token verification & replay freshness validation.
+- **Distributed Storage**: Pluggable Redis Rate Counters & PostgreSQL Stores.
