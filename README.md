@@ -104,7 +104,7 @@ console.log(report);
 
 - **Browser-Local Prototype**: Current events are stored in the browser's `LocalStorage`. Centralized multi-tenant aggregation will be supported via Server Collector API in v0.6.
 - **CounterStore**: `MemoryFixedWindowCounterStore` is intended for local testing and single-instance Node runtimes. Serverless/distributed edge deployments will utilize Redis adapters.
-- **Software-Observed Signals**: Interaction metrics (`isTrusted`, `webdriver`) represent browser-reported software signals, not unforgeable hardware biometric proofs.
+- **Software-Observed Signals**: Interaction metrics (`isTrusted`, `webdriver`) represent browser-reported software signals, not cryptographically authenticated hardware biometric proofs.
 - **Token Verification**: In v0.5, client tokens are marked `tokenPresented: true, tokenVerified: false`. Cryptographic HMAC signature verification will be enforced in the server-side Collector (v0.6).
 - **Security Design**: Stored event fields are rendered through DOM APIs and `textContent`, eliminating DOM XSS injection sinks.
 
