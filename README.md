@@ -1,16 +1,18 @@
 # 🛡️ AMEVA Sentinel
 
 > **Privacy-first Security Observability Layer for Web Applications**  
-> *AMEVA Sentinel v0.5.0-alpha.1 — Browser-Local Shadow Mode Prototype*
+> *AMEVA Sentinel v0.5.0-alpha.1 — Deterministic 0-100 Risk Engine & Policy-as-Code*
 
-![Tests](https://img.shields.io/badge/tests-28%20passing-16a34a?style=flat-square)
-![Stage](https://img.shields.io/badge/stage-v0.5.0--alpha.1-blue?style=flat-square)
-![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)
-![npm](https://img.shields.io/npm/v/@ameva/sentinel/alpha?style=flat-square&color=blue)
-![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)
+[![Official Documentation](https://img.shields.io/badge/docs-uno--km.vercel.app%2Fsentinel-004499?style=flat-square&logo=vercel)](https://uno-km.vercel.app/sentinel/)
+[![npm package](https://img.shields.io/npm/v/@ameva/sentinel/alpha?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/@ameva/sentinel)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-100%25%20PASS%20(28%20passing)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
+[![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)](https://uno-km.vercel.app/sentinel/)
+[![Foundation](https://img.shields.io/badge/AOSF-Tier%201%20TLP-f59e0b?style=flat-square)](https://uno-km.vercel.app/docs/foundation/)
 
 > [!NOTE]
-> **Pre-release Notice**: The current release is an alpha prototype intended for local/shadow mode testing. Install explicitly with `npm install @ameva/sentinel@alpha`.
+> **Pre-release Notice**: The current release is an alpha prototype intended for local/shadow mode testing. Install explicitly with `npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha`.  
+> Complete interactive documentation & API reference: [https://uno-km.vercel.app/sentinel/](https://uno-km.vercel.app/sentinel/)
 
 ---
 
