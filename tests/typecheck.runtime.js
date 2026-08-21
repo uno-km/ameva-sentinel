@@ -101,6 +101,7 @@ async function runRuntimeContract() {
     nonceStore,
     expectedAudience: 'ameva-sentinel-collector',
     expectedPurpose: 'telemetry-collect',
+    allowedIssuers: ['ameva-auth'],
     redirectRegistry: {
       AI_FEED: 'https://example.com/llms.txt'
     }

@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import {
   evaluate,
   evaluateVerified,
@@ -164,6 +164,7 @@ async function main() {
       keyResolver,
       nonceStore,
       expectedAudience: 'sentinel-api-prod',
+      allowedIssuers: ['partner-corp'],
       redirectRegistry: {
         AI_FEED: 'https://example.com/llms-full.txt'
       }

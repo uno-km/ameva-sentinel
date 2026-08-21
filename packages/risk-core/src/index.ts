@@ -1,4 +1,4 @@
-﻿export * from './types.js';
+export * from './types.js';
 export * from './confidence.js';
 export * from './counter.js';
 export * from './rules.js';
@@ -21,5 +21,9 @@ export {
   base64UrlDecode,
   base64UrlDecodeToBytes,
   computeHmacSha256,
+  computeSha256,
+  assertBase64UrlSegment,
+  readJsonBodyLimited,
   isVerifiedCollectorContext
 } from './collector-crypto.js';
+

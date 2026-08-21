@@ -2,9 +2,11 @@
   SentinelAction,
   SentinelRiskReport,
   TelemetrySignals,
+  UntrustedTelemetrySignals,
   EvidenceItem,
   EnforcementMode,
   VerifiedCollectorContext,
+  InternalDecisionTrustState,
   createTraceId
 } from './types.js';
 import { calculateConfidence } from './confidence.js';
@@ -22,10 +24,64 @@ export interface EvaluateOptions {
 /**
  * Pure risk evaluation engine (4-Stage Pipeline).
  * 1. Classification -> 2. Scoring -> 3. Decision -> 4. Report Resolution
- * Guaranteed input immutability and deterministic 0~100 score clamping.
+ * Always executes in unverified trust state (verification.state: 'NONE').
  */
 export function evaluate(
-  signals: TelemetrySignals = {},
+  signals: UntrustedTelemetrySignals = {},
+  optionsOrPolicy: EvaluateOptions | SentinelPolicy = defaultPolicy
+): SentinelRiskReport {
+  return evaluateWithTrust(signals, { isVerified: false }, optionsOrPolicy);
+}
+
+/**
+ * Evaluates with cryptographically verified Server Context.
+ * General user API cannot spoof verified context.
+ */
+export function evaluateVerified(
+  signals: UntrustedTelemetrySignals = {},
+  verifiedContext: VerifiedCollectorContext | null | undefined,
+  optionsOrPolicy: EvaluateOptions | SentinelPolicy = defaultPolicy
+): SentinelRiskReport {
+  let isAuthentic = false;
+  let verificationState: 'NONE' | 'FAILED' | 'VERIFIED' = 'NONE';
+  let issuer: string | undefined;
+  let kid: string | undefined;
+  let error: string | undefined;
+
+  if (verifiedContext) {
+    if (isVerifiedCollectorContext(verifiedContext)) {
+      isAuthentic = true;
+      verificationState = 'VERIFIED';
+      issuer = verifiedContext.issuer;
+      kid = verifiedContext.kid;
+    } else {
+      verificationState = 'FAILED';
+      error = 'AUTHENTICATION_FAILED';
+    }
+  }
+
+  const report = evaluateWithTrust(
+    signals,
+    { isVerified: isAuthentic },
+    optionsOrPolicy
+  );
+
+  report.verification = {
+    state: verificationState,
+    issuer,
+    kid,
+    error
+  };
+
+  return report;
+}
+
+/**
+ * Internal 4-Stage Pipeline with explicit trustedState
+ */
+function evaluateWithTrust(
+  signals: UntrustedTelemetrySignals = {},
+  trustedState: InternalDecisionTrustState,
   optionsOrPolicy: EvaluateOptions | SentinelPolicy = defaultPolicy
 ): SentinelRiskReport {
   let policy: SentinelPolicy = defaultPolicy;
@@ -97,14 +153,17 @@ export function evaluate(
   // =========================================================================
   // Stage 3: Pure Decision Resolution (TargetMode & Policy Routing)
   // =========================================================================
-  const decision = resolveDecision({
-    score: finalScore,
-    recommendedScoreAction,
-    classification,
-    signals: safeSignals,
-    botPolicy: policy.botPolicy,
-    enforcementMode
-  });
+  const decision = resolveDecision(
+    {
+      score: finalScore,
+      recommendedScoreAction,
+      classification,
+      signals: safeSignals,
+      botPolicy: policy.botPolicy,
+      enforcementMode
+    },
+    trustedState
+  );
 
   const recommendedAction = decision.action;
 
@@ -129,6 +188,9 @@ export function evaluate(
     recommendedAction,
     decision,
     classification,
+    verification: {
+      state: trustedState.isVerified ? 'VERIFIED' : 'NONE'
+    },
     redirectTo: decision.redirect?.destinationId,
     redirectStatusCode: decision.redirect?.statusCode,
     enforcementMode,
@@ -137,31 +199,4 @@ export function evaluate(
     evaluatedAt: new Date().toISOString(),
     signals: safeSignals
   };
-}
-
-/**
- * Evaluates with cryptographically verified Server Context
- * General user API cannot spoof verified context.
- */
-export function evaluateVerified(
-  signals: TelemetrySignals = {},
-  verifiedContext: VerifiedCollectorContext | null | undefined,
-  optionsOrPolicy: EvaluateOptions | SentinelPolicy = defaultPolicy
-): SentinelRiskReport {
-  const isAuthentic = isVerifiedCollectorContext(verifiedContext);
-  const enrichedSignals: TelemetrySignals = {
-    ...signals,
-    verifiedBot: isAuthentic
-  };
-  const report = evaluate(enrichedSignals, optionsOrPolicy);
-  if (isAuthentic && verifiedContext) {
-    report.verification = {
-      state: 'VERIFIED',
-      issuer: verifiedContext.issuer,
-      kid: verifiedContext.kid
-    };
-  } else if (verifiedContext) {
-    report.verification = { state: 'FAILED' };
-  }
-  return report;
 }

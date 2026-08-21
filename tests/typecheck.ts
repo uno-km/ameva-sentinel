@@ -25,6 +25,7 @@
   type BotRoutingRule,
   type BotPolicyConfig,
   type VerifiedCollectorContext,
+  type VerificationOutcome,
   type KeyResolver,
   type NonceStore,
   SentinelAction,
@@ -45,6 +46,7 @@
   signCollectorToken,
   verifyCollectorToken,
   isVerifiedCollectorContext,
+  readJsonBodyLimited,
   MemoryNonceStore,
   StaticKeyResolver,
   validateRedirectUrl
@@ -58,7 +60,8 @@ import {
   type EvaluateOptions,
   type RiskEventStoreOptions,
   type MinimalDerivedSignals,
-  type SanitizedEvidence
+  type SanitizedEvidence,
+  type InternalDecisionTrustState
 } from '../packages/risk-core/dist/index.js';
 
 import {
@@ -183,6 +186,7 @@ const sentinelOptions: SentinelOptions = {
   nonceStore,
   expectedAudience: 'sentinel-typecheck',
   expectedPurpose: 'telemetry-collect',
+  allowedIssuers: ['ameva-auth'],
   rateKeyProvider: (req: any) => (req?.customUserId ? `user_${req.customUserId}` : null),
   redirectRegistry: {
     AI_FEED: 'https://example.com/llms.txt',
@@ -216,7 +220,8 @@ async function runFullStaticTypeCheck(): Promise<void> {
 
   const authenticContext: VerifiedCollectorContext = await verifyCollectorToken(token, keyResolver, nonceStore, {
     expectedAudience: 'sentinel-typecheck',
-    expectedPurpose: 'telemetry-collect'
+    expectedPurpose: 'telemetry-collect',
+    allowedIssuers: ['ameva-auth']
   });
 
   const directEngineReport: SentinelRiskReport = evaluate(signals, evalOptions);
@@ -230,7 +235,7 @@ async function runFullStaticTypeCheck(): Promise<void> {
     signals,
     botPolicy: botPolicyConfig,
     enforcementMode: 'SHADOW'
-  });
+  }, { isVerified: true });
 
   const storedV1: StoredRiskEventV1 = toStoredRiskEventV1(report);
   const storedV2: StoredRiskEventV2 = toStoredRiskEvent(report);
@@ -239,11 +244,13 @@ async function runFullStaticTypeCheck(): Promise<void> {
   const isUniversal: boolean = isStoredRiskEvent(storedV2);
 
   const urlCheck = validateRedirectUrl('/llms.txt', { allowRelative: true });
+  const bodyCheck = await readJsonBodyLimited({ body: '{"ok":true}' });
 
   void isV1;
   void isV2;
   void isUniversal;
   void urlCheck;
+  void bodyCheck;
   void decision;
   void verifiedReport;
   void directEngineReport;

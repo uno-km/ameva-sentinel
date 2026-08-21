@@ -97,6 +97,16 @@ export interface VerifiedCollectorContext {
   readonly expiresAtEpochMs: number;
 }
 
+export type VerificationOutcome =
+  | { state: 'NONE'; context: null }
+  | { state: 'VERIFIED'; context: VerifiedCollectorContext }
+  | { state: 'FAILED'; context: null; error?: CollectorErrorCode | string };
+
+export interface InternalDecisionTrustState {
+  isVerified: boolean;
+  verificationOutcome?: VerificationOutcome;
+}
+
 export interface RuleAttributes {
   [key: string]: string | number | boolean | null | undefined;
 }
@@ -116,7 +126,8 @@ export interface SanitizedEvidence {
 }
 
 /**
- * Untrusted raw input telemetry signals received from client or HTTP request
+ * Untrusted raw input telemetry signals received from client or HTTP request.
+ * Contains ZERO raw verifiedBot trust flags.
  */
 export interface UntrustedTelemetrySignals {
   webdriver?: boolean;
@@ -138,11 +149,10 @@ export interface UntrustedTelemetrySignals {
 }
 
 /**
- * Internal enriched telemetry signals used during 4-stage pipeline evaluation
+ * Internal signals used during 4-stage pipeline evaluation.
  */
 export interface TelemetrySignals extends UntrustedTelemetrySignals {
   botCategory?: BotCategory;
-  verifiedBot?: boolean; // Set strictly by evaluateVerified via authentic VerifiedCollectorContext
 }
 
 export interface SentinelRiskReport {
@@ -153,10 +163,11 @@ export interface SentinelRiskReport {
   recommendedAction: SentinelAction;   // Evaluated policy recommendation
   decision: SentinelDecision;          // Structured 4-stage decision object
   classification?: BotClassificationResult; // Heuristic bot classification
-  verification?: {
+  verification: {
     state: 'NONE' | 'FAILED' | 'VERIFIED';
     issuer?: string;
     kid?: string;
+    error?: string;
   };
   redirectTo?: string;                 // Resolved redirect URL or destination ID
   redirectStatusCode?: 302 | 307;
@@ -197,10 +208,11 @@ export interface StoredRiskEventV2 {
     identityState: BotIdentityState;
     claimedName?: string;
   };
-  verification?: {
+  verification: {
     state: 'NONE' | 'FAILED' | 'VERIFIED';
     issuer?: string;
     kid?: string;
+    error?: string;
   };
   evidence: SanitizedEvidence[];
 }

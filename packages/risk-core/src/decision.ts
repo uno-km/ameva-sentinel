@@ -1,11 +1,11 @@
-import {
+﻿import {
   SentinelAction,
   SentinelDecision,
   BotPolicyConfig,
   BotClassificationResult,
   TelemetrySignals,
   EnforcementMode,
-  DecisionReasonCode
+  InternalDecisionTrustState
 } from './types.js';
 
 export interface DecisionContext {
@@ -23,9 +23,12 @@ export interface DecisionContext {
  * Guarantees:
  * - Implements the complete Truth Table across all 4 TrafficTargetModes.
  * - Closed-Destination ID routing only (zero open redirect vulnerabilities).
- * - Pure function without side effects or HTTP transport logic.
+ * - Accepts an internal trustedState parameter; raw caller signals cannot spoof verification state.
  */
-export function resolveDecision(context: DecisionContext): SentinelDecision {
+export function resolveDecision(
+  context: DecisionContext,
+  trustedState: InternalDecisionTrustState = { isVerified: false }
+): SentinelDecision {
   const {
     score,
     recommendedScoreAction,
@@ -39,7 +42,9 @@ export function resolveDecision(context: DecisionContext): SentinelDecision {
   const allowlist = new Set(botPolicy.allowlist || []);
   const denylist = new Set(botPolicy.denylist || []);
   const categoryRouting = botPolicy.categoryRouting || {};
-  const isVerified = signals.verifiedBot === true;
+  
+  // Verification state is derived STRICTLY from trusted internal context
+  const isVerified = trustedState.isVerified === true;
 
   // =========================================================================
   // 1. Target Mode: VERIFIED_PARTNERS_ONLY
@@ -63,108 +68,107 @@ export function resolveDecision(context: DecisionContext): SentinelDecision {
   // Rule: Reject automation tools & require verification for claimed bots
   // =========================================================================
   if (targetMode === 'HUMANS_ONLY') {
-    if (classification.isBotLikely || signals.webdriver) {
-      if (classification.category === 'AUTOMATED_TOOL' || denylist.has(classification.category)) {
-        return {
-          action: SentinelAction.TEMPORARY_DENY,
-          reasonCode: 'TARGET_MODE_HUMANS_ONLY_VIOLATION'
-        };
-      }
+    if (classification.category === 'AUTOMATED_TOOL' || denylist.has(classification.category)) {
       return {
-        action: SentinelAction.REQUIRE_APP_VERIFICATION,
+        action: SentinelAction.TEMPORARY_DENY,
         reasonCode: 'TARGET_MODE_HUMANS_ONLY_VIOLATION'
       };
     }
+
+    if (classification.isBotLikely && !isVerified) {
+      return {
+        action: SentinelAction.TEMPORARY_DENY,
+        reasonCode: 'TARGET_MODE_HUMANS_ONLY_VIOLATION'
+      };
+    }
+
+    // Interactive human browser passing heuristic checks
+    return {
+      action: recommendedScoreAction,
+      reasonCode: recommendedScoreAction === SentinelAction.ALLOW ? 'BASELINE_CLEAN' : 'AUTOMATION_SUSPECTED'
+    };
   }
 
   // =========================================================================
   // 3. Target Mode: BOTS_ONLY
-  // Rule: Reject human interactive browsers; Route to guidance or allow bots
+  // Rule: Redirect human traffic to BOT_GUIDANCE / LLMs feed
   // =========================================================================
   if (targetMode === 'BOTS_ONLY') {
-    const isHumanInteractive = (signals.isTrustedEventsCount ?? 0) > 0 && !signals.webdriver && !classification.isBotLikely;
-    if (isHumanInteractive) {
-      const guidanceRule = botPolicy.categoryRouting?.['NONE'];
+    if (!classification.isBotLikely && classification.category === 'NONE') {
+      const guidanceRoute = categoryRouting['NONE'] || {
+        action: SentinelAction.REDIRECT,
+        destinationId: 'BOT_GUIDANCE',
+        statusCode: 302,
+        reasonCode: 'TARGET_MODE_BOTS_ONLY_VIOLATION'
+      };
+
       return {
-        action: guidanceRule?.action || SentinelAction.REDIRECT,
-        reasonCode: 'TARGET_MODE_BOTS_ONLY_VIOLATION',
-        redirect: {
-          destinationId: guidanceRule?.destinationId || 'BOT_GUIDANCE',
-          statusCode: guidanceRule?.statusCode || 302
-        }
+        action: guidanceRoute.action,
+        reasonCode: guidanceRoute.reasonCode || 'TARGET_MODE_BOTS_ONLY_VIOLATION',
+        redirect: guidanceRoute.destinationId ? {
+          destinationId: guidanceRoute.destinationId,
+          statusCode: guidanceRoute.statusCode || 302
+        } : undefined
       };
     }
+
+    // Bot traffic in BOTS_ONLY mode continues to category routing or policy score
   }
 
   // =========================================================================
-  // 4. Category-Specific Routing & Denylist / Allowlist Evaluation (ANY / BOTS)
+  // 4. Target Mode: ANY & Universal Routing / Allowlist / Denylist Engine
   // =========================================================================
-  if (classification.isBotLikely) {
-    // 4.1 Denylist Check
-    if (denylist.has(classification.category) || (classification.claimedName && denylist.has(classification.claimedName))) {
-      const customDeny = categoryRouting[classification.category];
-      if (customDeny?.action === SentinelAction.REDIRECT && customDeny.destinationId) {
-        return {
-          action: SentinelAction.REDIRECT,
-          reasonCode: 'BOT_DENYLIST_TRIGGERED',
-          redirect: {
-            destinationId: customDeny.destinationId,
-            statusCode: customDeny.statusCode || 302
-          }
-        };
-      }
-      return {
-        action: SentinelAction.TEMPORARY_DENY,
-        reasonCode: 'BOT_DENYLIST_TRIGGERED'
-      };
-    }
 
-    // 4.2 Category Routing Check (e.g. AI_AGENT -> REDIRECT to AI_FEED)
-    const matchedCategoryRule = categoryRouting[classification.category];
-    if (matchedCategoryRule) {
-      if (matchedCategoryRule.action === SentinelAction.REDIRECT && matchedCategoryRule.destinationId) {
-        return {
-          action: SentinelAction.REDIRECT,
-          reasonCode: 'CATEGORY_ROUTING_REDIRECT',
-          redirect: {
-            destinationId: matchedCategoryRule.destinationId,
-            statusCode: matchedCategoryRule.statusCode || 302
-          }
-        };
-      }
-      return {
-        action: matchedCategoryRule.action,
-        reasonCode: matchedCategoryRule.reasonCode || 'CATEGORY_ROUTING_MATCH'
-      };
-    }
-
-    // 4.3 Allowlist Check
-    if (allowlist.has(classification.category) || (classification.claimedName && allowlist.has(classification.claimedName))) {
-      return {
-        action: SentinelAction.ALLOW,
-        reasonCode: 'BOT_ALLOWLIST_PASSED'
-      };
-    }
+  // Check 4a: Explicit Denylist (Highest precedence)
+  if (denylist.has(classification.category) || (classification.claimedName && denylist.has(classification.claimedName))) {
+    return {
+      action: SentinelAction.TEMPORARY_DENY,
+      reasonCode: 'BOT_DENYLIST_TRIGGERED'
+    };
   }
 
-  // =========================================================================
-  // 5. Default Fallback to Pure Risk Engine Score Recommendation
-  // =========================================================================
-  let reasonCode: DecisionReasonCode = 'BASELINE_CLEAN';
-  if (recommendedScoreAction === SentinelAction.TEMPORARY_DENY) {
-    reasonCode = 'POLICY_SCORE_DENY';
-  } else if (recommendedScoreAction === SentinelAction.REQUIRE_APP_VERIFICATION) {
-    reasonCode = 'POLICY_SCORE_APP_VERIFICATION';
-  } else if (recommendedScoreAction === SentinelAction.RATE_LIMIT) {
-    reasonCode = 'POLICY_SCORE_RATE_LIMIT';
-  } else if (signals.webdriver) {
-    reasonCode = 'AUTOMATION_SUSPECTED';
-  } else if (signals.burstCount10s && signals.burstCount10s > 10) {
-    reasonCode = 'RATE_BURST_EXCEEDED';
+  // Check 4b: Explicit Allowlist (Verified or Trusted Partner)
+  if (isVerified || allowlist.has(classification.category) || (classification.claimedName && allowlist.has(classification.claimedName))) {
+    return {
+      action: SentinelAction.ALLOW,
+      reasonCode: 'BOT_ALLOWLIST_PASSED'
+    };
   }
 
+  // Check 4c: Category Routing (e.g., AI_AGENT -> AI_FEED redirect)
+  const categoryRule = categoryRouting[classification.category];
+  if (categoryRule) {
+    return {
+      action: categoryRule.action,
+      reasonCode: categoryRule.reasonCode || 'CATEGORY_ROUTING_REDIRECT',
+      redirect: categoryRule.destinationId ? {
+        destinationId: categoryRule.destinationId,
+        statusCode: categoryRule.statusCode || 302
+      } : undefined
+    };
+  }
+
+  // Check 4d: Unknown Bot Fallback
+  if (classification.category === 'UNKNOWN_BOT' && botPolicy.unknownBotAction) {
+    return {
+      action: botPolicy.unknownBotAction.action,
+      reasonCode: botPolicy.unknownBotAction.reasonCode || 'UNKNOWN_BOT_POLICY_ACTION',
+      redirect: botPolicy.unknownBotAction.destinationId ? {
+        destinationId: botPolicy.unknownBotAction.destinationId,
+        statusCode: botPolicy.unknownBotAction.statusCode || 302
+      } : undefined
+    };
+  }
+
+  // Check 4e: Pure Risk Score Fallback
   return {
     action: recommendedScoreAction,
-    reasonCode
+    reasonCode: recommendedScoreAction === SentinelAction.ALLOW
+      ? 'BASELINE_CLEAN'
+      : recommendedScoreAction === SentinelAction.TEMPORARY_DENY
+        ? 'POLICY_SCORE_DENY'
+        : recommendedScoreAction === SentinelAction.REQUIRE_APP_VERIFICATION
+          ? 'POLICY_SCORE_APP_VERIFICATION'
+          : 'POLICY_SCORE_RATE_LIMIT'
   };
 }

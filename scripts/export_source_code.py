@@ -46,7 +46,7 @@ def main():
         f"# PROJECT_METADATA\nProject: AMEVA-Sentinel\nSnapshot Date: {now:%Y-%m-%d}\nBranch: {branch}\nCommit: {commit}\n"
         f"Working Tree: {'DIRTY' if porcelain else 'CLEAN'}\nSnapshot State: {'HEAD + working tree snapshot' if porcelain else 'HEAD snapshot'}\n"
         f"Operating System: {sys.platform}\nPython Version: {sys.version.split()[0]}\nNode Version: {cmd(['node', '-v']) or 'Unknown'}\n"
-        f"Package Manager: npm\nCurrent Stage: v0.5 Browser-Local Shadow Mode Prototype\nTarget Release: 1.0.0 OSS Release\n\n\n"
+        f"Package Manager: npm\nCurrent Stage: v0.6.0-alpha.1 Target Discrimination & Trust Boundary\nTarget Release: 1.0.0 OSS Release\n\n\n"
     )
 
     with open(out_file, "w", encoding="utf-8") as out:

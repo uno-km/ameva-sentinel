@@ -10,6 +10,7 @@
   verifyCollectorToken,
   signCollectorToken,
   isVerifiedCollectorContext,
+  readJsonBodyLimited,
   MemoryNonceStore,
   StaticKeyResolver,
   validateRedirectUrl,
@@ -46,6 +47,7 @@ import type {
   BotRoutingRule,
   BotPolicyConfig,
   VerifiedCollectorContext,
+  VerificationOutcome,
   KeyResolver,
   NonceStore
 } from '@ameva/sentinel-risk-core';
@@ -62,6 +64,7 @@ export {
   verifyCollectorToken,
   signCollectorToken,
   isVerifiedCollectorContext,
+  readJsonBodyLimited,
   MemoryNonceStore,
   StaticKeyResolver,
   validateRedirectUrl,
@@ -98,6 +101,7 @@ export type {
   BotRoutingRule,
   BotPolicyConfig,
   VerifiedCollectorContext,
+  VerificationOutcome,
   KeyResolver,
   NonceStore
 };
@@ -160,6 +164,9 @@ export class Sentinel {
       if (!this.expectedAudience) {
         throw new Error('Sentinel configuration error: expectedAudience is mandatory when botPolicy.targetMode is "VERIFIED_PARTNERS_ONLY"');
       }
+      if (!this.allowedIssuers || this.allowedIssuers.length === 0) {
+        throw new Error('Sentinel configuration error: non-empty allowedIssuers is mandatory when botPolicy.targetMode is "VERIFIED_PARTNERS_ONLY"');
+      }
     }
 
     // Fail-fast constructor validation of redirect registry
@@ -179,7 +186,7 @@ export class Sentinel {
       if (!validation.valid || !validation.sanitizedUrl) {
         throw new Error(`Sentinel configuration error: Invalid redirectRegistry URL for "${destId}": ${validation.error}`);
       }
-      this.redirectRegistry[destId] = validation.sanitizedUrl;
+      this.redirectRegistry[destId as RedirectDestinationId] = validation.sanitizedUrl;
     }
   }
 
@@ -194,6 +201,9 @@ export class Sentinel {
         burstCount10s = rate.count;
       } catch (err: any) {
         this.handleOperationalError(err, 'counterStore.increment');
+        if (this.stateFailureMode === 'FAIL_CLOSED') {
+          throw err;
+        }
       }
     }
 
@@ -203,12 +213,26 @@ export class Sentinel {
     };
 
     // Strict End-to-End Cryptographic Verification Pipeline
-    const verifiedContext = await this.verify(token);
+    const verificationOutcome = await this.verify(token);
 
-    const report = evaluateVerified(enrichedSignals, verifiedContext, {
+    // Fail-closed enforcement on presented invalid token
+    if (verificationOutcome.state === 'FAILED' && this.stateFailureMode === 'FAIL_CLOSED') {
+      const errorMsg = verificationOutcome.error || 'Token verification failed';
+      throw new Error(`Sentinel security violation: ${errorMsg}`);
+    }
+
+    const report = evaluateVerified(enrichedSignals, verificationOutcome.context, {
       policy: this.policy,
       enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW'
     });
+
+    // Propagate exact verification outcome
+    if (verificationOutcome.state === 'FAILED') {
+      report.verification = {
+        state: 'FAILED',
+        error: String(verificationOutcome.error || 'INVALID_TOKEN')
+      };
+    }
 
     // Resolve Destination ID against validated closed server registry
     if (report.redirectTo && this.redirectRegistry[report.redirectTo]) {
@@ -220,6 +244,9 @@ export class Sentinel {
         await this.eventStore.append(report);
       } catch (err: any) {
         this.handleOperationalError(err, 'eventStore.append');
+        if (this.stateFailureMode === 'FAIL_CLOSED') {
+          throw err;
+        }
       }
     }
 
@@ -247,87 +274,126 @@ export class Sentinel {
   }
 
   /**
-   * Safe extraction of untrusted telemetry signals and presented token from HTTP/raw request
+   * Safe extraction of untrusted telemetry signals and presented token from HTTP/raw request.
+   * Extracts headers and signals concurrently without mutually exclusive early returns.
    */
   async collect(req: any): Promise<{ signals: UntrustedTelemetrySignals; token: string | null }> {
     if (!req) return { signals: {}, token: null };
 
-    let token: string | null = null;
-
-    if (req.signals && typeof req.signals === 'object') {
-      const s = req.signals;
-      token = typeof s.token === 'string' ? s.token : null;
-      return {
-        signals: {
-          webdriver: !!s.webdriverObserved || !!s.webdriver,
-          telemetryObserved: !!s.telemetryObserved,
-          sampleComplete: !!s.sampleComplete,
-          observationDurationMs: typeof s.observationDurationMs === 'number' ? s.observationDurationMs : 6000,
-          isTrustedEventsCount: typeof s.trustedInputCount === 'number' ? s.trustedInputCount : (typeof s.isTrustedEventsCount === 'number' ? s.isTrustedEventsCount : 0),
-          touchMismatch: !!s.touchMismatch,
-          suspiciousUA: !!s.suspiciousUA,
-          userAgent: typeof s.userAgent === 'string' ? s.userAgent : undefined,
-          claimedBot: typeof s.claimedBot === 'string' ? s.claimedBot : undefined,
-          tokenPresented: Boolean(token),
-          tokenFreshnessMs: typeof s.tokenFreshnessMs === 'number' ? s.tokenFreshnessMs : 100
-        },
-        token
-      };
-    }
-
     const headers = req.headers || {};
     const getHeader = (name: string): string => {
       if (typeof headers.get === 'function') return headers.get(name) || '';
-      return headers[name.toLowerCase()] || headers[name] || '';
+      return (
+        headers[name] ||
+        headers[name.toLowerCase()] ||
+        headers[name.toUpperCase()] ||
+        ''
+      );
     };
 
     const ua = getHeader('user-agent');
     const secChUaMobile = getHeader('sec-ch-ua-mobile');
 
-    // Extract auth/collector token
+    // Extract auth token with priority: 1) Header Bearer -> 2) Custom Header -> 3) signals.token -> 4) body.token
+    let token: string | null = null;
     const authHeader = getHeader('authorization');
-    if (authHeader.startsWith('Bearer ')) {
-      token = authHeader.slice(7).trim();
+    const bearerMatch = /^Bearer\s+(.+)$/i.exec(authHeader);
+    if (bearerMatch) {
+      token = bearerMatch[1].trim();
     } else {
-      const customTokenHeader = getHeader('x-ameva-collector-token');
-      if (customTokenHeader) token = customTokenHeader.trim();
+      const customTokenHeader = getHeader('x-ameva-collector-token').trim();
+      if (customTokenHeader) token = customTokenHeader;
     }
 
+    const signalInput = req.signals && typeof req.signals === 'object' ? req.signals : {};
+    if (!token && typeof signalInput.token === 'string' && signalInput.token.trim()) {
+      token = signalInput.token.trim();
+    }
+
+    // Safe 64KB bounded body reader
     let body: any = {};
-    const maxBodyBytes = 65536; // 64KB Max Guard
-    if (typeof req.json === 'function') {
-      try { body = await req.json(); } catch (e) {}
-    } else if (req.body) {
-      if (typeof req.body === 'string') {
-        if (req.body.length <= maxBodyBytes) {
-          try { body = JSON.parse(req.body); } catch (e) {}
-        }
-      } else if (typeof req.body === 'object') {
-        body = req.body;
-      }
+    try {
+      body = await readJsonBodyLimited(req, 65536);
+    } catch (err: any) {
+      this.handleOperationalError(err, 'readJsonBodyLimited');
+      if (this.stateFailureMode === 'FAIL_CLOSED') throw err;
     }
 
-    if (!token && typeof body.token === 'string') {
-      token = body.token;
+    if (!token && typeof body?.token === 'string' && body.token.trim()) {
+      token = body.token.trim();
     }
 
-    const isWebdriver = !!body.webdriver || /HeadlessChrome|PhantomJS|Selenium|Playwright/i.test(ua);
-    const isTouchMismatch = secChUaMobile === '?1' && body.is_touch === false;
-    const isSuspiciousUA = ua.length === 0 || /python-requests|curl|wget|scrapy|aiohttp|HeadlessChrome|PhantomJS|Selenium|Playwright/i.test(ua);
+    const isWebdriver =
+      signalInput.webdriverObserved === true ||
+      signalInput.webdriver === true ||
+      body?.webdriver === true ||
+      /HeadlessChrome|PhantomJS|Selenium|Playwright/i.test(ua);
+
+    const isTouchMismatch =
+      signalInput.touchMismatch === true ||
+      (secChUaMobile === '?1' && body?.is_touch === false);
+
+    const isSuspiciousUA =
+      signalInput.suspiciousUA === true ||
+      ua.length === 0 ||
+      /python-requests|curl|wget|scrapy|aiohttp|HeadlessChrome|PhantomJS|Selenium|Playwright/i.test(ua);
+
+    const observationDurationMs =
+      typeof signalInput.observationDurationMs === 'number'
+        ? signalInput.observationDurationMs
+        : typeof body?.observation_duration_ms === 'number'
+          ? body.observation_duration_ms
+          : 6000;
+
+    const isTrustedEventsCount =
+      typeof signalInput.trustedInputCount === 'number'
+        ? signalInput.trustedInputCount
+        : typeof signalInput.isTrustedEventsCount === 'number'
+          ? signalInput.isTrustedEventsCount
+          : typeof body?.trusted_events === 'number'
+            ? body.trusted_events
+            : 0;
+
+    const telemetryObserved =
+      signalInput.telemetryObserved === true ||
+      body?.telemetry_observed !== undefined
+        ? !!body.telemetry_observed
+        : (body?.trusted_events !== undefined);
+
+    const sampleComplete =
+      signalInput.sampleComplete === true ||
+      body?.sample_complete !== undefined
+        ? !!body.sample_complete
+        : false;
+
+    const userAgent =
+      typeof signalInput.userAgent === 'string'
+        ? signalInput.userAgent
+        : ua || undefined;
+
+    const claimedBot =
+      typeof signalInput.claimedBot === 'string'
+        ? signalInput.claimedBot
+        : body?.claimed_bot || (ua && ua.includes('Bot') ? 'claimed_bot' : undefined);
+
+    const tokenFreshnessMs =
+      typeof signalInput.tokenFreshnessMs === 'number'
+        ? signalInput.tokenFreshnessMs
+        : body?.timestamp ? Date.now() - body.timestamp : 100;
 
     return {
       signals: {
         webdriver: isWebdriver,
-        telemetryObserved: body.telemetry_observed !== undefined ? !!body.telemetry_observed : (body.trusted_events !== undefined),
-        sampleComplete: body.sample_complete !== undefined ? !!body.sample_complete : false,
-        observationDurationMs: typeof body.observation_duration_ms === 'number' ? body.observation_duration_ms : 6000,
-        isTrustedEventsCount: typeof body.trusted_events === 'number' ? body.trusted_events : 0,
+        telemetryObserved,
+        sampleComplete,
+        observationDurationMs,
+        isTrustedEventsCount,
         touchMismatch: isTouchMismatch,
         suspiciousUA: isSuspiciousUA,
-        userAgent: ua,
-        claimedBot: body.claimed_bot || (ua.includes('Bot') ? 'claimed_bot' : undefined),
+        userAgent,
+        claimedBot,
         tokenPresented: Boolean(token),
-        tokenFreshnessMs: body.timestamp ? Date.now() - body.timestamp : 100
+        tokenFreshnessMs
       },
       token
     };
@@ -336,9 +402,20 @@ export class Sentinel {
   /**
    * Cryptographically verifies the presented token against the configured KeyResolver and NonceStore
    */
-  async verify(token: string | null | undefined): Promise<VerifiedCollectorContext | null> {
-    if (!token || !this.keyResolver || !this.expectedAudience) {
-      return null;
+  async verify(token: string | null | undefined): Promise<VerificationOutcome> {
+    if (!token) {
+      return { state: 'NONE', context: null };
+    }
+
+    if (!this.keyResolver || !this.expectedAudience) {
+      if (this.policy.botPolicy?.targetMode === 'VERIFIED_PARTNERS_ONLY') {
+        return {
+          state: 'FAILED',
+          context: null,
+          error: 'KEY_RESOLVER_NOT_CONFIGURED'
+        };
+      }
+      return { state: 'NONE', context: null };
     }
 
     try {
@@ -352,10 +429,14 @@ export class Sentinel {
           allowedIssuers: this.allowedIssuers
         }
       );
-      return verified;
+      return { state: 'VERIFIED', context: verified };
     } catch (err: any) {
       this.handleOperationalError(err, 'verifyCollectorToken');
-      return null;
+      return {
+        state: 'FAILED',
+        context: null,
+        error: err.code || err.message
+      };
     }
   }
 

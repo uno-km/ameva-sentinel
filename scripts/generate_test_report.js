@@ -45,12 +45,12 @@ const testSuites = [
   },
   {
     id: 'collector_crypto',
-    title: '3. Trust Boundary Collector HMAC, Freshness, Replay Attack & 100-Concurrency Suite (12 Gates)',
+    title: '3. Trust Boundary Collector HMAC, RFC 4231 Vectors, Freshness, Replay Attack & 100-Race Suite (15 Gates)',
     file: 'tests/collector-crypto.test.js',
     category: 'Trust Boundary & Collector Crypto',
     command: 'node tests/collector-crypto.test.js',
-    expectedPasses: 12,
-    pointsPerTest: 15 / 12,
+    expectedPasses: 15,
+    pointsPerTest: 15 / 15,
     maxPoints: 15
   },
   {
@@ -95,12 +95,12 @@ const testSuites = [
   },
   {
     id: 'sentinel',
-    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (3 Gates)',
+    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (9 Gates)',
     file: 'tests/sentinel.test.js',
     category: 'Facade & State Enforcement',
     command: 'node tests/sentinel.test.js',
-    expectedPasses: 3,
-    pointsPerTest: 10 / 3,
+    expectedPasses: 9,
+    pointsPerTest: 10 / 9,
     maxPoints: 10
   },
   {

@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import {
   signCollectorToken,
   verifyCollectorToken,
@@ -8,6 +8,9 @@ import {
   constantTimeEqual,
   evaluateVerified,
   canonicalizeJsonSubset,
+  computeHmacSha256,
+  computeSha256,
+  assertBase64UrlSegment,
   SentinelAction
 } from '../packages/risk-core/dist/index.js';
 
@@ -219,6 +222,41 @@ async function main() {
     const circ = {};
     circ.self = circ;
     assert.throws(() => canonicalizeJsonSubset(circ), { code: 'MALFORMED_TOKEN' });
+  });
+
+  // 13. [P1-1 Regression] Reject Non-canonical JSON Payload Malleability
+  await runTest('verifyCollectorToken should reject non-canonical payload representation', async () => {
+    // Construct valid token with non-canonical whitespace in payload
+    const nonCanonicalJson = '{\n  "aud": "ameva-sentinel-collector",  "exp": ' + (Date.now() + 60000) + ',\n  "iat": ' + Date.now() + ',\n  "iss": "ameva-authenticator",\n  "kid": "kid-2026-prod-a",\n  "nonce": "nonce_noncanon_1",\n  "purpose": "telemetry-collect",\n  "sessionRef": "sess_1",\n  "v": 1\n}';
+    const nonCanonB64 = Buffer.from(nonCanonicalJson).toString('base64url');
+    const signingInput = `sv1.${nonCanonB64}`;
+    const sig = computeHmacSha256(secretKey, signingInput);
+    const sigB64 = Buffer.from(sig).toString('base64url');
+    const malleableToken = `sv1.${nonCanonB64}.${sigB64}`;
+
+    await assert.rejects(
+      async () => verifyCollectorToken(malleableToken, keyResolver, nonceStore, defaultVerifyOpts),
+      { name: 'CollectorVerificationError', code: 'MALFORMED_TOKEN' }
+    );
+  });
+
+  // 14. [P1-1 Regression] Strict Base64URL alphabet and padding check
+  await runTest('assertBase64UrlSegment should reject invalid characters and illegal padding', () => {
+    assert.throws(() => assertBase64UrlSegment('invalid+plus', 'test'), { code: 'MALFORMED_TOKEN' });
+    assert.throws(() => assertBase64UrlSegment('invalid/slash', 'test'), { code: 'MALFORMED_TOKEN' });
+    assert.throws(() => assertBase64UrlSegment('invalid=equals', 'test'), { code: 'MALFORMED_TOKEN' });
+    assert.throws(() => assertBase64UrlSegment('a', 'test'), { code: 'MALFORMED_TOKEN' }); // length % 4 === 1
+  });
+
+  // 15. [RFC 4231 & NIST Test Vectors] Cryptographic Standard Vector Validation
+  await runTest('computeHmacSha256 matches RFC 4231 official Test Case 2 vector', () => {
+    // RFC 4231 Test Case 2: Key = "Jefe", Data = "what do ya want for nothing?"
+    const key = 'Jefe';
+    const data = 'what do ya want for nothing?';
+    const digest = computeHmacSha256(key, data);
+    const hex = Array.from(digest, b => b.toString(16).padStart(2, '0')).join('');
+    
+    assert.strictEqual(hex, '5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843');
   });
 
   if (failedTests > 0) {

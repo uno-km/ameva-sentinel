@@ -45,7 +45,6 @@ export class MemoryNonceStore implements NonceStore {
     }
 
     if (this.nonces.size >= this.maxEntries) {
-      // Memory bound reached -> prune aggressively or fail-closed
       this.prune();
       if (this.nonces.size >= this.maxEntries) {
         return false;
@@ -78,9 +77,9 @@ export class StaticKeyResolver implements KeyResolver {
 }
 
 /**
- * Internal factory creating unforgeable VerifiedCollectorContext
+ * Strictly unexported internal factory creating unforgeable VerifiedCollectorContext
  */
-export function createVerifiedCollectorContext(payload: CollectorTokenPayload): VerifiedCollectorContext {
+function createVerifiedCollectorContext(payload: CollectorTokenPayload): VerifiedCollectorContext {
   return Object.freeze({
     [VERIFIED_COLLECTOR_BRAND]: true as const,
     kid: payload.kid,
@@ -138,6 +137,14 @@ export function canonicalizeJsonSubset(obj: unknown, seen = new Set<unknown>()):
   return '{' + entries.join(',') + '}';
 }
 
+const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
+
+export function assertBase64UrlSegment(segment: string, name: string): void {
+  if (!segment || typeof segment !== 'string' || !BASE64URL_RE.test(segment) || segment.length % 4 === 1) {
+    throw new CollectorVerificationError('MALFORMED_TOKEN', `Invalid ${name} Base64URL encoding`, 400);
+  }
+}
+
 /**
  * Safe Base64URL utilities (Browser & Node isomorphic)
  */
@@ -152,6 +159,7 @@ export function base64UrlEncode(data: string | Uint8Array): string {
 }
 
 export function base64UrlDecodeToBytes(str: string): Uint8Array {
+  assertBase64UrlSegment(str, 'segment');
   let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
   while (base64.length % 4) {
     base64 += '=';
@@ -169,7 +177,7 @@ export function base64UrlDecodeToBytes(str: string): Uint8Array {
 
 export function base64UrlDecode(str: string): string {
   const bytes = base64UrlDecodeToBytes(str);
-  return new TextDecoder().decode(bytes);
+  return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
 }
 
 /**
@@ -187,9 +195,9 @@ export function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 /**
- * Pure Isomorphic SHA-256
+ * Pure Isomorphic SHA-256 (NIST FIPS 180-4 compliant)
  */
-function sha256(data: Uint8Array): Uint8Array {
+export function computeSha256(data: Uint8Array): Uint8Array {
   const K = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -214,15 +222,15 @@ function sha256(data: Uint8Array): Uint8Array {
   padded[data.length] = 0x80;
 
   const view = new DataView(padded.buffer, padded.byteOffset, padded.byteLength);
-  view.setUint32(paddedLen - 4, l >>> 0);
-  view.setUint32(paddedLen - 8, Math.floor(l / 0x100000000) >>> 0);
+  view.setUint32(paddedLen - 8, Math.floor(data.length / 0x20000000) >>> 0, false);
+  view.setUint32(paddedLen - 4, (l >>> 0), false);
 
   const W = new Uint32Array(64);
   const rotr = (n: number, x: number) => (x >>> n) | (x << (32 - n));
 
   for (let i = 0; i < paddedLen; i += 64) {
     for (let t = 0; t < 16; t++) {
-      W[t] = view.getUint32(i + t * 4);
+      W[t] = view.getUint32(i + t * 4, false);
     }
     for (let t = 16; t < 64; t++) {
       const s0 = rotr(7, W[t - 15]) ^ rotr(18, W[t - 15]) ^ (W[t - 15] >>> 3);
@@ -263,25 +271,26 @@ function sha256(data: Uint8Array): Uint8Array {
   const out = new Uint8Array(32);
   const outView = new DataView(out.buffer);
   for (let i = 0; i < 8; i++) {
-    outView.setUint32(i * 4, H[i]);
+    outView.setUint32(i * 4, H[i], false);
   }
   return out;
 }
 
 /**
- * Pure Isomorphic HMAC-SHA256 generator
+ * Pure Isomorphic HMAC-SHA256 generator (RFC 4231 compliant)
  */
 export function computeHmacSha256(key: string | Uint8Array, data: string | Uint8Array): Uint8Array {
   const encoder = new TextEncoder();
-  let keyBytes = typeof key === 'string' ? encoder.encode(key) : key;
+  const keyBytes = typeof key === 'string' ? encoder.encode(key) : key;
   const dataBytes = typeof data === 'string' ? encoder.encode(data) : data;
 
   const blockSize = 64;
+  let finalKey = keyBytes;
   if (keyBytes.length > blockSize) {
-    keyBytes = sha256(keyBytes);
+    finalKey = computeSha256(keyBytes);
   }
   const paddedKey = new Uint8Array(blockSize);
-  paddedKey.set(keyBytes);
+  paddedKey.set(finalKey);
 
   const oKeyPad = new Uint8Array(blockSize);
   const iKeyPad = new Uint8Array(blockSize);
@@ -293,12 +302,12 @@ export function computeHmacSha256(key: string | Uint8Array, data: string | Uint8
   const inner = new Uint8Array(blockSize + dataBytes.length);
   inner.set(iKeyPad);
   inner.set(dataBytes, blockSize);
-  const innerHash = sha256(inner);
+  const innerHash = computeSha256(inner);
 
   const outer = new Uint8Array(blockSize + innerHash.length);
   outer.set(oKeyPad);
   outer.set(innerHash, blockSize);
-  return sha256(outer);
+  return computeSha256(outer);
 }
 
 /**
@@ -323,7 +332,7 @@ export interface VerifyTokenOptions {
 }
 
 /**
- * Strict sv1 Token Verifier Pipeline (Fail-Closed by Default)
+ * Strict sv1 Token Verifier Pipeline (Fail-Closed, Non-malleable, Oracle-Resistant)
  */
 export async function verifyCollectorToken(
   token: string,
@@ -351,9 +360,8 @@ export async function verifyCollectorToken(
   }
 
   const [, payloadB64, sigB64] = parts;
-  if (!payloadB64 || !sigB64) {
-    throw new CollectorVerificationError('MALFORMED_TOKEN', 'Token segments must be non-empty', 400);
-  }
+  assertBase64UrlSegment(payloadB64, 'payload');
+  assertBase64UrlSegment(sigB64, 'signature');
 
   // Step 3: Base64URL Decode and Payload Parse
   let payload: CollectorTokenPayload;
@@ -379,22 +387,29 @@ export async function verifyCollectorToken(
     throw new CollectorVerificationError('MALFORMED_TOKEN', 'Token payload contains invalid or missing mandatory claims', 400);
   }
 
-  // Step 4: Issuer Whitelist Check
-  if (options.allowedIssuers && options.allowedIssuers.length > 0) {
-    if (!options.allowedIssuers.includes(payload.iss)) {
-      throw new CollectorVerificationError('UNAUTHORIZED_ISSUER', `Issuer "${payload.iss}" is not in authorized issuers whitelist`, 403);
-    }
+  // Step 4: Key ID Resolution
+  const secretKey = await keyResolver.resolveKey(payload.kid);
+  if (!secretKey) {
+    throw new CollectorVerificationError('UNKNOWN_KEY_ID', `Key ID "${payload.kid}" is not recognized or has been revoked`, 401);
   }
 
-  // Step 5: Audience & Purpose Validation (Strict)
-  if (payload.aud !== options.expectedAudience) {
-    throw new CollectorVerificationError('AUDIENCE_MISMATCH', `Expected audience "${options.expectedAudience}", got "${payload.aud}"`, 403);
-  }
-  if (payload.purpose !== options.expectedPurpose) {
-    throw new CollectorVerificationError('PURPOSE_MISMATCH', `Expected purpose "${options.expectedPurpose}", got "${payload.purpose}"`, 403);
+  // Step 5: Canonical Form Verification (Malleability Defense)
+  const canonical = canonicalizeJsonSubset(payload);
+  const reEncodedPayloadB64 = base64UrlEncode(canonical);
+  if (payloadB64 !== reEncodedPayloadB64) {
+    throw new CollectorVerificationError('MALFORMED_TOKEN', 'Token payload is not in canonical form', 400);
   }
 
-  // Step 6: Lifetime & Expiration Check
+  // Step 6: Constant-Time HMAC Signature Verification
+  const signingInput = `sv1.${reEncodedPayloadB64}`;
+  const expectedSigBytes = computeHmacSha256(secretKey, signingInput);
+  const providedSigBytes = base64UrlDecodeToBytes(sigB64);
+
+  if (!constantTimeEqual(expectedSigBytes, providedSigBytes)) {
+    throw new CollectorVerificationError('INVALID_SIGNATURE', 'Cryptographic signature verification failed', 401);
+  }
+
+  // Step 7: Lifetime & Expiration Check
   const now = options.nowEpochMs ?? Date.now();
   if (payload.exp <= payload.iat) {
     throw new CollectorVerificationError('MALFORMED_TOKEN', 'Token expiration must be strictly greater than issued timestamp', 400);
@@ -409,36 +424,28 @@ export async function verifyCollectorToken(
     throw new CollectorVerificationError('TOKEN_EXPIRED', 'Collector token has expired', 401);
   }
 
-  // Step 7: Timestamp Freshness Window Check (+- 30s default)
+  // Step 8: Timestamp Freshness Window Check (+- 30s default)
   const maxClockSkewMs = options.maxClockSkewMs ?? 30000;
   if (Math.abs(now - payload.iat) > maxClockSkewMs) {
     throw new CollectorVerificationError('INVALID_TIMESTAMP_FRESHNESS', 'Token timestamp violates freshness window', 401);
   }
 
-  // Step 8: Key ID Resolution
-  const secretKey = await keyResolver.resolveKey(payload.kid);
-  if (!secretKey) {
-    throw new CollectorVerificationError('UNKNOWN_KEY_ID', `Key ID "${payload.kid}" is not recognized or has been revoked`, 401);
+  // Step 9: Audience & Purpose Validation
+  if (payload.aud !== options.expectedAudience) {
+    throw new CollectorVerificationError('AUDIENCE_MISMATCH', `Expected audience "${options.expectedAudience}", got "${payload.aud}"`, 403);
+  }
+  if (payload.purpose !== options.expectedPurpose) {
+    throw new CollectorVerificationError('PURPOSE_MISMATCH', `Expected purpose "${options.expectedPurpose}", got "${payload.purpose}"`, 403);
   }
 
-  // Step 9: Canonicalize & HMAC Constant-Time Verification
-  const canonical = canonicalizeJsonSubset(payload);
-  const reEncodedPayloadB64 = base64UrlEncode(canonical);
-  const signingInput = `sv1.${reEncodedPayloadB64}`;
-  const expectedSigBytes = computeHmacSha256(secretKey, signingInput);
-  
-  let providedSigBytes: Uint8Array;
-  try {
-    providedSigBytes = base64UrlDecodeToBytes(sigB64);
-  } catch (err) {
-    throw new CollectorVerificationError('INVALID_SIGNATURE', 'Invalid signature encoding', 401);
+  // Step 10: Issuer Whitelist Check
+  if (options.allowedIssuers && options.allowedIssuers.length > 0) {
+    if (!options.allowedIssuers.includes(payload.iss)) {
+      throw new CollectorVerificationError('UNAUTHORIZED_ISSUER', `Issuer "${payload.iss}" is not in authorized issuers whitelist`, 403);
+    }
   }
 
-  if (!constantTimeEqual(expectedSigBytes, providedSigBytes)) {
-    throw new CollectorVerificationError('INVALID_SIGNATURE', 'Cryptographic signature verification failed', 401);
-  }
-
-  // Step 10: Replay Defense (Atomic Multi-Tenant Nonce Consumption)
+  // Step 11: Replay Defense (Atomic Multi-Tenant Nonce Consumption)
   const namespace: NonceNamespace = {
     issuer: payload.iss,
     kid: payload.kid,
@@ -449,6 +456,69 @@ export async function verifyCollectorToken(
     throw new CollectorVerificationError('REPLAY_ATTACK_DETECTED', `Nonce "${payload.nonce}" has already been used for issuer "${payload.iss}" (Replay Attack Detected)`, 409);
   }
 
-  // Return Unforgeable Branded Verified Context
+  // Step 12: Return Unforgeable Branded Verified Context
   return createVerifiedCollectorContext(payload);
+}
+
+/**
+ * Stream and multi-byte safe Request JSON body reader with hard byte-level limits
+ */
+export async function readJsonBodyLimited(request: any, maxBytes = 65536): Promise<any> {
+  if (!request) return {};
+
+  // Standard Fetch / Web Request with stream body
+  if (typeof request.headers?.get === 'function') {
+    const contentLength = request.headers.get('content-length');
+    if (contentLength && Number.isFinite(Number(contentLength)) && Number(contentLength) > maxBytes) {
+      throw new CollectorVerificationError('MALFORMED_TOKEN', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
+    }
+
+    if (request.body && typeof request.body.getReader === 'function') {
+      const reader = request.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel();
+          throw new CollectorVerificationError('MALFORMED_TOKEN', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
+        }
+        chunks.push(value);
+      }
+      const bytes = new Uint8Array(total);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      return text.trim() ? JSON.parse(text) : {};
+    }
+  }
+
+  // Raw body in Node / mock objects
+  if (request.body !== undefined) {
+    if (typeof request.body === 'string') {
+      const bytes = new TextEncoder().encode(request.body);
+      if (bytes.byteLength > maxBytes) {
+        throw new CollectorVerificationError('MALFORMED_TOKEN', `Request body exceeds maximum size of ${maxBytes} bytes`, 413);
+      }
+      return request.body.trim() ? JSON.parse(request.body) : {};
+    }
+    if (typeof request.body === 'object') {
+      return request.body;
+    }
+  }
+
+  if (typeof request.json === 'function') {
+    try {
+      return await request.json();
+    } catch (e) {
+      return {};
+    }
+  }
+
+  return {};
 }
