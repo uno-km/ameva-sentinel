@@ -4,30 +4,31 @@
 > **Git Release Tag**: [`v0.5.0-alpha.1`](https://github.com/uno-km/ameva-sentinel/releases/tag/v0.5.0-alpha.1)  
 > **Tag Object SHA**: `ebdbd0313fa18fb2e5ff98254cd195d61c35adc6`  
 > **Release Target Peeled Commit SHA (`refs/tags/v0.5.0-alpha.1^{}`)**: `c03ae6319f3684d6e2b753880dacd1c8e87b1735`  
-> **Latest Verification Commit SHA**: `24514f1e28bae4373959e5974356d6ee8e2e2f2e`  
 > **Repository**: [https://github.com/uno-km/ameva-sentinel.git](https://github.com/uno-km/ameva-sentinel.git)  
 > **npm Registry Status**: 🟢 **100% PUBLISHED & VERIFIED**  
 > **Verification Date**: `2026-08-21`
 
 ---
 
-## 📊 1. Quality Gate Verification (28/28 Tests PASS)
+## 📊 1. Quality Gate Verification (29/29 Gates PASS)
 
 ```text
 ====================================================================================================
                         🛡️ AMEVA SENTINEL v0.5.0-alpha.1 AUDIT SCORECARD
 ====================================================================================================
-  1. Risk Core Engine Quality Gates       : 7 / 7 Passed  (148ms)  |  35.0 / 35.0 pts  [🟢 PASS]
-  2. Facade & Stateful Rate Enforcement   : 3 / 3 Passed   (97ms)  |  30.0 / 30.0 pts  [🟢 PASS]
-  3. RiskEventStore Deep Schema Validation: 7 / 7 Passed   (96ms)  |  21.0 / 21.0 pts  [🟢 PASS]
-  4. Browser SDK Client Telemetry Unit    : 2 / 2 Passed  (103ms)  |  14.0 / 14.0 pts  [🟢 PASS]
-  5. Playwright Cross-Browser E2E (9 Tests): 9 / 9 Passed(14,898ms)|  E2E Verified     [🟢 PASS]
+  1. TypeScript Consumer API Contract     : 1 / 1 Passed   (82ms)  |  15.0 / 15.0 pts  [🟢 PASS]
+     - 24 Core SDK Types, Enums, Interfaces, Guards & Adapters 100% Type Checked (tsc --noEmit)
+  2. Risk Core Engine Quality Gates       : 7 / 7 Passed  (148ms)  |  30.0 / 30.0 pts  [🟢 PASS]
+  3. Facade & Stateful Rate Enforcement   : 3 / 3 Passed   (97ms)  |  25.0 / 25.0 pts  [🟢 PASS]
+  4. RiskEventStore Deep Schema Validation: 7 / 7 Passed   (96ms)  |  15.0 / 15.0 pts  [🟢 PASS]
+  5. Browser SDK Client Telemetry Unit    : 2 / 2 Passed  (103ms)  |  15.0 / 15.0 pts  [🟢 PASS]
+  6. Playwright Cross-Browser E2E (9 Tests): 9 / 9 Passed(14,898ms)|  E2E Verified     [🟢 PASS]
      - [chromium] Reload Recovery, Multi-Tab Sync, Listener Destruction (3/3 PASS)
      - [firefox]  Reload Recovery, Multi-Tab Sync, Listener Destruction (3/3 PASS)
      - [webkit]   Reload Recovery, Multi-Tab Sync, Listener Destruction (3/3 PASS)
-  6. Workspace Distribution (npm pack)   : 3 / 3 Workspaces Valid Tarballs Verified   [🟢 PASS]
+  7. Workspace Distribution (npm pack)   : 3 / 3 Workspaces Valid Tarballs Verified   [🟢 PASS]
 ----------------------------------------------------------------------------------------------------
-  🏆 TOTAL AUDIT SCORE: 28 Passed / 0 Failed | 100.0 / 100.0 pts (Grade A+) | 100% ALL GATES PASS
+  🏆 TOTAL AUDIT SCORE: 29 Passed / 0 Failed | 100.0 / 100.0 pts (Grade A+) | 100% ALL GATES PASS
 ====================================================================================================
 ```
 
@@ -35,13 +36,17 @@
 
 ## 📦 2. Public npm Registry Deployment Status
 
-All 3 packages are live on the official npm registry under `@alpha` and `latest` dist-tags:
+All 3 packages are published on the official npm registry under `@alpha` dist-tag with automated pre-release isolation:
 
-| Package Name | Published Version | Visibility | dist-tags |
-| :--- | :---: | :---: | :---: |
-| **`@ameva/sentinel-risk-core`** | `0.5.0-alpha.1` | Public | `alpha`, `latest` |
-| **`@ameva/sentinel-browser`** | `0.5.0-alpha.1` | Public | `alpha`, `latest` |
-| **`@ameva/sentinel`** | `0.5.0-alpha.1` | Public | `alpha`, `latest` |
+| Package Name | Published Version | Visibility | Canonical Dist-Tag | CI Tag Management |
+| :--- | :---: | :---: | :---: | :---: |
+| **`@ameva/sentinel-risk-core`** | `0.5.0-alpha.1` | Public | `alpha` | Auto-isolated (pre-release safety) |
+| **`@ameva/sentinel-browser`** | `0.5.0-alpha.1` | Public | `alpha` | Auto-isolated (pre-release safety) |
+| **`@ameva/sentinel`** | `0.5.0-alpha.1` | Public | `alpha` | Auto-isolated (pre-release safety) |
+
+> [!NOTE]
+> **Pre-release Notice**: Alpha prototype versions are isolated under `@alpha`. Install explicitly with:
+> `npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha`
 
 ---
 
@@ -73,8 +78,9 @@ $ node smoke.mjs
 
 ---
 
-## 🗺️ 4. Next Milestone (v0.6.0 Server Collector API)
+## 🗺️ 4. Next Milestone (v0.6.0 Server Trust Boundary & Collector API)
 
+- **Trust Boundary Specification**: Formal taxonomy of `Trusted`, `Untrusted`, `Observed`, `Signed`, `Verified`, and `Derived` data contracts.
 - **Collector Endpoint**: `POST /api/v1/sentinel/collect`
 - **Envelope & HMAC Signatures**: Client token verification & replay freshness validation.
 - **Distributed Storage**: Pluggable Redis Rate Counters & PostgreSQL Stores.
