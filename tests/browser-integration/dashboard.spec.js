@@ -26,20 +26,27 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
     await expect(page.locator(`[data-trace-id="${firstTraceId}"]`)).toBeVisible();
   });
 
-  test('risk event is synchronized in real-time across tabs', async ({ context }) => {
+  test('risk event is synchronized in real-time across tabs', async ({ browser }) => {
+    const context = await browser.newContext();
     const producer = await context.newPage();
     const dashboard = await context.newPage();
 
-    await producer.goto('/packages/dashboard/index.html');
-    await dashboard.goto('/packages/dashboard/index.html');
+    try {
+      await producer.goto('/packages/dashboard/index.html');
+      await dashboard.goto('/packages/dashboard/index.html');
 
-    const before = Number(await dashboard.locator('[data-testid="event-count"]').textContent());
+      const before = Number(await dashboard.locator('[data-testid="event-count"]').textContent());
 
-    // Generate event on producer tab
-    await producer.getByRole('button', { name: /simulate headless bot/i }).click();
+      // Generate event on producer tab
+      await producer.getByRole('button', { name: /simulate headless bot/i }).click();
 
-    // Verify dashboard tab updates count dynamically without reload
-    await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+      // Verify dashboard tab updates count dynamically without reload
+      await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+    } finally {
+      await producer.close().catch(() => {});
+      await dashboard.close().catch(() => {});
+      await context.close().catch(() => {});
+    }
   });
 
   test('destroy() stops active telemetry collection and listener observation', async ({ page }) => {
@@ -57,7 +64,8 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
       return window.testTelemetry.snapshot();
     });
 
-    expect(during.pointerEventCount).toBeGreaterThanOrEqual(before.pointerEventCount);
+    // Must strictly prove telemetry listener actually captured pointer events before destruction
+    expect(during.pointerEventCount).toBeGreaterThan(before.pointerEventCount);
 
     // Destroy telemetry collector
     await page.evaluate(() => {

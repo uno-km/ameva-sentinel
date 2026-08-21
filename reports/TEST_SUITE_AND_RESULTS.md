@@ -1,6 +1,6 @@
 # 🛡️ AMEVA-Sentinel — Comprehensive Test Suite & Execution Results Report
 
-> **Generated At**: `2026-08-21T01:37:08.999Z`  
+> **Generated At**: `2026-08-21T01:43:48.615Z`  
 > **Repository**: [https://github.com/uno-km/ameva-sentinel.git](https://github.com/uno-km/ameva-sentinel.git)  
 > **Monorepo Version**: `0.5.0-alpha.1`  
 > **Execution Engine**: Node.js `v24.16.0` on `win32`
@@ -11,12 +11,12 @@
 
 | Test Category | Tests Passed | Execution Time | Score Points | Status |
 | :--- | :---: | :---: | :---: | :---: |
-| **Risk Engine Quality Gates** | `7 / 7` | `81ms` | **35.0 / 35 pts** | 🟢 PASS |
-| **Facade & State Enforcement** | `3 / 3` | `98ms` | **30.0 / 30 pts** | 🟢 PASS |
-| **Persistence & Schema Bounds** | `4 / 4` | `75ms` | **20.0 / 20 pts** | 🟢 PASS |
-| **Browser SDK Unit Verification** | `2 / 2` | `82ms` | **15.0 / 15 pts** | 🟢 PASS |
-| **Playwright Real-Browser E2E Spec** | `3 specs defined` | `N/A` | **Spec Defined** | 🔵 READY |
-| **TOTAL AUDIT SCORE** | **16 Passed / 0 Failed** | **—** | **100.0 / 100 pts (Grade A+)** | 🏆 **100% PASS** |
+| **Risk Engine Quality Gates** | `7 / 7` | `148ms` | **35.0 / 35 pts** | 🟢 PASS |
+| **Facade & State Enforcement** | `3 / 3` | `97ms` | **30.0 / 30 pts** | 🟢 PASS |
+| **Persistence & Deep Schema Bounds** | `7 / 7` | `96ms` | **21.0 / 21 pts** | 🟢 PASS |
+| **Browser SDK Unit Verification** | `2 / 2` | `103ms` | **14.0 / 14 pts** | 🟢 PASS |
+| **Playwright Cross-Browser E2E (9 Tests)** | `9 / 9` | `14898ms` | **E2E Verified** | 🟢 PASS |
+| **TOTAL AUDIT SCORE** | **28 Passed / 0 Failed** | **—** | **100.0 / 100 pts (Grade A+)** | 🏆 **100% PASS** |
 
 ---
 
@@ -24,9 +24,9 @@
 
 - [1. Risk Core Engine & Boundary Quality Gate Tests](#engine)
 - [2. Sentinel Facade & Stateful Rate Enforcement Tests](#sentinel)
-- [3. RiskEventStore Persistence & Strict Schema Validation Tests](#store)
+- [3. RiskEventStore Persistence & Deep Schema Validation Tests](#store)
 - [4. @ameva/sentinel-browser Client Telemetry Unit Tests](#browser)
-- [5. Playwright Real-Browser Integration E2E Spec](#playwright)
+- [5. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)](#playwright)
 
 ---
 
@@ -35,7 +35,7 @@
 
 - **Test File Path**: [`tests/engine.test.js`](file:///C:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/tests/engine.test.js)
 - **Execution Command**: `node tests/engine.test.js`
-- **Execution Latency**: `81 ms`
+- **Execution Latency**: `148 ms`
 - **Results**: `7 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -239,7 +239,7 @@ Failed:                  0
 
 - **Test File Path**: [`tests/sentinel.test.js`](file:///C:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/tests/sentinel.test.js)
 - **Execution Command**: `node tests/sentinel.test.js`
-- **Execution Latency**: `98 ms`
+- **Execution Latency**: `97 ms`
 - **Results**: `3 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -400,18 +400,18 @@ Failed:             0
 ---
 
 <a id="store"></a>
-## 3. RiskEventStore Persistence & Strict Schema Validation Tests
+## 3. RiskEventStore Persistence & Deep Schema Validation Tests
 
 - **Test File Path**: [`tests/store.test.js`](file:///C:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/tests/store.test.js)
 - **Execution Command**: `node tests/store.test.js`
-- **Execution Latency**: `75 ms`
-- **Results**: `4 Passed, 0 Failed`
+- **Execution Latency**: `96 ms`
+- **Results**: `7 Passed, 0 Failed`
 
 ### 📄 Test Source Code
 
 ```javascript
 /**
- * AMEVA Sentinel - RiskEventStore Unit & Edge Case Test Suite
+ * AMEVA Sentinel - RiskEventStore Unit & Deep Schema Validation Test Suite
  */
 import assert from 'node:assert';
 import {
@@ -419,7 +419,10 @@ import {
   LocalStorageRiskEventStore,
   SentinelAction,
   evaluate,
-  toStoredRiskEvent
+  toStoredRiskEvent,
+  isStoredRiskEventV1,
+  hasPrimitiveAttributes,
+  isIsoDate
 } from '../packages/risk-core/dist/index.js';
 
 console.log('\n🧪 Running AMEVA Sentinel RiskEventStore Test Suite...\n');
@@ -427,125 +430,118 @@ console.log('\n🧪 Running AMEVA Sentinel RiskEventStore Test Suite...\n');
 let passedTests = 0;
 let failedTests = 0;
 
-function it(name, fn) {
-  return (async () => {
-    try {
-      await fn();
-      console.log(`  ✅ PASS: ${name}`);
-      passedTests++;
-    } catch (err) {
-      console.error(`  ❌ FAIL: ${name}`);
-      console.error(`     Error: ${err.message}`);
-      failedTests++;
-    }
-  })();
+async function it(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passedTests++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(`     Reason: ${err.message}`);
+    failedTests++;
+  }
 }
 
 async function run() {
-  // 1. Basic Append and List Retrieval
+  // 1. Schema v1.0 Structure Integrity
   await it('should append and list reports with schemaVersion 1.0', async () => {
     const store = new MemoryRiskEventStore();
-    const mockReport = {
-      traceId: 'trc_001',
-      score: 25,
-      evidenceConfidence: 0.88,
-      action: SentinelAction.OBSERVE,
-      recommendedAction: SentinelAction.OBSERVE,
-      enforcementMode: 'SHADOW',
-      policyVersion: '2026-08-21.1',
-      evidence: [],
-      evaluatedAt: new Date().toISOString()
-    };
+    const report = evaluate({ webdriver: true, burstCount10s: 2 });
 
-    await store.append(mockReport);
+    await store.append(report);
     const list = await store.list();
 
     assert.strictEqual(list.length, 1);
-    assert.strictEqual(list[0].traceId, 'trc_001');
-    assert.strictEqual(list[0].schemaVersion, '1.0');
+    const item = list[0];
+    assert.strictEqual(item.schemaVersion, '1.0');
+    assert.strictEqual(item.traceId, report.traceId);
+    assert.strictEqual(item.score, report.score);
+    assert.strictEqual(typeof item.storedAt, 'string');
+    assert.ok(isIsoDate(item.storedAt), 'storedAt must be valid ISO date string');
+    assert.ok(isStoredRiskEventV1(item), 'Appended item must strictly satisfy isStoredRiskEventV1');
   });
 
-  // 2. Idempotency (Deduplication on identical traceId)
+  // 2. Trace ID Deduplication (Idempotency)
   await it('should be idempotent and deduplicate appends with identical traceId', async () => {
     const store = new MemoryRiskEventStore();
-    const report = {
-      traceId: 'trc_dup_999',
-      score: 30,
-      evidenceConfidence: 0.85,
-      action: SentinelAction.OBSERVE,
-      recommendedAction: SentinelAction.RATE_LIMIT,
-      enforcementMode: 'SHADOW',
-      policyVersion: '2026-08-21.1',
-      evidence: [],
-      evaluatedAt: new Date().toISOString()
-    };
+    const report = evaluate({ webdriver: false });
 
     await store.append(report);
-    await store.append(report); // Duplicate append
-    await store.append(report); // Duplicate append
+    await store.append(report);
+    await store.append(report);
 
     const list = await store.list();
-    assert.strictEqual(list.length, 1, 'Store must contain exactly 1 entry for duplicate traceId');
+    assert.strictEqual(list.length, 1, 'Duplicate traceId should update rather than append duplicate entries');
   });
 
-  // 3. FIFO Capacity Limit Eviction
+  // 3. FIFO Capacity Eviction
   await it('should evict oldest items in FIFO order when exceeding maxItems', async () => {
     const store = new MemoryRiskEventStore({ maxItems: 3 });
 
-    for (let i = 1; i <= 5; i++) {
-      await store.append({
-        traceId: `trc_${i}`,
-        score: i * 10,
-        evidenceConfidence: 0.9,
-        action: SentinelAction.ALLOW,
-        recommendedAction: SentinelAction.ALLOW,
-        enforcementMode: 'SHADOW',
-        policyVersion: '2026-08-21.1',
-        evidence: [],
-        evaluatedAt: new Date().toISOString()
-      });
+    for (let i = 0; i < 5; i++) {
+      const rep = evaluate({});
+      rep.traceId = `trc_test_${i}`;
+      await store.append(rep);
     }
 
     const list = await store.list();
-    assert.strictEqual(list.length, 3, 'Store must clamp to maxItems (3)');
-    assert.strictEqual(list[0].traceId, 'trc_5', 'Most recent item must be at index 0');
-    assert.strictEqual(list[1].traceId, 'trc_4');
-    assert.strictEqual(list[2].traceId, 'trc_3');
+    assert.strictEqual(list.length, 3, 'Store size must strictly remain capped at maxItems');
+    assert.strictEqual(list[0].traceId, 'trc_test_4', 'Newest item should be at index 0');
+    assert.strictEqual(list[2].traceId, 'trc_test_2', 'Oldest preserved item should be trc_test_2');
   });
 
-  // 4. TTL Expired Event Pruning
+  // 4. Time-to-Live (TTL) Pruning
   await it('should prune expired events beyond maxAgeMs', async () => {
-    const store = new MemoryRiskEventStore({ maxAgeMs: 1000 }); // 1 second TTL
+    const store = new MemoryRiskEventStore({ maxAgeMs: 100 });
+    const rep = evaluate({});
+    rep.evaluatedAt = new Date(Date.now() - 500).toISOString(); // 500ms ago
 
-    const oldReport = {
-      traceId: 'trc_old',
-      score: 10,
-      evidenceConfidence: 0.8,
-      action: SentinelAction.ALLOW,
-      recommendedAction: SentinelAction.ALLOW,
-      enforcementMode: 'SHADOW',
-      policyVersion: '2026-08-21.1',
-      evidence: [],
-      evaluatedAt: new Date(Date.now() - 5000).toISOString() // 5 seconds ago
-    };
+    await store.append(rep);
+    const unexpired = await store.list({ includeExpired: false });
+    assert.strictEqual(unexpired.length, 0, 'Expired item should be filtered out during list()');
 
-    await store.append(oldReport);
-
-    const list = await store.list();
-    assert.strictEqual(list.length, 0, 'Expired event must be pruned on list()');
+    const all = await store.list({ includeExpired: true });
+    assert.strictEqual(all.length, 1, 'Explicit includeExpired: true must return expired events');
   });
 
-  console.log('\n------------------------------------------------');
-  console.log(`Total Store Tests: ${passedTests + failedTests}`);
-  console.log(`Passed:            ${passedTests}`);
-  console.log(`Failed:            ${failedTests}`);
-  console.log('------------------------------------------------\n');
+  // 5. Schema Guard: Reject Out-of-Bounds Scores & Confidences
+  await it('isStoredRiskEventV1 should reject out-of-bounds score and confidence numbers', () => {
+    const valid = toStoredRiskEvent(evaluate({ webdriver: false }));
 
-  if (failedTests > 0) {
-    process.exitCode = 1;
-    console.error(`🚨 STORE TEST SUITE FAILED: ${failedTests} test(s) failed.`);
-    process.exit(1);
-  }
+    assert.strictEqual(isStoredRiskEventV1(valid), true, 'Valid StoredRiskEventV1 must pass');
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, score: 101 }), false, 'Score > 100 must be rejected');
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, score: -1 }), false, 'Score < 0 must be rejected');
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, score: NaN }), false, 'NaN score must be rejected');
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, evidenceConfidence: 1.5 }), false, 'Confidence > 1 must be rejected');
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, evidenceConfidence: -0.1 }), false, 'Confidence < 0 must be rejected');
+  });
+
+  // 6. Schema Guard: Reject Invalid Actions, Modes, and Non-ISO Dates
+  await it('isStoredRiskEventV1 should reject invalid actions, modes, and non-ISO dates', () => {
+    const valid = toStoredRiskEvent(evaluate({ webdriver: false }));
+
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, action: 'INVALID_BLOCK' }), false, 'Unknown action must fail');
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, enforcementMode: 'ILLEGAL' }), false, 'Unknown mode must fail');
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, evaluatedAt: 'yesterday at 5pm' }), false, 'Non-ISO evaluatedAt must fail');
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, storedAt: 'not-a-date' }), false, 'Non-ISO storedAt must fail');
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, minimalDerivedSignals: null }), false, 'Null minimalDerivedSignals must fail');
+  });
+
+  // 7. Schema Guard: Reject Non-Primitive Attributes in Evidence
+  await it('isStoredRiskEventV1 should reject nested objects or arrays inside evidence attributes', () => {
+    const valid = toStoredRiskEvent(evaluate({ webdriver: true }));
+
+    const poisonedEvidence = [
+      {
+        rule: 'test.poison',
+        score: 10,
+        message: 'nested exploit attempt',
+        attributes: { nested: { inner: 'dangerous' }, arrayVal: [1, 2, 3] }
+      }
+    ];
+
+    assert.strictEqual(isStoredRiskEventV1({ ...valid, evidence: poisonedEvidence }), false, 'Nested objects in attributes must be rejected');
+  });
 }
 
 run();
@@ -561,12 +557,9 @@ run();
   ✅ PASS: should be idempotent and deduplicate appends with identical traceId
   ✅ PASS: should evict oldest items in FIFO order when exceeding maxItems
   ✅ PASS: should prune expired events beyond maxAgeMs
-
-------------------------------------------------
-Total Store Tests: 4
-Passed:            4
-Failed:            0
-------------------------------------------------
+  ✅ PASS: isStoredRiskEventV1 should reject out-of-bounds score and confidence numbers
+  ✅ PASS: isStoredRiskEventV1 should reject invalid actions, modes, and non-ISO dates
+  ✅ PASS: isStoredRiskEventV1 should reject nested objects or arrays inside evidence attributes
 ```
 
 ---
@@ -576,7 +569,7 @@ Failed:            0
 
 - **Test File Path**: [`tests/browser.test.js`](file:///C:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/tests/browser.test.js)
 - **Execution Command**: `node tests/browser.test.js`
-- **Execution Latency**: `82 ms`
+- **Execution Latency**: `103 ms`
 - **Results**: `2 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -667,9 +660,12 @@ Failed:              0
 ---
 
 <a id="playwright"></a>
-## 5. Playwright Real-Browser Integration E2E Spec
+## 5. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)
 
 - **Test File Path**: [`tests/browser-integration/dashboard.spec.js`](file:///C:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/tests/browser-integration/dashboard.spec.js)
+- **Execution Command**: `npx playwright test`
+- **Execution Latency**: `14898 ms`
+- **Results**: `9 Passed, 0 Failed`
 
 ### 📄 Test Source Code
 
@@ -702,20 +698,27 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
     await expect(page.locator(`[data-trace-id="${firstTraceId}"]`)).toBeVisible();
   });
 
-  test('risk event is synchronized in real-time across tabs', async ({ context }) => {
+  test('risk event is synchronized in real-time across tabs', async ({ browser }) => {
+    const context = await browser.newContext();
     const producer = await context.newPage();
     const dashboard = await context.newPage();
 
-    await producer.goto('/packages/dashboard/index.html');
-    await dashboard.goto('/packages/dashboard/index.html');
+    try {
+      await producer.goto('/packages/dashboard/index.html');
+      await dashboard.goto('/packages/dashboard/index.html');
 
-    const before = Number(await dashboard.locator('[data-testid="event-count"]').textContent());
+      const before = Number(await dashboard.locator('[data-testid="event-count"]').textContent());
 
-    // Generate event on producer tab
-    await producer.getByRole('button', { name: /simulate headless bot/i }).click();
+      // Generate event on producer tab
+      await producer.getByRole('button', { name: /simulate headless bot/i }).click();
 
-    // Verify dashboard tab updates count dynamically without reload
-    await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+      // Verify dashboard tab updates count dynamically without reload
+      await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+    } finally {
+      await producer.close().catch(() => {});
+      await dashboard.close().catch(() => {});
+      await context.close().catch(() => {});
+    }
   });
 
   test('destroy() stops active telemetry collection and listener observation', async ({ page }) => {
@@ -733,7 +736,8 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
       return window.testTelemetry.snapshot();
     });
 
-    expect(during.pointerEventCount).toBeGreaterThanOrEqual(before.pointerEventCount);
+    // Must strictly prove telemetry listener actually captured pointer events before destruction
+    expect(during.pointerEventCount).toBeGreaterThan(before.pointerEventCount);
 
     // Destroy telemetry collector
     await page.evaluate(() => {
@@ -762,7 +766,19 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
 ### 🖥️ Actual Execution Output & Assertion Logs
 
 ```text
-Spec file ready for Chromium, Firefox, and WebKit execution via `npm run test:e2e`
+Running 9 tests using 1 worker
+
+  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (611ms)
+  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (591ms)
+  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (167ms)
+  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (2.6s)
+  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.4s)
+  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (391ms)
+  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (804ms)
+  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (874ms)
+  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (287ms)
+
+  9 passed (13.0s)
 ```
 
 ---

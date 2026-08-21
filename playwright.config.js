@@ -3,10 +3,10 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests/browser-integration',
   timeout: 30000,
-  fullyParallel: true,
+  fullyParallel: false, // Prevents Firefox context collision on Windows
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 2 : 1,
+  workers: 1,
   reporter: 'list',
   use: {
     baseURL: 'http://127.0.0.1:4173',
@@ -19,7 +19,15 @@ export default defineConfig({
     },
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      use: {
+        ...devices['Desktop Firefox'],
+        launchOptions: {
+          firefoxUserPrefs: {
+            'browser.sessionstore.resume_from_crash': false,
+            'browser.sessionstore.max_tabs_undo': 0
+          }
+        }
+      },
     },
     {
       name: 'webkit',

@@ -17,7 +17,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --clean && tsc --emitDeclarationOnly --declaration --outDir dist src/index.ts"
+    "build": "tsup src/index.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022,dom --emitDeclarationOnly --declaration --outDir dist src/index.ts"
   },
   "dependencies": {
     "@ameva/sentinel-risk-core": "^0.5.0-alpha.1"

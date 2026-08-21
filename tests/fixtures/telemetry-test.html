@@ -10,7 +10,7 @@
 
     <script type="module">
         import { createBrowserTelemetry } from '../../packages/browser-sdk/dist/index.js';
-        window.testTelemetry = createBrowserTelemetry({ autoStart: false });
+        window.testTelemetry = createBrowserTelemetry({ autoStart: false, pointerSampleIntervalMs: 0 });
     </script>
 </body>
 </html>

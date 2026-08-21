@@ -40,28 +40,64 @@ export interface StoredRiskEventV1 {
 const VALID_ACTIONS = new Set<string>(Object.values(SentinelAction));
 const VALID_MODES = new Set<string>(['SHADOW', 'ENFORCE']);
 
-function isIsoDate(value: unknown): value is string {
-  return typeof value === 'string' && Number.isFinite(Date.parse(value));
+export function isIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const time = Date.parse(value);
+  if (!Number.isFinite(time)) return false;
+  try {
+    return new Date(time).toISOString() === value;
+  } catch (e) {
+    return false;
+  }
 }
 
-function isValidEvidenceItem(item: any): item is SanitizedEvidence {
+export function hasPrimitiveAttributes(value: unknown): value is SanitizedEvidence['attributes'] {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  return Object.values(value as Record<string, unknown>).every(item => {
+    return (
+      item === null ||
+      typeof item === 'string' ||
+      typeof item === 'number' ||
+      typeof item === 'boolean'
+    );
+  });
+}
+
+export function isMinimalDerivedSignals(value: unknown): value is MinimalDerivedSignals {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const s = value as Record<string, unknown>;
+  if (s.webdriverObserved !== undefined && typeof s.webdriverObserved !== 'boolean') return false;
+  if (s.telemetryObserved !== undefined && typeof s.telemetryObserved !== 'boolean') return false;
+  if (s.sampleComplete !== undefined && typeof s.sampleComplete !== 'boolean') return false;
+  if (s.observationDurationMs !== undefined && typeof s.observationDurationMs !== 'number') return false;
+  if (s.trustedInputCount !== undefined && typeof s.trustedInputCount !== 'number') return false;
+  if (s.burstCount10s !== undefined && typeof s.burstCount10s !== 'number') return false;
+  if (s.touchMismatch !== undefined && typeof s.touchMismatch !== 'boolean') return false;
+  if (s.suspiciousUA !== undefined && typeof s.suspiciousUA !== 'boolean') return false;
+  return true;
+}
+
+export function isValidEvidenceItem(item: unknown): item is SanitizedEvidence {
+  if (item === null || typeof item !== 'object' || Array.isArray(item)) return false;
+  const e = item as Record<string, unknown>;
   return (
-    item !== null &&
-    typeof item === 'object' &&
-    typeof item.rule === 'string' &&
-    typeof item.score === 'number' &&
-    Number.isFinite(item.score) &&
-    typeof item.message === 'string' &&
-    item.attributes !== null &&
-    typeof item.attributes === 'object'
+    typeof e.rule === 'string' &&
+    typeof e.score === 'number' &&
+    Number.isFinite(e.score) &&
+    typeof e.message === 'string' &&
+    hasPrimitiveAttributes(e.attributes)
   );
 }
 
 /**
- * Comprehensive runtime type guard validating full structure, date formats, action enums, and score bounds.
+ * Comprehensive runtime type guard validating full structure, date formats, action enums, primitive attributes, and score bounds.
  */
 export function isStoredRiskEventV1(value: unknown): value is StoredRiskEventV1 {
-  if (value === null || typeof value !== 'object') return false;
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   const item = value as Record<string, any>;
 
   return (
@@ -84,6 +120,8 @@ export function isStoredRiskEventV1(value: unknown): value is StoredRiskEventV1 
     VALID_MODES.has(item.enforcementMode) &&
     typeof item.policyVersion === 'string' &&
     isIsoDate(item.evaluatedAt) &&
+    isIsoDate(item.storedAt) &&
+    isMinimalDerivedSignals(item.minimalDerivedSignals) &&
     Array.isArray(item.evidence) &&
     item.evidence.every(isValidEvidenceItem)
   );
@@ -104,7 +142,7 @@ export function sanitizeSignals(signals: any = {}): MinimalDerivedSignals {
 
 export function sanitizeEvidence(item: EvidenceItem): SanitizedEvidence {
   const safeAttrs: Record<string, string | number | boolean | null> = {};
-  if (item.attributes && typeof item.attributes === 'object') {
+  if (item.attributes && typeof item.attributes === 'object' && !Array.isArray(item.attributes)) {
     for (const [k, v] of Object.entries(item.attributes)) {
       if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null) {
         safeAttrs[k] = v;
@@ -161,36 +199,30 @@ export class MemoryRiskEventStore implements RiskEventStore {
 
   async append(report: SentinelRiskReport): Promise<void> {
     if (!report || !report.traceId) return;
-    const now = Date.now();
     const storedItem = toStoredRiskEvent(report);
 
     this.events = this.events.filter(e => e.traceId !== report.traceId);
     this.events.unshift(storedItem);
-    this.prune(now);
+    if (this.events.length > this.maxItems) {
+      this.events = this.events.slice(0, this.maxItems);
+    }
   }
 
   async list(options: { limit?: number; includeExpired?: boolean } = {}): Promise<StoredRiskEventV1[]> {
     const now = Date.now();
-    if (!options.includeExpired) {
-      this.prune(now);
-    }
+    const valid = this.events.filter(isStoredRiskEventV1);
+    const unexpired = options.includeExpired
+      ? valid
+      : valid.filter(item => {
+          const time = new Date(item.evaluatedAt).getTime();
+          return (now - time) <= this.maxAgeMs;
+        });
     const limit = options.limit ?? this.maxItems;
-    return this.events.slice(0, limit);
+    return unexpired.slice(0, limit);
   }
 
   async clear(): Promise<void> {
     this.events = [];
-  }
-
-  private prune(now: number): void {
-    this.events = this.events.filter(e => {
-      const itemTime = new Date(e.evaluatedAt).getTime();
-      return (now - itemTime) <= this.maxAgeMs;
-    });
-
-    if (this.events.length > this.maxItems) {
-      this.events = this.events.slice(0, this.maxItems);
-    }
   }
 }
 
