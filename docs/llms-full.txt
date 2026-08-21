@@ -1,0 +1,39 @@
+# AMEVA-Sentinel Full Technical Specification (v0.5.0-alpha.1)
+Official Documentation & Deep Architecture Reference for Autonomous AI Agents.
+
+## 1. System Overview
+Privacy-first Security Observability and Deterministic Threat Scoring Layer for Web Applications
+AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging.
+
+## 2. Package & Installation
+- PyPI: 
+- Command: npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha
+- Repository: https://github.com/uno-km/ameva-sentinel
+
+## 3. Core Capabilities
+- **Privacy-by-Design Zero Raw Telemetry**: Collects only derived interaction intervals and trusted event counters without recording keystrokes or cursor coordinates.
+- **Deterministic Policy Evaluation Engine**: Pure function evaluation guaranteeing algebraic score bounds, rule immutability, and transparent reasoning evidence.
+- **Shadow Mode Observability Architecture**: Operates safely in shadow mode with LocalStorage persistence and cross-tab real-time event synchronization.
+- **Cross-Browser Verified Zero-Drift SDK**: E2E automated verification across Chromium, Firefox, and WebKit ensuring identical behavior on all platforms.
+
+## 4. Canonical Implementation
+```python
+import { createBrowserTelemetry } from '@ameva/sentinel-browser';
+import { createSentinel, MemoryFixedWindowCounterStore, LocalStorageRiskEventStore } from '@ameva/sentinel';
+
+// 1. Collect privacy-safe derived interaction signals
+const telemetry = createBrowserTelemetry({ autoStart: true });
+const signals = telemetry.snapshot();
+
+// 2. Initialize Sentinel Shadow-mode instance
+const sentinel = createSentinel({
+  mode: 'shadow',
+  counterStore: new MemoryFixedWindowCounterStore(),
+  eventStore: new LocalStorageRiskEventStore()
+});
+
+// 3. Evaluate and inspect transparent risk report
+const report = await sentinel.score({ signals });
+console.log(`Trace ID: ${report.traceId}, Score: ${report.score}, Action: ${report.action}`);
+
+```

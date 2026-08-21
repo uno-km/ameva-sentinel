@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AMEVA-Sentinel | Official Documentation</title>
+  <meta name="description" content="AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/i18n.js" defer></script>
+  <script src="assets/i18n-translations.js" defer></script>
+</head>
+<body>
+  <header>
+    <a href="index.html" class="header-brand">
+      <img src="favicon.svg" alt="AMEVA-Sentinel Logo">
+      <h1 data-i18n="common.brand">AMEVA-Sentinel</h1>
+    </a>
+    <div class="header-controls">
+      <span class="release-tag" data-i18n="common.releaseTag">v0.5.0-alpha.1 (Shadow Mode Alpha)</span>
+      <div class="lang-selector-wrapper"></div>
+      
+      <a href="https://www.npmjs.com/package/@ameva/sentinel" target="_blank" class="header-btn npm-btn" data-i18n="common.npmBtn">npm (Node.js)</a>
+      <a href="https://github.com/uno-km/ameva-sentinel" target="_blank" class="header-btn primary" data-i18n="common.githubBtn">GitHub</a>
+    </div>
+  </header>
+
+  <div class="container">
+  <nav class="sidebar">
+    <h3 data-i18n="common.nav.overview">Overview</h3>
+    <ul>
+      <li><a href="index.html" class="active" data-i18n="common.nav.home">Home / Architecture</a></li>
+      <li><a href="installation.html" data-i18n="common.nav.installation">Installation Guide</a></li>
+      <li><a href="quickstart.html" data-i18n="common.nav.quickstart">Quickstart & Recipes</a></li>
+    </ul>
+    <h3 data-i18n="common.nav.reference">Official Reference</h3>
+    <ul>
+      <li><a href="api-reference.html" data-i18n="common.nav.apiReference">API Reference</a></li>
+      <li><a href="benchmarks.html" data-i18n="common.nav.benchmarks">Benchmarks & Profiling</a></li>
+      <li><a href="advanced-parameters.html" data-i18n="common.nav.advancedParams">Advanced Parameters</a></li>
+      <li><a href="versions.html" data-i18n="common.nav.versions">Version Archive</a></li>
+    </ul>
+    <h3 data-i18n="common.nav.aiSpecs">AI Agent Protocols</h3>
+    <ul>
+      <li><a href="llms.txt" target="_blank">llms.txt (AI Fast Context)</a></li>
+      <li><a href="llms-full.txt" target="_blank">llms-full.txt (Full Spec)</a></li>
+      <li><a href="robots.txt" target="_blank">robots.txt (AI Crawlers)</a></li>
+      <li><a href="sitemap.xml" target="_blank">sitemap.xml (Sitemap)</a></li>
+    </ul>
+  </nav>
+
+    <main class="content">
+      <!-- Section 1: Main Title & Subtitle -->
+      <h2 data-i18n="home.title">AMEVA-Sentinel</h2>
+      <p class="subtitle" data-i18n="home.subtitle">Privacy-first Security Observability and Deterministic Threat Scoring Layer for Web Applications</p>
+
+      <!-- Section 2: Badges Bar -->
+      <div class="badges-bar">
+        <a href="https://www.npmjs.com/package/@ameva/sentinel" target="_blank"><img src="https://img.shields.io/npm/v/@ameva/sentinel.svg?color=cb3837" alt="npm Version"></a>
+        <a href="https://www.npmjs.com/package/@ameva/sentinel" target="_blank"><img src="https://img.shields.io/npm/dm/@ameva/sentinel.svg?color=2563eb&label=npm%20Downloads" alt="npm Downloads"></a>
+        <img src="https://img.shields.io/badge/license-Apache-2.0-success.svg" alt="License">
+        <img src="https://img.shields.io/badge/tests-100%25_PASS-success.svg" alt="Tests">
+        <img src="https://img.shields.io/badge/platform-Browser_DOM_/_NodeNext_ESM-blueviolet.svg" alt="Platform">
+      </div>
+
+      <!-- Section 3: 1-Line Quick Installation Alert -->
+      <div class="alert alert-tip">
+        <span class="alert-title" data-i18n="home.quickInstallTitle">1-Line Quick Installation</span>
+        <p data-i18n="home.quickInstallDesc">Install the official package directly into your runtime:</p>
+        <pre><code>npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha</code></pre>
+      </div>
+
+      <!-- Section 4: Engineering Challenge & Architectural Breakthrough -->
+      <h3 data-i18n="home.challengeTitle">The Engineering Challenge</h3>
+      <p data-i18n="home.challengeText">Traditional bot mitigation SDKs aggressively collect unhashed keystrokes, absolute mouse coordinates, and intrusive canvas hashes, resulting in severe GDPR/CCPA regulatory liabilities and unpredictable false-positive blocks.</p>
+
+      <h3 data-i18n="home.breakthroughTitle">The Architectural Breakthrough</h3>
+      <p data-i18n="home.breakthroughText">AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging.</p>
+
+      <!-- Section 5: Key Capabilities Grid -->
+      <h3 data-i18n="home.featuresTitle">Key Capabilities &amp; Built-in Hardening</h3>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h4 data-i18n="home.features.0.title">Privacy-by-Design Zero Raw Telemetry</h4>
+          <p data-i18n="home.features.0.desc">Collects only derived interaction intervals and trusted event counters without recording keystrokes or cursor coordinates.</p>
+        </div>
+        <div class="feature-card">
+          <h4 data-i18n="home.features.1.title">Deterministic Policy Evaluation Engine</h4>
+          <p data-i18n="home.features.1.desc">Pure function evaluation guaranteeing algebraic score bounds, rule immutability, and transparent reasoning evidence.</p>
+        </div>
+        <div class="feature-card">
+          <h4 data-i18n="home.features.2.title">Shadow Mode Observability Architecture</h4>
+          <p data-i18n="home.features.2.desc">Operates safely in shadow mode with LocalStorage persistence and cross-tab real-time event synchronization.</p>
+        </div>
+        <div class="feature-card">
+          <h4 data-i18n="home.features.3.title">Cross-Browser Verified Zero-Drift SDK</h4>
+          <p data-i18n="home.features.3.desc">E2E automated verification across Chromium, Firefox, and WebKit ensuring identical behavior on all platforms.</p>
+        </div>
+      </div>
+
+      <!-- Section 6: Compute & Module Matrix -->
+      <h3 data-i18n="home.matrixTitle">Supported Compute Kernels &amp; Operations</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th data-i18n="home.matrixCol1">Subsystem Category</th>
+            <th data-i18n="home.matrixCol2">Operations &amp; Kernels</th>
+            <th data-i18n="home.matrixCol3">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Client Telemetry Subsystem</strong></td>
+            <td>Throttled pointermove (100ms), Discrete Click/Touch Observation, Hardware Webdriver Detection</td>
+            <td><span class="status-badge active">Verified (Chromium, Firefox, WebKit)</span></td>
+          </tr>
+          <tr>
+            <td><strong>Risk Core Engine</strong></td>
+            <td>Deterministic Rule Scoring, Policy-as-Code Compiler, Evidence Confidence Metric</td>
+            <td><span class="status-badge active">Verified (100% Quality Gates)</span></td>
+          </tr>
+          <tr>
+            <td><strong>Stateful Enforcement</strong></td>
+            <td>Fixed-Window Session Burst Limiter, LocalStorage Deduplicated Event Store</td>
+            <td><span class="status-badge active">Verified (Idempotent v1.0)</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Section 7: Canonical Usage Example -->
+      <h3 data-i18n="home.codeExampleTitle">Canonical Usage Example</h3>
+      <pre><code>import { createBrowserTelemetry } from '@ameva/sentinel-browser';
+import { createSentinel, MemoryFixedWindowCounterStore, LocalStorageRiskEventStore } from '@ameva/sentinel';
+
+// 1. Collect privacy-safe derived interaction signals
+const telemetry = createBrowserTelemetry({ autoStart: true });
+const signals = telemetry.snapshot();
+
+// 2. Initialize Sentinel Shadow-mode instance
+const sentinel = createSentinel({
+  mode: 'shadow',
+  counterStore: new MemoryFixedWindowCounterStore(),
+  eventStore: new LocalStorageRiskEventStore()
+});
+
+// 3. Evaluate and inspect transparent risk report
+const report = await sentinel.score({ signals });
+console.log(`Trace ID: ${report.traceId}, Score: ${report.score}, Action: ${report.action}`);
+</code></pre>
+
+      <!-- Section 8: Getting Started Navigation -->
+      <h3 data-i18n="home.nextStepsTitle">Getting Started &amp; Deep Guides</h3>
+      <ul>
+        <li><a href="installation.html" data-i18n="home.linkInstall">Detailed Installation Guide (Hardware dependencies, Termux setup, WebGPU flags)</a></li>
+        <li><a href="quickstart.html" data-i18n="home.linkQuickstart">Quickstart Recipes &amp; Common Execution Patterns</a></li>
+        <li><a href="api-reference.html" data-i18n="home.linkApi">100% Full API Reference &amp; Struct Definitions</a></li>
+      </ul>
+    </main>
+  </div>
+
+  <footer>
+    <span data-i18n="common.footerText">&copy; 2026 AMEVA Open-Source Foundation. Released under the Apache-2.0 License.</span>
+  </footer>
+</body>
+</html>

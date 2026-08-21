@@ -1,0 +1,67 @@
+name: "AMEVA-Sentinel"
+package_name_pypi: ""
+package_name_npm: "@ameva/sentinel"
+version: "v0.5.0-alpha.1"
+release_name: "Shadow Mode Alpha"
+license: "Apache-2.0"
+platform: "Browser DOM / NodeNext ESM"
+github_repo_url: "https://github.com/uno-km/ameva-sentinel"
+
+tagline_en: "Privacy-first Security Observability and Deterministic Threat Scoring Layer for Web Applications"
+tagline_ko: "개인정보 침해 없는 0-Data 브라우저 관측 및 확정적 위험도 채점 보안 레이어"
+
+quick_install_cmd: "npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha"
+
+why_challenge_en: "Traditional bot mitigation SDKs aggressively collect unhashed keystrokes, absolute mouse coordinates, and intrusive canvas hashes, resulting in severe GDPR/CCPA regulatory liabilities and unpredictable false-positive blocks."
+why_challenge_ko: "기존 봇 탐지 솔루션은 키로깅, 절대 마우스 좌표, 캔버스 지문 등 침해성 높은 원시 데이터를 수집하여 심각한 개인정보 규제 리스크와 불투명한 오탐(False Positive) 차단을 유발합니다."
+
+description_en: "AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging."
+description_ko: "AMEVA Sentinel은 원시 입력값을 일절 저장하지 않고 최소 파생 통계만을 수집합니다. 선언적 규칙 엔진을 통해 0~100점의 확정적 점수와 명확한 증거(Evidence) 로그를 산출합니다."
+
+features:
+  - title_en: "Privacy-by-Design Zero Raw Telemetry"
+    title_ko: "원시 데이터 수집 차단 프라이버시 설계"
+    desc_en: "Collects only derived interaction intervals and trusted event counters without recording keystrokes or cursor coordinates."
+    desc_ko: "키 입력 내용이나 커서 좌표를 일절 저장하지 않고 파생된 시간 간격과 신뢰 이벤트 수치만을 안전하게 집계합니다."
+  - title_en: "Deterministic Policy Evaluation Engine"
+    title_ko: "확정적 정책 평가 및 0-100 클램핑 엔진"
+    desc_en: "Pure function evaluation guaranteeing algebraic score bounds, rule immutability, and transparent reasoning evidence."
+    desc_ko: "수학적으로 0~100 범위가 엄격히 보장되는 순수 함수 평가 엔진으로 명확한 판정 근거를 제공합니다."
+  - title_en: "Shadow Mode Observability Architecture"
+    title_ko: "섀도우 모드 관측 및 실시간 동기화"
+    desc_en: "Operates safely in shadow mode with LocalStorage persistence and cross-tab real-time event synchronization."
+    desc_ko: "실제 트래픽을 차단하지 않고 관측하는 섀도우 모드와 탭 간 실시간 위험 이벤트 동기화를 지원합니다."
+  - title_en: "Cross-Browser Verified Zero-Drift SDK"
+    title_ko: "3대 브라우저 전수 검증 크로스플랫폼 SDK"
+    desc_en: "E2E automated verification across Chromium, Firefox, and WebKit ensuring identical behavior on all platforms."
+    desc_ko: "Chromium, Firefox, WebKit 전 브라우저에서 동일한 라이프사이클 및 저장소 복구 동작을 보장합니다."
+
+matrix_table:
+  - category: "Client Telemetry Subsystem"
+    operations: "Throttled pointermove (100ms), Discrete Click/Touch Observation, Hardware Webdriver Detection"
+    status: "Verified (Chromium, Firefox, WebKit)"
+  - category: "Risk Core Engine"
+    operations: "Deterministic Rule Scoring, Policy-as-Code Compiler, Evidence Confidence Metric"
+    status: "Verified (100% Quality Gates)"
+  - category: "Stateful Enforcement"
+    operations: "Fixed-Window Session Burst Limiter, LocalStorage Deduplicated Event Store"
+    status: "Verified (Idempotent v1.0)"
+
+code_example_py: |
+  import { createBrowserTelemetry } from '@ameva/sentinel-browser';
+  import { createSentinel, MemoryFixedWindowCounterStore, LocalStorageRiskEventStore } from '@ameva/sentinel';
+
+  // 1. Collect privacy-safe derived interaction signals
+  const telemetry = createBrowserTelemetry({ autoStart: true });
+  const signals = telemetry.snapshot();
+
+  // 2. Initialize Sentinel Shadow-mode instance
+  const sentinel = createSentinel({
+    mode: 'shadow',
+    counterStore: new MemoryFixedWindowCounterStore(),
+    eventStore: new LocalStorageRiskEventStore()
+  });
+
+  // 3. Evaluate and inspect transparent risk report
+  const report = await sentinel.score({ signals });
+  console.log(`Trace ID: ${report.traceId}, Score: ${report.score}, Action: ${report.action}`);
