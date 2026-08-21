@@ -1,29 +1,29 @@
 # 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Comprehensive Test Suite & Verification Results
 > **Release Target**: `v0.6.0-alpha.1`  
-> **Generated Timestamp**: `2026-08-21T05:31:14.275Z`  
+> **Generated Timestamp**: `2026-08-21T05:39:22.063Z`  
 > **Target Mode, Smart Bot Classifier & Trust Boundary Engine**: 100% Verified  
 > **Overall Gate Status**: `PASSED (100% SUCCESS)`  
 > **Final Score**: `100.0 / 100 pts (Grade A+)`  
-> **Total Checks**: `79 Executable Checks + 3 Packaging Checks = 82 / 82 Release Checks`  
+> **Total Checks**: `82 Executable Checks + 3 Packaging Checks = 85 / 85 Release Checks`  
 
 ---
 
-## 📊 1. Executive Test Scorecard (82 / 82 Release Checks: 79 Executable Gates + 3 Package Dry-Runs)
+## 📊 1. Executive Test Scorecard (85 / 85 Release Checks: 82 Executable Gates + 3 Package Dry-Runs)
 
 | Test Category | Tests Passed | Execution Time | Score Points | Gate Status |
 | :--- | :---: | :---: | :---: | :---: |
-| TypeScript Static Contract | 1 / 1 | 2589ms | 10.0 / 10 pts | 🟢 PASS |
-| TypeScript Runtime Contract | 1 / 1 | 87ms | 5.0 / 5 pts | 🟢 PASS |
-| Trust Boundary & Collector Crypto | 16 / 16 | 93ms | 15.0 / 15 pts | 🟢 PASS |
-| Redirect Security & Injection Defense | 7 / 7 | 81ms | 10.0 / 10 pts | 🟢 PASS |
-| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 77ms | 15.0 / 15 pts | 🟢 PASS |
-| Target Mode & Decision Engine | 6 / 6 | 86ms | 15.0 / 15 pts | 🟢 PASS |
-| Risk Engine Quality Gates | 7 / 7 | 86ms | 10.0 / 10 pts | 🟢 PASS |
-| Facade & State Enforcement | 14 / 14 | 95ms | 10.0 / 10 pts | 🟢 PASS |
-| Persistence & Schema V1/V2 Bounds | 8 / 8 | 76ms | 10.0 / 10 pts | 🟢 PASS |
+| TypeScript Static Contract | 1 / 1 | 2607ms | 10.0 / 10 pts | 🟢 PASS |
+| TypeScript Runtime Contract | 1 / 1 | 93ms | 5.0 / 5 pts | 🟢 PASS |
+| Trust Boundary & Collector Crypto | 16 / 16 | 94ms | 15.0 / 15 pts | 🟢 PASS |
+| Redirect Security & Injection Defense | 8 / 8 | 78ms | 10.0 / 10 pts | 🟢 PASS |
+| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 84ms | 15.0 / 15 pts | 🟢 PASS |
+| Target Mode & Decision Engine | 6 / 6 | 94ms | 15.0 / 15 pts | 🟢 PASS |
+| Risk Engine Quality Gates | 7 / 7 | 81ms | 10.0 / 10 pts | 🟢 PASS |
+| Facade & State Enforcement | 16 / 16 | 106ms | 10.0 / 10 pts | 🟢 PASS |
+| Persistence & Schema V1/V2 Bounds | 8 / 8 | 83ms | 10.0 / 10 pts | 🟢 PASS |
 | Browser SDK Unit Verification | 2 / 2 | 81ms | 5.0 / 5 pts | 🟢 PASS |
-| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 14556ms | E2E Verified | 🟢 PASS |
-| **TOTAL EXECUTABLE AUDIT SCORE** | **79 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
+| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 13082ms | E2E Verified | 🟢 PASS |
+| **TOTAL EXECUTABLE AUDIT SCORE** | **82 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
 
 ---
 
@@ -41,7 +41,7 @@
 
 ### 1. TypeScript Static Consumer Contract Gate (32+ Types, Guards, Interfaces)
 * **Target File**: [`tests/typecheck.ts`](../../tests/typecheck.ts)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 2589ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 2607ms)
 
 #### Execution Console Output:
 ```text
@@ -323,14 +323,14 @@ runFullStaticTypeCheck();
 
 ### 2. TypeScript Runtime Consumer Contract Gate (Live Execution & Assertion)
 * **Target File**: [`tests/typecheck.runtime.js`](../../tests/typecheck.runtime.js)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 87ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 93ms)
 
 #### Execution Console Output:
 ```text
 🔍 Running TypeScript Consumer API Runtime Contract Gate...
 
 [TypeScript v0.6.0 Contract Gate] ALL 32+ SDK Types & Runtime Interfaces 100% Verified.
-  - TraceId: trc_aec2895a0e7b4bce
+  - TraceId: trc_b4c25a9b2e5e4663
   - Decision Action: ALLOW (BOT_ALLOWLIST_PASSED)
   - Bot Classification: SEARCH_ENGINE (Googlebot)
   - SessionId: ephemeral_local_session
@@ -494,7 +494,7 @@ runRuntimeContract().catch(err => {
 
 ### 3. Trust Boundary Collector HMAC, RFC 4231 Vectors, Freshness, Replay Attack, Capacity Saturation & 100-Race Suite (16 Gates)
 * **Target File**: [`tests/collector-crypto.test.js`](../../tests/collector-crypto.test.js)
-* **Execution Status**: `PASS` (16 passed, 0 failed in 93ms)
+* **Execution Status**: `PASS` (16 passed, 0 failed in 94ms)
 
 #### Execution Console Output:
 ```text
@@ -810,9 +810,9 @@ main();
 
 ---
 
-### 4. Redirect Security & Closed-Destination Injection Defense Suite (7 Gates)
+### 4. Redirect Security & Closed-Destination Injection Defense Suite (8 Gates)
 * **Target File**: [`tests/redirect-security.test.js`](../../tests/redirect-security.test.js)
-* **Execution Status**: `PASS` (7 passed, 0 failed in 81ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 78ms)
 
 #### Execution Console Output:
 ```text
@@ -825,14 +825,15 @@ main();
   ✅ PASS: should reject URLs with embedded user credentials (user:pass@host)
   ✅ PASS: should enforce allowedHosts whitelist and fail constructor on invalid registry
   ✅ PASS: should enforce exact hostname when allowSubdomains is false
+  ✅ PASS: normalizeAllowedHost normalizes casing/whitespace and strictly rejects malformed host strings
 
-{"suite":"redirect_security","passed":7,"failed":0,"total":7}
+{"suite":"redirect_security","passed":8,"failed":0,"total":8}
 ```
 
 #### Source Code Verification (`tests/redirect-security.test.js`):
 ```javascript
 import assert from 'node:assert';
-import { validateRedirectUrl, createSentinel } from '../packages/sentinel/dist/index.js';
+import { validateRedirectUrl, normalizeAllowedHost, createSentinel } from '../packages/sentinel/dist/index.js';
 
 console.log('\n🛡️ Running AMEVA Sentinel Redirect Security & Open Redirect Prevention Tests...\n');
 
@@ -921,6 +922,24 @@ runTest('should enforce exact hostname when allowSubdomains is false', () => {
   assert.strictEqual(validateRedirectUrl('https://sub.example.com/bot', optionsPermissive).valid, true);
 });
 
+// 8. Allowed Host Normalization & Suffix Attack Prevention
+runTest('normalizeAllowedHost normalizes casing/whitespace and strictly rejects malformed host strings', () => {
+  assert.strictEqual(normalizeAllowedHost(' Example.COM '), 'example.com');
+  assert.strictEqual(normalizeAllowedHost('example.com.'), 'example.com');
+
+  assert.throws(() => normalizeAllowedHost('https://example.com'), /Invalid allowed host format/);
+  assert.throws(() => normalizeAllowedHost('example.com:443'), /Invalid allowed host format/);
+  assert.throws(() => normalizeAllowedHost(''), /Invalid allowed host format/);
+  assert.throws(() => normalizeAllowedHost('example.com/path'), /Invalid allowed host format/);
+
+  // Suffix collision attacks (evil-example.com, example.com.evil.test) must be strictly rejected
+  const opts = { allowedHosts: ['Example.COM '], allowSubdomains: true };
+  assert.strictEqual(validateRedirectUrl('https://example.com/path', opts).valid, true);
+  assert.strictEqual(validateRedirectUrl('https://sub.example.com/path', opts).valid, true);
+  assert.strictEqual(validateRedirectUrl('https://evil-example.com/path', opts).valid, false);
+  assert.strictEqual(validateRedirectUrl('https://example.com.evil.test/path', opts).valid, false);
+});
+
 if (failedTests > 0) {
   process.exit(1);
 }
@@ -932,7 +951,7 @@ console.log(`\n{"suite":"redirect_security","passed":${passedTests},"failed":${f
 
 ### 5. Smart Bot Classifier & ReDoS Safety Suite (7 Taxonomies, 8 Gates)
 * **Target File**: [`tests/bot-classifier.test.js`](../../tests/bot-classifier.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 77ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 84ms)
 
 #### Execution Console Output:
 ```text
@@ -1116,7 +1135,7 @@ console.log(`\n{"suite":"bot_classifier","passed":${passedTests},"failed":${fail
 
 ### 6. Target Mode & Decision Engine Suite (Closed-Destination Routing, 6 Gates)
 * **Target File**: [`tests/decision.test.js`](../../tests/decision.test.js)
-* **Execution Status**: `PASS` (6 passed, 0 failed in 86ms)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 94ms)
 
 #### Execution Console Output:
 ```text
@@ -1355,7 +1374,7 @@ main();
 
 ### 7. Risk Core Pure Engine & Clamping Quality Gates (7 Gates)
 * **Target File**: [`tests/engine.test.js`](../../tests/engine.test.js)
-* **Execution Status**: `PASS` (7 passed, 0 failed in 86ms)
+* **Execution Status**: `PASS` (7 passed, 0 failed in 81ms)
 
 #### Execution Console Output:
 ```text
@@ -1366,7 +1385,7 @@ main();
   ✅ PASS: shadow mode never enforces a denial action directly (returns OBSERVE with recommendation)
   ✅ PASS: score must be clamped strictly to 100 on excessive cumulative rule weights
   ✅ PASS: score must be clamped to 0 on negative weights or empty inputs
-  ✅ PASS: evaluation does not mutate its inputs (Object.freeze guarantee)
+  ✅ PASS: evaluation does not mutate top-level input properties
   ✅ PASS: should gracefully handle undefined, null, and NaN signals without throwing
 
 {"suite":"engine","passed":7,"failed":0,"total":7}
@@ -1374,7 +1393,7 @@ main();
 
 #### Source Code Verification (`tests/engine.test.js`):
 ```javascript
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import { evaluate, calculateConfidence, createPolicy, rules, SentinelAction } from '../packages/risk-core/dist/index.js';
 
 console.log('\n🧪 Running AMEVA Sentinel Quality Gate Test Suite...\n');
@@ -1481,17 +1500,19 @@ it('score must be clamped to 0 on negative weights or empty inputs', () => {
   assert.strictEqual(report.score, 0, 'Negative score must be clamped to 0');
 });
 
-// 5. Input Immutability Test (Deep Object.freeze)
-it('evaluation does not mutate its inputs (Object.freeze guarantee)', () => {
-  const rawSignals = {
+// 5. Input Mutation Defense Test (Top-level Shallow Clone)
+it('evaluation does not mutate top-level input properties', () => {
+  const nested = { marker: 'original' };
+  const rawSignals = Object.freeze({
     webdriver: true,
     burstCount10s: 42,
-    customKey: 'original_val'
-  };
-  Object.freeze(rawSignals);
+    customKey: 'original_val',
+    customObject: nested
+  });
 
   const report = evaluate(rawSignals);
   assert.strictEqual(rawSignals.customKey, 'original_val');
+  assert.deepStrictEqual(nested, { marker: 'original' });
   assert.strictEqual(report.score, 55);
 });
 
@@ -1519,9 +1540,9 @@ console.log(`\n{"suite":"engine","passed":${passedTests},"failed":${failedTests}
 
 ---
 
-### 8. Sentinel Facade & Stateful Rate Enforcement Tests (14 Gates)
+### 8. Sentinel Facade & Stateful Rate Enforcement Tests (16 Gates)
 * **Target File**: [`tests/sentinel.test.js`](../../tests/sentinel.test.js)
-* **Execution Status**: `PASS` (14 passed, 0 failed in 95ms)
+* **Execution Status**: `PASS` (16 passed, 0 failed in 106ms)
 
 #### Execution Console Output:
 ```text
@@ -1541,8 +1562,10 @@ console.log(`\n{"suite":"engine","passed":${passedTests},"failed":${failedTests}
   ✅ PASS: untrusted verifiedBot cannot elevate classification identityState or verification state
   ✅ PASS: Sentinel.score rejects oversized pre-parsed object body exceeding 64KB
   ✅ PASS: readJsonBodyLimited throws MALFORMED_REQUEST_BODY on invalid JSON and request.json failure
+  ✅ PASS: Sentinel.score propagates nonce capacity saturation as HTTP 503
+  ✅ PASS: createSentinel validates allowRedirectSubdomains: false and rejects subdomain URLs
 
-{"suite":"sentinel","passed":14,"failed":0,"total":14}
+{"suite":"sentinel","passed":16,"failed":0,"total":16}
 ```
 
 #### Source Code Verification (`tests/sentinel.test.js`):
@@ -1889,6 +1912,83 @@ async function run() {
     );
   });
 
+  // 15. [P1-1 Regression] Sentinel.score propagates nonce capacity saturation as HTTP 503
+  await it('Sentinel.score propagates nonce capacity saturation as HTTP 503', async () => {
+    const tinyNonceStore = new MemoryNonceStore({ maxEntries: 1 });
+    const s = createSentinel({
+      mode: 'shadow',
+      keyResolver: new StaticKeyResolver({ 'k1': 'secret-123' }),
+      nonceStore: tinyNonceStore,
+      expectedAudience: 'aud-test',
+      expectedPurpose: 'telemetry-collect'
+    });
+
+    const tok1 = signCollectorToken({
+      v: 1,
+      kid: 'k1',
+      iss: 'iss-1',
+      aud: 'aud-test',
+      purpose: 'telemetry-collect',
+      sessionRef: 's1',
+      iat: Date.now(),
+      exp: Date.now() + 60000,
+      nonce: 'nonce_sat_1'
+    }, 'secret-123');
+
+    const tok2 = signCollectorToken({
+      v: 1,
+      kid: 'k1',
+      iss: 'iss-1',
+      aud: 'aud-test',
+      purpose: 'telemetry-collect',
+      sessionRef: 's2',
+      iat: Date.now(),
+      exp: Date.now() + 60000,
+      nonce: 'nonce_sat_2'
+    }, 'secret-123');
+
+    // First consumption succeeds
+    const rep1 = await s.score({
+      headers: { authorization: `Bearer ${tok1}` }
+    });
+    assert.strictEqual(rep1.verification.state, 'VERIFIED');
+
+    // Second consumption hits saturation limit (1 entry) and throws HTTP 503
+    await assert.rejects(
+      () => s.score({ headers: { authorization: `Bearer ${tok2}` } }),
+      {
+        name: 'CollectorVerificationError',
+        code: 'NONCE_STORE_CAPACITY_REACHED',
+        httpStatus: 503
+      }
+    );
+  });
+
+  // 16. [P1-2 Regression] createSentinel validates allowRedirectSubdomains: false and rejects subdomain URLs
+  await it('createSentinel validates allowRedirectSubdomains: false and rejects subdomain URLs', () => {
+    // Exact hostname match passes
+    assert.doesNotThrow(() => {
+      createSentinel({
+        redirectRegistry: {
+          AI_FEED: 'https://example.com/feed'
+        },
+        allowedRedirectHosts: ['example.com'],
+        allowRedirectSubdomains: false
+      });
+    });
+
+    // Subdomain fails when allowRedirectSubdomains is false
+    assert.throws(() => {
+      createSentinel({
+        redirectRegistry: {
+          AI_FEED: 'https://sub.example.com/feed'
+        },
+        allowedRedirectHosts: ['example.com'],
+        allowRedirectSubdomains: false
+      });
+    }, /Invalid redirectRegistry URL/);
+  });
+
   if (failedTests > 0) {
     process.exit(1);
   }
@@ -1903,7 +2003,7 @@ run();
 
 ### 9. RiskEventStore V1 & V2 Schema Validation & Migration Suite (8 Gates)
 * **Target File**: [`tests/store.test.js`](../../tests/store.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 76ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 83ms)
 
 #### Execution Console Output:
 ```text
@@ -1923,7 +2023,7 @@ run();
 
 #### Source Code Verification (`tests/store.test.js`):
 ```javascript
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import {
   MemoryRiskEventStore,
   toStoredRiskEvent,
@@ -1939,9 +2039,9 @@ console.log('\n🧪 Running AMEVA Sentinel RiskEventStore V1 & V2 Test Suite...\
 let passedTests = 0;
 let failedTests = 0;
 
-function it(name, fn) {
+async function it(name, fn) {
   try {
-    fn();
+    await fn();
     console.log(`  ✅ PASS: ${name}`);
     passedTests++;
   } catch (err) {
@@ -1977,108 +2077,112 @@ function createDummyReport(traceId, score = 0) {
   };
 }
 
-// 1. StoredRiskEventV2 Serialization & Schema Validation
-it('should create and validate StoredRiskEventV2 with schemaVersion 2.0', () => {
-  const report = createDummyReport('trc_test_v2_001', 15);
-  const storedV2 = toStoredRiskEvent(report);
+async function main() {
+  // 1. StoredRiskEventV2 Serialization & Schema Validation
+  await it('should create and validate StoredRiskEventV2 with schemaVersion 2.0', async () => {
+    const report = createDummyReport('trc_test_v2_001', 15);
+    const storedV2 = toStoredRiskEvent(report);
 
-  assert.strictEqual(storedV2.schemaVersion, '2.0');
-  assert.strictEqual(isStoredRiskEventV2(storedV2), true);
-  assert.strictEqual(isStoredRiskEvent(storedV2), true);
-});
+    assert.strictEqual(storedV2.schemaVersion, '2.0');
+    assert.strictEqual(isStoredRiskEventV2(storedV2), true);
+    assert.strictEqual(isStoredRiskEvent(storedV2), true);
+  });
 
-// 2. Backward Compatible V1 Schema Support
-it('should validate legacy StoredRiskEventV1 and support migration guard', () => {
-  const report = createDummyReport('trc_test_v1_001', 10);
-  const storedV1 = toStoredRiskEventV1(report);
+  // 2. Backward Compatible V1 Schema Support
+  await it('should validate legacy StoredRiskEventV1 and support migration guard', async () => {
+    const report = createDummyReport('trc_test_v1_001', 10);
+    const storedV1 = toStoredRiskEventV1(report);
 
-  assert.strictEqual(storedV1.schemaVersion, '1.0');
-  assert.strictEqual(isStoredRiskEventV1(storedV1), true);
-  assert.strictEqual(isStoredRiskEvent(storedV1), true);
-});
+    assert.strictEqual(storedV1.schemaVersion, '1.0');
+    assert.strictEqual(isStoredRiskEventV1(storedV1), true);
+    assert.strictEqual(isStoredRiskEvent(storedV1), true);
+  });
 
-// 3. FIFO Eviction Order
-it('should evict oldest items in FIFO order when exceeding maxItems', async () => {
-  const store = new MemoryRiskEventStore({ maxItems: 3 });
-  await store.append(createDummyReport('trc_1'));
-  await store.append(createDummyReport('trc_2'));
-  await store.append(createDummyReport('trc_3'));
-  await store.append(createDummyReport('trc_4'));
+  // 3. FIFO Eviction Order
+  await it('should evict oldest items in FIFO order when exceeding maxItems', async () => {
+    const store = new MemoryRiskEventStore({ maxItems: 3 });
+    await store.append(createDummyReport('trc_1'));
+    await store.append(createDummyReport('trc_2'));
+    await store.append(createDummyReport('trc_3'));
+    await store.append(createDummyReport('trc_4'));
 
-  const list = await store.list();
-  assert.strictEqual(list.length, 3);
-  const traceIds = list.map(e => e.traceId);
-  assert.deepStrictEqual(traceIds, ['trc_4', 'trc_3', 'trc_2']);
-});
+    const list = await store.list();
+    assert.strictEqual(list.length, 3);
+    const traceIds = list.map(e => e.traceId);
+    assert.deepStrictEqual(traceIds, ['trc_4', 'trc_3', 'trc_2']);
+  });
 
-// 4. Idempotency by Trace ID
-it('should be idempotent and deduplicate appends with identical traceId', async () => {
-  const store = new MemoryRiskEventStore();
-  const report = createDummyReport('trc_dedup_1', 10);
-  await store.append(report);
+  // 4. Idempotency by Trace ID
+  await it('should be idempotent and deduplicate appends with identical traceId', async () => {
+    const store = new MemoryRiskEventStore();
+    const report = createDummyReport('trc_dedup_1', 10);
+    await store.append(report);
 
-  const updatedReport = createDummyReport('trc_dedup_1', 85);
-  await store.append(updatedReport);
+    const updatedReport = createDummyReport('trc_dedup_1', 85);
+    await store.append(updatedReport);
 
-  const list = await store.list();
-  assert.strictEqual(list.length, 1);
-  assert.strictEqual(list[0].score, 85);
-});
+    const list = await store.list();
+    assert.strictEqual(list.length, 1);
+    assert.strictEqual(list[0].score, 85);
+  });
 
-// 5. Schema Guard: Reject Out-of-Bounds Score and Confidence Numbers
-it('isStoredRiskEventV2 should reject out-of-bounds score and confidence numbers', () => {
-  const base = toStoredRiskEvent(createDummyReport('trc_bounds'));
+  // 5. Schema Guard: Reject Out-of-Bounds Score and Confidence Numbers
+  await it('isStoredRiskEventV2 should reject out-of-bounds score and confidence numbers', async () => {
+    const base = toStoredRiskEvent(createDummyReport('trc_bounds'));
 
-  assert.strictEqual(isStoredRiskEventV2({ ...base, score: -1 }), false);
-  assert.strictEqual(isStoredRiskEventV2({ ...base, score: 101 }), false);
-  assert.strictEqual(isStoredRiskEventV2({ ...base, score: NaN }), false);
-  assert.strictEqual(isStoredRiskEventV2({ ...base, score: Infinity }), false);
-  assert.strictEqual(isStoredRiskEventV2({ ...base, evidenceConfidence: -0.1 }), false);
-  assert.strictEqual(isStoredRiskEventV2({ ...base, evidenceConfidence: 1.1 }), false);
-});
+    assert.strictEqual(isStoredRiskEventV2({ ...base, score: -1 }), false);
+    assert.strictEqual(isStoredRiskEventV2({ ...base, score: 101 }), false);
+    assert.strictEqual(isStoredRiskEventV2({ ...base, score: NaN }), false);
+    assert.strictEqual(isStoredRiskEventV2({ ...base, score: Infinity }), false);
+    assert.strictEqual(isStoredRiskEventV2({ ...base, evidenceConfidence: -0.1 }), false);
+    assert.strictEqual(isStoredRiskEventV2({ ...base, evidenceConfidence: 1.1 }), false);
+  });
 
-// 6. Schema Guard: Reject Invalid Actions and Non-ISO Dates
-it('isStoredRiskEventV2 should reject invalid actions, modes, and non-ISO dates', () => {
-  const base = toStoredRiskEvent(createDummyReport('trc_invalid'));
+  // 6. Schema Guard: Reject Invalid Actions and Non-ISO Dates
+  await it('isStoredRiskEventV2 should reject invalid actions, modes, and non-ISO dates', async () => {
+    const base = toStoredRiskEvent(createDummyReport('trc_invalid'));
 
-  assert.strictEqual(isStoredRiskEventV2({ ...base, action: 'DESTROY_USER' }), false);
-  assert.strictEqual(isStoredRiskEventV2({ ...base, evaluatedAt: 'yesterday' }), false);
-  assert.strictEqual(isStoredRiskEventV2({ ...base, evaluatedAt: 1234567890 }), false);
-});
+    assert.strictEqual(isStoredRiskEventV2({ ...base, action: 'DESTROY_USER' }), false);
+    assert.strictEqual(isStoredRiskEventV2({ ...base, evaluatedAt: 'yesterday' }), false);
+    assert.strictEqual(isStoredRiskEventV2({ ...base, evaluatedAt: 1234567890 }), false);
+  });
 
-// 7. Schema Guard: Reject Prototype Pollution / Nested Objects in Attributes
-it('isStoredRiskEventV2 should reject nested objects or arrays inside evidence attributes', () => {
-  const base = toStoredRiskEvent(createDummyReport('trc_pollution'));
-  const dirtyEvidence = [
-    {
-      rule: 'test.dirty',
-      score: 10,
-      attributes: {
-        safe: 'val',
-        nestedObject: { evil: true }
-      },
-      message: 'Dirty'
-    }
-  ];
+  // 7. Schema Guard: Reject Prototype Pollution / Nested Objects in Attributes
+  await it('isStoredRiskEventV2 should reject nested objects or arrays inside evidence attributes', async () => {
+    const base = toStoredRiskEvent(createDummyReport('trc_pollution'));
+    const dirtyEvidence = [
+      {
+        rule: 'test.dirty',
+        score: 10,
+        attributes: {
+          safe: 'val',
+          nestedObject: { evil: true }
+        },
+        message: 'Dirty'
+      }
+    ];
 
-  assert.strictEqual(isStoredRiskEventV2({ ...base, evidence: dirtyEvidence }), false);
-});
+    assert.strictEqual(isStoredRiskEventV2({ ...base, evidence: dirtyEvidence }), false);
+  });
 
-// 8. Max Age Pruning (TTL)
-it('should prune expired events beyond maxAgeMs', async () => {
-  const store = new MemoryRiskEventStore({ maxAgeMs: 100 });
-  const oldReport = createDummyReport('trc_old');
-  oldReport.evaluatedAt = new Date(Date.now() - 200).toISOString();
+  // 8. Max Age Pruning (TTL)
+  await it('should prune expired events beyond maxAgeMs', async () => {
+    const store = new MemoryRiskEventStore({ maxAgeMs: 100 });
+    const oldReport = createDummyReport('trc_old');
+    oldReport.evaluatedAt = new Date(Date.now() - 200).toISOString();
 
-  await store.append(oldReport);
-  const list = await store.list();
-  assert.strictEqual(list.length, 0);
-});
+    await store.append(oldReport);
+    const list = await store.list();
+    assert.strictEqual(list.length, 0);
+  });
 
-if (failedTests > 0) {
-  process.exit(1);
+  if (failedTests > 0) {
+    process.exit(1);
+  }
+  console.log(`\n{"suite":"store","passed":${passedTests},"failed":${failedTests},"total":${passedTests + failedTests}}`);
 }
-console.log(`\n{"suite":"store","passed":${passedTests},"failed":${failedTests},"total":${passedTests + failedTests}}`);
+
+await main();
 
 ```
 
@@ -2152,23 +2256,23 @@ console.log(`\n{"suite":"browser","passed":${passedTests},"failed":${failedTests
 
 ### 11. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)
 * **Target File**: [`tests/browser-integration/dashboard.spec.js`](../../tests/browser-integration/dashboard.spec.js)
-* **Execution Status**: `PASS` (9 passed, 0 failed in 14556ms)
+* **Execution Status**: `PASS` (9 passed, 0 failed in 13082ms)
 
 #### Execution Console Output:
 ```text
 Running 9 tests using 1 worker
 
-  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.9s)
-  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (785ms)
-  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (147ms)
+  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (569ms)
+  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (540ms)
+  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (140ms)
   ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (2.1s)
-  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (998ms)
-  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (311ms)
-  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.0s)
-  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (854ms)
-  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (253ms)
+  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.1s)
+  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (348ms)
+  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (883ms)
+  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (826ms)
+  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (269ms)
 
-  9 passed (13.1s)
+  9 passed (11.6s)
 ```
 
 #### Source Code Verification (`tests/browser-integration/dashboard.spec.js`):

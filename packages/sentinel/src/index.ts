@@ -14,6 +14,8 @@ import {
   MemoryNonceStore,
   StaticKeyResolver,
   validateRedirectUrl,
+  normalizeAllowedHost,
+  CollectorVerificationError,
   MemoryFixedWindowCounterStore,
   MemoryCounterStore,
   MemoryRiskEventStore,
@@ -68,6 +70,8 @@ export {
   MemoryNonceStore,
   StaticKeyResolver,
   validateRedirectUrl,
+  normalizeAllowedHost,
+  CollectorVerificationError,
   MemoryFixedWindowCounterStore,
   MemoryCounterStore,
   MemoryRiskEventStore,
@@ -116,6 +120,7 @@ export interface SentinelOptions {
   rateKeyProvider?: (req: any) => string | null;
   redirectRegistry?: Record<string, string | URL>;
   allowedRedirectHosts?: string[];
+  allowRedirectSubdomains?: boolean;
   keyResolver?: KeyResolver;
   nonceStore?: NonceStore;
   expectedAudience?: string;
@@ -133,6 +138,7 @@ export class Sentinel {
   private rateKeyProvider?: (req: any) => string | null;
   private redirectRegistry: Record<string, string>;
   private allowedRedirectHosts?: string[];
+  private allowRedirectSubdomains: boolean;
   private keyResolver?: KeyResolver;
   private nonceStore: NonceStore;
   private expectedAudience?: string;
@@ -155,6 +161,7 @@ export class Sentinel {
     this.stateFailureMode = options.stateFailureMode || 'OBSERVE_ONLY';
     this.onOperationalError = options.onOperationalError;
     this.allowedRedirectHosts = options.allowedRedirectHosts;
+    this.allowRedirectSubdomains = options.allowRedirectSubdomains ?? true;
 
     // Fail-fast constructor validation for VERIFIED_PARTNERS_ONLY
     if (this.policy.botPolicy?.targetMode === 'VERIFIED_PARTNERS_ONLY') {
@@ -181,6 +188,7 @@ export class Sentinel {
       const targetStr = typeof target === 'string' ? target : target.toString();
       const validation = validateRedirectUrl(targetStr, {
         allowedHosts: this.allowedRedirectHosts,
+        allowSubdomains: this.allowRedirectSubdomains,
         allowRelative: true
       });
       if (!validation.valid || !validation.sanitizedUrl) {
@@ -434,6 +442,10 @@ export class Sentinel {
       return { state: 'VERIFIED', context: verified };
     } catch (err: any) {
       this.handleOperationalError(err, 'verifyCollectorToken');
+      // If store capacity reached (503 Service Unavailable), rethrow directly to propagate HTTP 503
+      if (err instanceof CollectorVerificationError && err.code === 'NONCE_STORE_CAPACITY_REACHED') {
+        throw err;
+      }
       return {
         state: 'FAILED',
         context: null,

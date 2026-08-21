@@ -55,12 +55,12 @@ const testSuites = [
   },
   {
     id: 'redirect_security',
-    title: '4. Redirect Security & Closed-Destination Injection Defense Suite (7 Gates)',
+    title: '4. Redirect Security & Closed-Destination Injection Defense Suite (8 Gates)',
     file: 'tests/redirect-security.test.js',
     category: 'Redirect Security & Injection Defense',
     command: 'node tests/redirect-security.test.js',
-    expectedPasses: 7,
-    pointsPerTest: 10 / 7,
+    expectedPasses: 8,
+    pointsPerTest: 10 / 8,
     maxPoints: 10
   },
   {
@@ -95,12 +95,12 @@ const testSuites = [
   },
   {
     id: 'sentinel',
-    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (14 Gates)',
+    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (16 Gates)',
     file: 'tests/sentinel.test.js',
     category: 'Facade & State Enforcement',
     command: 'node tests/sentinel.test.js',
-    expectedPasses: 14,
-    pointsPerTest: 10 / 14,
+    expectedPasses: 16,
+    pointsPerTest: 10 / 16,
     maxPoints: 10
   },
   {
@@ -322,6 +322,20 @@ ${res.sourceCode}
 fs.writeFileSync(REPORT_FILE, md, 'utf8');
 fs.writeFileSync(CODES_REPORT_FILE, md, 'utf8');
 
+// Generate machine-readable JSON summary
+const summaryData = {
+  executable: totalPassed,
+  packaging: packagingPassedCount,
+  total: releaseTotal,
+  passed: releasePassed,
+  failed: totalFailed,
+  score: finalScore,
+  grade: grade,
+  status: overallPassed ? 'PASS' : 'FAIL',
+  generatedAt: new Date().toISOString()
+};
+fs.writeFileSync(path.join(REPORT_DIR, 'summary.json'), JSON.stringify(summaryData, null, 2), 'utf8');
+
 // Generate text report in codes directory
 const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15);
 const textReportFile = path.join(CODES_DIR, `${timestamp}_test_report.txt`);
@@ -330,7 +344,8 @@ fs.writeFileSync(textReportFile, md, 'utf8');
 console.log(`\n🎉 Comprehensive Test Report successfully generated at:`);
 console.log(`   1. ${REPORT_FILE}`);
 console.log(`   2. ${CODES_REPORT_FILE}`);
-console.log(`   3. ${textReportFile}`);
+console.log(`   3. ${path.join(REPORT_DIR, 'summary.json')}`);
+console.log(`   4. ${textReportFile}`);
 console.log(`   Status: ${overallStatus} (${releasePassed}/${releaseTotal} checks)\n`);
 
 if (!overallPassed) {

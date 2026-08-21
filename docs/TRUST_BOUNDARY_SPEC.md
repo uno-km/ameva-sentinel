@@ -29,7 +29,7 @@ In the AMEVA Sentinel ecosystem, zero trust is placed on raw client-supplied cla
 │  ├── 2. Key Ring Lookup (kid) & Length-Safe HMAC Verification        │
 │  │      (crypto.timingSafeEqual after length pre-check)              │
 │  ├── 3. Freshness & Timestamp Window Validation (|Δt| <= 30s)        │
-│  ├── 4. Atomic Nonce Consumption (Replay Defense via Redis SET NX)   │
+│  ├── 4. Nonce Consumption (In-Memory Check-and-Set / Redis SET NX)   │
 │  │      ├── If Nonce Already Exists: REJECT (409) -> Security Audit  │
 │  │      └── If Nonce Fresh & Consumed: PROCEED                       │
 │  ├── 5. Server Context Extraction (Trusted Proxy Whitelisted Peer IP)│
@@ -55,7 +55,7 @@ Every field and signal processed by Sentinel must belong to exactly one of the s
 | **`Untrusted`** | Client HTTP Headers & Body | None | High (Attacker Controlled) | `User-Agent`, `Referer`, raw body JSON, claimed identity |
 | **`Observed`** | Browser Telemetry SDK | Software Instrumentation | Moderate (Spoofable in sandbox) | `isTrustedEventsCount`, `pointerEventCount`, `webdriver` flag |
 | **`Signed`** | Issued by Application Server | HMAC-SHA256 Signed Envelope | Payload integrity protected; Replayable unless nonce consumed | `sv1.<base64url(payload)>.<base64url(hmac)>` |
-| **`Verified`** | Evaluated by Collector | Cryptographically Proven | Sovereign (Immutable) | Signature valid + recognized `kid` + valid `aud`/`purpose` + fresh timestamp + atomically consumed nonce |
+| **`Verified`** | Evaluated by Collector | Cryptographically Proven | Sovereign (Immutable) | Signature valid + recognized `kid` + valid `aud`/`purpose` + fresh timestamp + consumed unique nonce |
 | **`Trusted`** | Collector Server Origin | Machine-Local / Infrastructure | Sovereign (Source of Truth) | Server System Time, Socket Peer IP (Whitelisted Proxy), Master Secret |
 | **`Derived`** | Risk Engine Core | Deterministic Algorithmic Output | Read-Only | Risk Score `0~100`, `SentinelAction`, Evidence List, `traceId` |
 

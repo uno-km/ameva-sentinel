@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { validateRedirectUrl, createSentinel } from '../packages/sentinel/dist/index.js';
+import { validateRedirectUrl, normalizeAllowedHost, createSentinel } from '../packages/sentinel/dist/index.js';
 
 console.log('\n🛡️ Running AMEVA Sentinel Redirect Security & Open Redirect Prevention Tests...\n');
 
@@ -86,6 +86,24 @@ runTest('should enforce exact hostname when allowSubdomains is false', () => {
 
   const optionsPermissive = { allowedHosts: ['example.com'], allowSubdomains: true };
   assert.strictEqual(validateRedirectUrl('https://sub.example.com/bot', optionsPermissive).valid, true);
+});
+
+// 8. Allowed Host Normalization & Suffix Attack Prevention
+runTest('normalizeAllowedHost normalizes casing/whitespace and strictly rejects malformed host strings', () => {
+  assert.strictEqual(normalizeAllowedHost(' Example.COM '), 'example.com');
+  assert.strictEqual(normalizeAllowedHost('example.com.'), 'example.com');
+
+  assert.throws(() => normalizeAllowedHost('https://example.com'), /Invalid allowed host format/);
+  assert.throws(() => normalizeAllowedHost('example.com:443'), /Invalid allowed host format/);
+  assert.throws(() => normalizeAllowedHost(''), /Invalid allowed host format/);
+  assert.throws(() => normalizeAllowedHost('example.com/path'), /Invalid allowed host format/);
+
+  // Suffix collision attacks (evil-example.com, example.com.evil.test) must be strictly rejected
+  const opts = { allowedHosts: ['Example.COM '], allowSubdomains: true };
+  assert.strictEqual(validateRedirectUrl('https://example.com/path', opts).valid, true);
+  assert.strictEqual(validateRedirectUrl('https://sub.example.com/path', opts).valid, true);
+  assert.strictEqual(validateRedirectUrl('https://evil-example.com/path', opts).valid, false);
+  assert.strictEqual(validateRedirectUrl('https://example.com.evil.test/path', opts).valid, false);
 });
 
 if (failedTests > 0) {

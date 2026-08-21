@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import { evaluate, calculateConfidence, createPolicy, rules, SentinelAction } from '../packages/risk-core/dist/index.js';
 
 console.log('\n🧪 Running AMEVA Sentinel Quality Gate Test Suite...\n');
@@ -105,17 +105,19 @@ it('score must be clamped to 0 on negative weights or empty inputs', () => {
   assert.strictEqual(report.score, 0, 'Negative score must be clamped to 0');
 });
 
-// 5. Input Immutability Test (Deep Object.freeze)
-it('evaluation does not mutate its inputs (Object.freeze guarantee)', () => {
-  const rawSignals = {
+// 5. Input Mutation Defense Test (Top-level Shallow Clone)
+it('evaluation does not mutate top-level input properties', () => {
+  const nested = { marker: 'original' };
+  const rawSignals = Object.freeze({
     webdriver: true,
     burstCount10s: 42,
-    customKey: 'original_val'
-  };
-  Object.freeze(rawSignals);
+    customKey: 'original_val',
+    customObject: nested
+  });
 
   const report = evaluate(rawSignals);
   assert.strictEqual(rawSignals.customKey, 'original_val');
+  assert.deepStrictEqual(nested, { marker: 'original' });
   assert.strictEqual(report.score, 55);
 });
 

@@ -7,6 +7,29 @@ export interface RedirectValidationResult {
 const FORBIDDEN_PROTOCOLS = /^(javascript|data|file|vbscript|about):/i;
 const CONTROL_CHARACTERS = /[\u0000-\u001F\u007F\r\n]/;
 
+/**
+ * Normalizes and validates an allowed redirect hostname.
+ * Strips whitespace, lowercases, removes trailing dot, and rejects protocol, port, path, or credentials.
+ */
+export function normalizeAllowedHost(value: string): string {
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid allowed host: expected non-empty string, got ${typeof value}`);
+  }
+  const host = value.trim().toLowerCase().replace(/\.$/, '');
+  if (
+    !host ||
+    host.includes('/') ||
+    host.includes(':') ||
+    host.includes('@') ||
+    host.includes('?') ||
+    host.includes('#') ||
+    /\s/.test(host)
+  ) {
+    throw new Error(`Invalid allowed host format: "${value}". Must be a valid hostname without protocol, port, path, or credentials.`);
+  }
+  return host;
+}
+
 export interface RedirectValidationOptions {
   allowedHosts?: string[];
   allowSubdomains?: boolean; // default true: permits 'sub.example.com' for allowedHost 'example.com'
@@ -90,8 +113,16 @@ export function validateRedirectUrl(
   // Host Whitelist check
   if (options.allowedHosts && options.allowedHosts.length > 0) {
     const allowSub = options.allowSubdomains !== false;
-    const hostAllowed = options.allowedHosts.some(h => (
-      parsed.hostname === h || (allowSub && parsed.hostname.endsWith(`.${h}`))
+    let normalizedAllowedHosts: string[];
+    try {
+      normalizedAllowedHosts = options.allowedHosts.map(normalizeAllowedHost);
+    } catch (err: any) {
+      return { valid: false, error: err.message };
+    }
+
+    const currentHost = parsed.hostname.toLowerCase().replace(/\.$/, '');
+    const hostAllowed = normalizedAllowedHosts.some(h => (
+      currentHost === h || (allowSub && currentHost.endsWith(`.${h}`))
     ));
     if (!hostAllowed) {
       return { valid: false, error: `Host ${parsed.hostname} is not in allowed redirect whitelist` };

@@ -340,6 +340,83 @@ async function run() {
     );
   });
 
+  // 15. [P1-1 Regression] Sentinel.score propagates nonce capacity saturation as HTTP 503
+  await it('Sentinel.score propagates nonce capacity saturation as HTTP 503', async () => {
+    const tinyNonceStore = new MemoryNonceStore({ maxEntries: 1 });
+    const s = createSentinel({
+      mode: 'shadow',
+      keyResolver: new StaticKeyResolver({ 'k1': 'secret-123' }),
+      nonceStore: tinyNonceStore,
+      expectedAudience: 'aud-test',
+      expectedPurpose: 'telemetry-collect'
+    });
+
+    const tok1 = signCollectorToken({
+      v: 1,
+      kid: 'k1',
+      iss: 'iss-1',
+      aud: 'aud-test',
+      purpose: 'telemetry-collect',
+      sessionRef: 's1',
+      iat: Date.now(),
+      exp: Date.now() + 60000,
+      nonce: 'nonce_sat_1'
+    }, 'secret-123');
+
+    const tok2 = signCollectorToken({
+      v: 1,
+      kid: 'k1',
+      iss: 'iss-1',
+      aud: 'aud-test',
+      purpose: 'telemetry-collect',
+      sessionRef: 's2',
+      iat: Date.now(),
+      exp: Date.now() + 60000,
+      nonce: 'nonce_sat_2'
+    }, 'secret-123');
+
+    // First consumption succeeds
+    const rep1 = await s.score({
+      headers: { authorization: `Bearer ${tok1}` }
+    });
+    assert.strictEqual(rep1.verification.state, 'VERIFIED');
+
+    // Second consumption hits saturation limit (1 entry) and throws HTTP 503
+    await assert.rejects(
+      () => s.score({ headers: { authorization: `Bearer ${tok2}` } }),
+      {
+        name: 'CollectorVerificationError',
+        code: 'NONCE_STORE_CAPACITY_REACHED',
+        httpStatus: 503
+      }
+    );
+  });
+
+  // 16. [P1-2 Regression] createSentinel validates allowRedirectSubdomains: false and rejects subdomain URLs
+  await it('createSentinel validates allowRedirectSubdomains: false and rejects subdomain URLs', () => {
+    // Exact hostname match passes
+    assert.doesNotThrow(() => {
+      createSentinel({
+        redirectRegistry: {
+          AI_FEED: 'https://example.com/feed'
+        },
+        allowedRedirectHosts: ['example.com'],
+        allowRedirectSubdomains: false
+      });
+    });
+
+    // Subdomain fails when allowRedirectSubdomains is false
+    assert.throws(() => {
+      createSentinel({
+        redirectRegistry: {
+          AI_FEED: 'https://sub.example.com/feed'
+        },
+        allowedRedirectHosts: ['example.com'],
+        allowRedirectSubdomains: false
+      });
+    }, /Invalid redirectRegistry URL/);
+  });
+
   if (failedTests > 0) {
     process.exit(1);
   }
