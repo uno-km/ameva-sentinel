@@ -260,6 +260,93 @@ export interface NonceStore {
   consume(namespace: NonceNamespace, expiresAtEpochMs: number): Promise<boolean>;
 }
 
+export interface DistributedNonceStore extends NonceStore {
+  readonly clientType: string;
+  ping(): Promise<boolean>;
+}
+
+export interface CounterIncrementResult {
+  count: number;
+  resetAt: number;
+}
+
+export interface CounterStore {
+  increment(key: string, options: { windowMs: number; amount?: number }): Promise<CounterIncrementResult>;
+  get(key: string): Promise<number>;
+  reset(key: string): Promise<void>;
+}
+
+export interface DistributedCounterStore extends CounterStore {
+  readonly clientType: string;
+  ping(): Promise<boolean>;
+}
+
+export interface RiskEventStoreOptions {
+  maxItems?: number;
+  maxAgeMs?: number;
+}
+
+export interface RiskEventStore {
+  append(report: SentinelRiskReport): Promise<void>;
+  list(options?: { limit?: number; since?: number }): Promise<StoredRiskEvent[]>;
+  clear(): Promise<void>;
+}
+
+export interface DistributedRiskEventStore extends RiskEventStore {
+  readonly clientType: string;
+  ping(): Promise<boolean>;
+}
+
+// --- Stream Record & EventSink Abstractions ---
+export interface StreamRecord {
+  readonly kind: string;
+  readonly id: string;
+  readonly timestamp: string;
+}
+
+export interface RiskEventRecord extends StreamRecord, StoredRiskEventV2 {
+  readonly kind: 'risk_event';
+}
+
+export interface EventSink {
+  readonly name: string;
+  emit(record: StreamRecord): Promise<void> | void;
+  emitBatch(records: StreamRecord[]): Promise<void> | void;
+  flush?(): Promise<void>;
+  close?(): Promise<void>;
+}
+
+export type RingBufferOverflowPolicy = 'DROP_OLDEST' | 'DROP_NEWEST' | 'FAIL_CLOSED';
+
+export interface RingBufferStats {
+  buffered: number;
+  capacity: number;
+  dropped: number;
+  droppedOldest: number;
+  droppedNewest: number;
+  circuitBreakerDrops: number;
+  failClosedRejects: number;
+  flushed: number;
+  flushFailures: number;
+  circuitBreakerState: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+  lastFlushTimestamp: string | null;
+}
+
+export interface AsyncRingBufferOptions {
+  downstream: EventSink;
+  capacity?: number;             // Power of 2, default 16384
+  flushIntervalMs?: number;      // Default 100ms
+  batchSize?: number;            // Default 100
+  overflowPolicy?: RingBufferOverflowPolicy; // Default 'DROP_OLDEST'
+  circuitBreakerThreshold?: number; // Default 5 consecutive failures
+  circuitBreakerCooldownMs?: number; // Default 5000ms
+  onError?: (err: Error, droppedCount: number) => void;
+}
+
+export interface CompositeSinkOptions {
+  emitTimeoutMs?: number; // Default 5000ms
+}
+
 export function createTraceId(): string {
   const uuid = typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
     ? globalThis.crypto.randomUUID()

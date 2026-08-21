@@ -26,7 +26,10 @@ import {
   isStoredRiskEventV1,
   isStoredRiskEventV2,
   sanitizeSignals,
-  createTraceId
+  createTraceId,
+  AsyncRingBufferSink,
+  CompositeSink,
+  NullSink
 } from '@ameva/sentinel-risk-core';
 
 import type {
@@ -39,6 +42,16 @@ import type {
   StoredRiskEventV2,
   CounterStore,
   RiskEventStore,
+  EventSink,
+  StreamRecord,
+  RiskEventRecord,
+  RingBufferStats,
+  RingBufferOverflowPolicy,
+  AsyncRingBufferOptions,
+  CompositeSinkOptions,
+  DistributedNonceStore,
+  DistributedCounterStore,
+  DistributedRiskEventStore,
   TrafficTargetMode,
   BotCategory,
   BotIdentityState,
@@ -82,7 +95,10 @@ export {
   isStoredRiskEventV1,
   isStoredRiskEventV2,
   sanitizeSignals,
-  createTraceId
+  createTraceId,
+  AsyncRingBufferSink,
+  CompositeSink,
+  NullSink
 };
 
 export type {
@@ -95,6 +111,16 @@ export type {
   StoredRiskEventV2,
   CounterStore,
   RiskEventStore,
+  EventSink,
+  StreamRecord,
+  RiskEventRecord,
+  RingBufferStats,
+  RingBufferOverflowPolicy,
+  AsyncRingBufferOptions,
+  CompositeSinkOptions,
+  DistributedNonceStore,
+  DistributedCounterStore,
+  DistributedRiskEventStore,
   TrafficTargetMode,
   BotCategory,
   BotIdentityState,
@@ -128,6 +154,7 @@ export interface SentinelOptions {
   allowedIssuers?: string[];
   stateFailureMode?: StateFailureMode;
   onOperationalError?: (err: Error, context: string) => void;
+  eventSink?: EventSink;
 }
 
 export class Sentinel {
@@ -135,6 +162,7 @@ export class Sentinel {
   private mode: 'shadow' | 'enforce';
   private counterStore: CounterStore;
   private eventStore: RiskEventStore | null;
+  private eventSink?: EventSink;
   private rateKeyProvider?: (req: any) => string | null;
   private redirectRegistry: Record<string, string>;
   private allowedRedirectHosts?: string[];
@@ -152,6 +180,7 @@ export class Sentinel {
     this.mode = options.mode || 'shadow';
     this.counterStore = options.counterStore || new MemoryFixedWindowCounterStore();
     this.eventStore = options.eventStore || null;
+    this.eventSink = options.eventSink;
     this.rateKeyProvider = options.rateKeyProvider;
     this.keyResolver = options.keyResolver;
     this.nonceStore = options.nonceStore || new MemoryNonceStore();
@@ -255,6 +284,26 @@ export class Sentinel {
         if (this.stateFailureMode === 'FAIL_CLOSED') {
           throw err;
         }
+      }
+    }
+
+    if (this.eventSink) {
+      const stored = toStoredRiskEvent(report);
+      const record: RiskEventRecord = {
+        ...stored,
+        kind: 'risk_event',
+        id: stored.traceId,
+        timestamp: stored.evaluatedAt
+      };
+      try {
+        const emitRes = this.eventSink.emit(record);
+        if (emitRes && typeof (emitRes as Promise<void>).catch === 'function') {
+          (emitRes as Promise<void>).catch(err => {
+            this.handleOperationalError(err, 'eventSink.emit');
+          });
+        }
+      } catch (err: any) {
+        this.handleOperationalError(err, 'eventSink.emit');
       }
     }
 

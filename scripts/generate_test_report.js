@@ -125,8 +125,28 @@ const testSuites = [
     maxPoints: 5
   },
   {
+    id: 'ring_buffer_sink',
+    title: '11. Async RingBuffer WorkerSink, CompositeSink Fan-out & Dropping Policies (8 Gates)',
+    file: 'tests/ring-buffer-sink.test.js',
+    category: 'Async RingBuffer & Composite Sinks',
+    command: 'node tests/ring-buffer-sink.test.js',
+    expectedPasses: 8,
+    pointsPerTest: 5 / 8,
+    maxPoints: 5
+  },
+  {
+    id: 'store_redis',
+    title: '12. Redis Distributed Storage, Lua TTL Drift Guard & Stream Sinks (6 Gates)',
+    file: 'tests/store-redis.test.js',
+    category: 'Redis Distributed Storage & Streams',
+    command: 'node tests/store-redis.test.js',
+    expectedPasses: 6,
+    pointsPerTest: 5 / 6,
+    maxPoints: 5
+  },
+  {
     id: 'playwright',
-    title: '11. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
+    title: '13. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
     file: 'tests/browser-integration/dashboard.spec.js',
     category: 'Playwright Cross-Browser E2E (9 Tests)',
     command: 'npx playwright test',
@@ -137,7 +157,7 @@ const testSuites = [
 ];
 
 // Execute test suites
-console.log('🧪 Executing all 11 test suites and collecting execution logs...\n');
+console.log('🧪 Executing all 13 test suites and collecting execution logs...\n');
 const resultsData = [];
 let totalScore = 0;
 const maxTotalScore = 100;
@@ -159,13 +179,16 @@ for (const suite of testSuites) {
   if (suite.command) {
     const t0 = performance.now();
     try {
-      outputLog = execSync(suite.command, { cwd: ROOT, encoding: 'utf8' });
+      outputLog = execSync(suite.command, {
+        cwd: ROOT,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
       durationMs = Math.round(performance.now() - t0);
-      status = 'PASS';
     } catch (err) {
-      outputLog = (err.stdout || '') + '\n' + (err.stderr || '') + '\n' + err.message;
-      durationMs = Math.round(performance.now() - t0);
       status = 'FAIL';
+      durationMs = Math.round(performance.now() - t0);
+      outputLog = (err.stdout || '') + '\n' + (err.stderr || '') + '\n' + err.message;
     }
 
     if (suite.id === 'types_static') {
@@ -221,7 +244,7 @@ const finalScore = Math.min(100, Math.round(totalScore * 10) / 10);
 const grade = finalScore >= 95 ? 'A+' : finalScore >= 90 ? 'A' : finalScore >= 80 ? 'B' : 'F';
 
 console.log('\n📦 Verifying npm pack --dry-run across workspaces...');
-const packages = ['packages/risk-core', 'packages/browser-sdk', 'packages/sentinel'];
+const packages = ['packages/risk-core', 'packages/browser-sdk', 'packages/sentinel', 'packages/store-redis'];
 const packageOutputs = [];
 for (const pkg of packages) {
   const pkgDir = path.join(ROOT, pkg);

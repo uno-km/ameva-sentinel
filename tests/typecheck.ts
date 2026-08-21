@@ -1,4 +1,4 @@
-﻿import {
+import {
   createSentinel,
   Sentinel,
   type SentinelOptions,
@@ -49,8 +49,25 @@
   readJsonBodyLimited,
   MemoryNonceStore,
   StaticKeyResolver,
-  validateRedirectUrl
+  validateRedirectUrl,
+  AsyncRingBufferSink,
+  CompositeSink,
+  NullSink,
+  type EventSink,
+  type StreamRecord,
+  type RiskEventRecord,
+  type RingBufferStats,
+  type DistributedNonceStore,
+  type DistributedCounterStore,
+  type DistributedRiskEventStore
 } from '../packages/sentinel/dist/index.js';
+
+import {
+  RedisNonceStore,
+  RedisFixedWindowCounterStore,
+  RedisRiskEventStore,
+  RedisStreamSink
+} from '../packages/store-redis/dist/index.js';
 
 import {
   calculateConfidence,
@@ -246,6 +263,35 @@ async function runFullStaticTypeCheck(): Promise<void> {
   const urlCheck = validateRedirectUrl('/llms.txt', { allowRelative: true });
   const bodyCheck = await readJsonBodyLimited({ body: '{"ok":true}' });
 
+  // Stream Sinks & Workers Static Contract Checks
+  const nullSink: EventSink = new NullSink();
+  const compositeSink: EventSink = new CompositeSink([nullSink], { emitTimeoutMs: 1000 });
+  const ringBuffer: EventSink = new AsyncRingBufferSink({
+    downstream: compositeSink,
+    capacity: 256,
+    flushIntervalMs: 50,
+    batchSize: 16,
+    overflowPolicy: 'DROP_OLDEST'
+  });
+  const stats: RingBufferStats = (ringBuffer as AsyncRingBufferSink).stats();
+
+  // Distributed Store Contract Checks
+  const mockRedisClient = {
+    set: async () => 'OK',
+    get: async () => '1',
+    del: async () => 1,
+    eval: async () => 1,
+    ping: async () => 'PONG',
+    xadd: async () => '1-0',
+    lpush: async () => 1,
+    ltrim: async () => 'OK',
+    lrange: async () => []
+  };
+  const distNonceStore: DistributedNonceStore = new RedisNonceStore({ redis: mockRedisClient });
+  const distCounterStore: DistributedCounterStore = new RedisFixedWindowCounterStore({ redis: mockRedisClient });
+  const distEventStore: DistributedRiskEventStore = new RedisRiskEventStore({ redis: mockRedisClient });
+  const redisStreamSink: EventSink = new RedisStreamSink({ redis: mockRedisClient, streamKey: 'risk-events' });
+
   void isV1;
   void isV2;
   void isUniversal;
@@ -260,6 +306,11 @@ async function runFullStaticTypeCheck(): Promise<void> {
   void sanitizedMinimal;
   void confidence;
   void sampleSanitizedEvidence;
+  void stats;
+  void distNonceStore;
+  void distCounterStore;
+  void distEventStore;
+  void redisStreamSink;
 }
 
 runFullStaticTypeCheck();

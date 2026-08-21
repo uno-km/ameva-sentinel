@@ -8,6 +8,9 @@ export * from './store.js';
 export * from './bot-classifier.js';
 export * from './decision.js';
 export * from './redirect-security.js';
+export * from './null-sink.js';
+export * from './composite-sink.js';
+export * from './ring-buffer-sink.js';
 
 export {
   CollectorVerificationError,

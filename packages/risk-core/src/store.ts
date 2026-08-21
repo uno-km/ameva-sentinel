@@ -1,4 +1,4 @@
-﻿import {
+import {
   SentinelAction,
   SentinelRiskReport,
   EnforcementMode,
@@ -6,7 +6,9 @@
   StoredRiskEventV1,
   StoredRiskEventV2,
   StoredRiskEvent,
-  SanitizedEvidence
+  SanitizedEvidence,
+  RiskEventStore,
+  RiskEventStoreOptions
 } from './types.js';
 
 export interface MinimalDerivedSignals {
@@ -221,17 +223,6 @@ export function toStoredRiskEventV1(report: SentinelRiskReport & { signals?: any
       hasPhysics: (report.signals?.isTrustedEventsCount || 0) > 0
     }
   };
-}
-
-export interface RiskEventStoreOptions {
-  maxItems?: number;
-  maxAgeMs?: number;
-}
-
-export interface RiskEventStore {
-  append(report: SentinelRiskReport): Promise<void>;
-  list(options?: { limit?: number; since?: number }): Promise<StoredRiskEvent[]>;
-  clear(): Promise<void>;
 }
 
 export class MemoryRiskEventStore implements RiskEventStore {

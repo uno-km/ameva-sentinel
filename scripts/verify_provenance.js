@@ -15,7 +15,7 @@ const codesProvPath = path.join(CODES_DIR, 'provenance.json');
 
 const EXPECTED_SCHEMA = '1.0';
 const EXPECTED_ARTIFACT = 'scripts/codes/source_export.txt';
-const EXPECTED_TOTAL_CHECKS = 86;
+const EXPECTED_TOTAL_CHECKS = 101;
 const GIT_SHA_RE = /^[a-f0-9]{40}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;

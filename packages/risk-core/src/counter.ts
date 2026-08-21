@@ -1,13 +1,6 @@
-﻿export interface CounterIncrementResult {
-  count: number;
-  resetAt: number;
-}
+import type { CounterStore, CounterIncrementResult } from './types.js';
 
-export interface CounterStore {
-  increment(key: string, options: { windowMs: number; amount?: number }): Promise<CounterIncrementResult>;
-  get(key: string): Promise<number>;
-  reset(key: string): Promise<void>;
-}
+export type { CounterStore, CounterIncrementResult };
 
 interface WindowBucket {
   count: number;
