@@ -1,53 +1,32 @@
-/**
- * @ameva/sentinel-browser
- * Lightweight, privacy-first client telemetry collector
- * Zero external dependencies. Zero PII collection. Zero mouse coordinates.
- */
-
-export interface BrowserSignals {
-  webdriver: boolean;
-  telemetryObserved: boolean;
-  observationDurationMs: number;
-  isTrustedEventsCount: number;
-  touchMismatch: boolean;
-  suspiciousUA: boolean;
-  timestamp: number;
-}
-
-export interface SentinelBrowserOptions {
-  autoTrack?: boolean;
-}
+// Pure ESM for @ameva/sentinel-browser
 
 export class SentinelBrowserCollector {
-  private startTime = Date.now();
-  private trustedEvents = 0;
-  private isListening = false;
-
-  constructor(options: SentinelBrowserOptions = {}) {
+  constructor(options = {}) {
+    this.startTime = Date.now();
+    this.trustedEvents = 0;
+    this.isListening = false;
     if (options.autoTrack !== false) {
       this.start();
     }
   }
 
-  start(): void {
+  start() {
     if (this.isListening || typeof window === 'undefined') return;
     this.isListening = true;
 
-    const onUserInteraction = (event: Event) => {
-      // Security Guard: Only count genuinely trusted hardware events
+    const onUserInteraction = (event) => {
       if (event.isTrusted === true) {
         this.trustedEvents++;
       }
     };
 
-    // Passive interaction listeners without tracking coordinates or keystroke content
     window.addEventListener('pointermove', onUserInteraction, { passive: true });
     window.addEventListener('click', onUserInteraction, { passive: true });
     window.addEventListener('keydown', onUserInteraction, { passive: true });
     window.addEventListener('touchstart', onUserInteraction, { passive: true });
   }
 
-  collectSignals(): BrowserSignals {
+  collectSignals() {
     const isBrowser = typeof window !== 'undefined' && typeof navigator !== 'undefined';
     if (!isBrowser) {
       return {
@@ -61,7 +40,7 @@ export class SentinelBrowserCollector {
       };
     }
 
-    const nav = navigator as any;
+    const nav = navigator;
     const isWebdriver = !!nav.webdriver;
     const hasTouch = 'ontouchstart' in window || (nav.maxTouchPoints || 0) > 0;
     const isMobileUA = /Android|iPhone|iPad|iPod/i.test(nav.userAgent || '');
@@ -79,7 +58,7 @@ export class SentinelBrowserCollector {
     };
   }
 
-  reset(): void {
+  reset() {
     this.startTime = Date.now();
     this.trustedEvents = 0;
   }

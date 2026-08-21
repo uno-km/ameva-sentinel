@@ -40,32 +40,72 @@ export class MemoryCounterStore {
 }
 
 export class MemoryRiskEventStore {
-  constructor(maxItems = 500) {
+  constructor(options = {}) {
     this.events = [];
-    this.maxItems = maxItems;
+    this.maxItems = options.maxItems ?? 500;
+    this.maxAgeMs = options.maxAgeMs ?? 24 * 60 * 60 * 1000;
   }
   async append(report) {
-    this.events.unshift({ ...report, evaluatedAt: report.evaluatedAt || new Date().toISOString() });
-    if (this.events.length > this.maxItems) this.events = this.events.slice(0, this.maxItems);
+    if (!report || !report.traceId) return;
+    const now = Date.now();
+    const storedItem = {
+      ...report,
+      schemaVersion: '1.0',
+      evaluatedAt: report.evaluatedAt || new Date(now).toISOString(),
+      storedAt: new Date(now).toISOString()
+    };
+    this.events = this.events.filter(e => e.traceId !== report.traceId);
+    this.events.unshift(storedItem);
+    this.prune(now);
   }
   async list(options = {}) {
+    const now = Date.now();
+    if (!options.includeExpired) this.prune(now);
     return this.events.slice(0, options.limit ?? this.maxItems);
   }
   async clear() {
     this.events = [];
   }
+  prune(now) {
+    this.events = this.events.filter(e => {
+      const itemTime = new Date(e.evaluatedAt).getTime();
+      return (now - itemTime) <= this.maxAgeMs;
+    });
+    if (this.events.length > this.maxItems) {
+      this.events = this.events.slice(0, this.maxItems);
+    }
+  }
 }
 
 export class LocalStorageRiskEventStore {
-  constructor(key = 'ameva:sentinel:risk-events', maxItems = 500) {
-    this.key = key;
-    this.maxItems = maxItems;
+  constructor(options = {}) {
+    this.key = options.key || 'ameva:sentinel:risk-events';
+    this.maxItems = options.maxItems ?? 500;
+    this.maxAgeMs = options.maxAgeMs ?? 24 * 60 * 60 * 1000;
   }
   async append(report) {
-    if (typeof localStorage === 'undefined') return;
-    const current = await this.list({ limit: this.maxItems });
-    const next = [{ ...report, evaluatedAt: report.evaluatedAt || new Date().toISOString() }, ...current].slice(0, this.maxItems);
-    try { localStorage.setItem(this.key, JSON.stringify(next)); } catch (e) {}
+    if (typeof localStorage === 'undefined' || !report || !report.traceId) return;
+    const current = await this.list({ limit: this.maxItems, includeExpired: false });
+    const now = Date.now();
+    const storedItem = {
+      ...report,
+      schemaVersion: '1.0',
+      evaluatedAt: report.evaluatedAt || new Date(now).toISOString(),
+      storedAt: new Date(now).toISOString()
+    };
+    const filtered = current.filter(e => e.traceId !== report.traceId);
+    const next = [storedItem, ...filtered].slice(0, this.maxItems);
+    try {
+      localStorage.setItem(this.key, JSON.stringify(next));
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        try { window.dispatchEvent(new CustomEvent('sentinel:risk-event-appended', { detail: storedItem })); } catch (e) {}
+      }
+    } catch (err) {
+      try {
+        const halved = next.slice(0, Math.floor(this.maxItems / 2));
+        localStorage.setItem(this.key, JSON.stringify(halved));
+      } catch (e) {}
+    }
   }
   async list(options = {}) {
     if (typeof localStorage === 'undefined') return [];
@@ -73,12 +113,25 @@ export class LocalStorageRiskEventStore {
     if (!raw) return [];
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.slice(0, options.limit ?? this.maxItems) : [];
-    } catch (e) { return []; }
+      if (!Array.isArray(parsed)) return [];
+      const now = Date.now();
+      let valid = parsed;
+      if (!options.includeExpired) {
+        valid = parsed.filter(item => {
+          if (!item || !item.evaluatedAt) return false;
+          const time = new Date(item.evaluatedAt).getTime();
+          return (now - time) <= this.maxAgeMs;
+        });
+      }
+      return valid.slice(0, options.limit ?? this.maxItems);
+    } catch (e) {
+      try { localStorage.removeItem(this.key); } catch (err) {}
+      return [];
+    }
   }
   async clear() {
     if (typeof localStorage === 'undefined') return;
-    localStorage.removeItem(this.key);
+    try { localStorage.removeItem(this.key); } catch (e) {}
   }
 }
 

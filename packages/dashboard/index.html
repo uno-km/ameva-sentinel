@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMEVA-Sentinel Status &amp; Observability Manager (Shadow Mode)</title>
+    <title>AMEVA-Sentinel Status &amp; Observability Manager (v0.5 Vertical Slice Demo)</title>
     <link rel="icon" type="image/svg+xml" href="https://uno-km.vercel.app/shared/brand/favicon.svg">
     <style>
-        /* ── Classic Apache / Tomcat Server Status Theme ─────────────────────────── */
         :root {
             --primary-color: #004499;
             --primary-dark: #002b66;
@@ -39,12 +38,7 @@
             z-index: 100;
             box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
-        .header-brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-        }
+        .header-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
         .header-brand img { width: 26px; height: 26px; }
         .header-brand h1 { margin: 0; color: var(--primary-color); font-size: 1.2em; font-weight: 700; }
         .header-controls { display: flex; align-items: center; gap: 8px; }
@@ -63,7 +57,6 @@
         }
         .header-btn:hover { background: #f1f5f9; color: var(--primary-color); border-color: var(--primary-color); }
         .header-btn.primary { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
-        .header-btn.primary:hover { background: var(--primary-dark); }
 
         .tomcat-container {
             max-width: 1380px;
@@ -88,26 +81,11 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
 
-        .status-title {
-            font-size: 1.15em;
-            font-weight: 800;
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .tomcat-badge {
-            display: inline-block;
-            font-size: 0.75em;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 3px;
-            text-transform: uppercase;
-            font-family: monospace;
-        }
+        .status-title { font-size: 1.15em; font-weight: 800; color: var(--primary-color); display: flex; align-items: center; gap: 8px; }
+        .tomcat-badge { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; font-family: monospace; }
         .badge-shadow { background: #e8f0fe; color: var(--primary-color); border: 1px solid #bfdbfe; }
         .badge-demo { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .badge-live { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
 
         .control-panel {
             background: #ffffff;
@@ -137,15 +115,10 @@
             transition: all 0.1s ease;
         }
         .btn-tomcat:hover { background: #f1f5f9; border-color: var(--primary-color); color: var(--primary-color); }
+        .btn-tomcat.primary { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
         .btn-tomcat.danger { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
-        .btn-tomcat.danger:hover { background: #fecaca; }
 
-        .tomcat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 12px;
-        }
-
+        .tomcat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
         .tomcat-card {
             background: #ffffff;
             border: 1px solid var(--border-color);
@@ -159,11 +132,7 @@
         .card-value { font-size: 1.6em; font-weight: 800; color: var(--primary-color); font-family: var(--font-mono); margin: 4px 0; }
         .card-sub { font-size: 0.8em; color: #64748b; }
 
-        .management-split {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 16px;
-        }
+        .management-split { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
         @media (max-width: 1024px) { .management-split { grid-template-columns: 1fr; } }
 
         .tomcat-section {
@@ -187,37 +156,13 @@
             align-items: center;
         }
 
-        table.tomcat-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.88em;
-            text-align: left;
-            border: 1px solid var(--border-color);
-        }
-        table.tomcat-table th {
-            background: #f1f5f9;
-            color: var(--primary-color);
-            font-weight: 700;
-            padding: 8px 10px;
-            border: 1px solid var(--border-color);
-            font-size: 0.85em;
-        }
-        table.tomcat-table td {
-            padding: 8px 10px;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-        }
+        table.tomcat-table { width: 100%; border-collapse: collapse; font-size: 0.88em; text-align: left; border: 1px solid var(--border-color); }
+        table.tomcat-table th { background: #f1f5f9; color: var(--primary-color); font-weight: 700; padding: 8px 10px; border: 1px solid var(--border-color); font-size: 0.85em; }
+        table.tomcat-table td { padding: 8px 10px; border: 1px solid var(--border-color); color: var(--text-main); }
         table.tomcat-table tr:nth-child(even) td { background: #f8fafc; }
         table.tomcat-table tr:hover td { background: #e8f0fe; cursor: pointer; }
 
-        .pill-action {
-            font-size: 0.75em;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: var(--font-mono);
-            display: inline-block;
-        }
+        .pill-action { font-size: 0.75em; font-weight: 700; padding: 2px 6px; border-radius: 3px; font-family: var(--font-mono); display: inline-block; }
         .pill-allow { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
         .pill-observe { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
         .pill-verify { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
@@ -228,47 +173,14 @@
         .score-med { background: #fef3c7; color: #b45309; }
         .score-high { background: #fee2e2; color: #b91c1c; }
 
-        .dist-bar {
-            height: 14px;
-            background: #e2e8f0;
-            border-radius: 2px;
-            overflow: hidden;
-            display: flex;
-            border: 1px solid var(--border-color);
-        }
+        .dist-bar { height: 14px; background: #e2e8f0; border-radius: 2px; overflow: hidden; display: flex; border: 1px solid var(--border-color); }
         .dist-low { background: #16a34a; }
         .dist-med { background: #f59e0b; }
         .dist-high { background: #dc2626; }
 
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(15, 23, 42, 0.6);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
-        }
-        .modal-box {
-            background: #ffffff;
-            border: 2px solid var(--primary-color);
-            border-radius: 4px;
-            width: 90%;
-            max-width: 680px;
-            max-height: 85vh;
-            overflow-y: auto;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .evidence-item {
-            background: #f8fafc;
-            border: 1px solid var(--border-color);
-            padding: 8px 12px;
-            border-radius: 3px;
-        }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); display: none; justify-content: center; align-items: center; z-index: 200; }
+        .modal-box { background: #ffffff; border: 2px solid var(--primary-color); border-radius: 4px; width: 90%; max-width: 680px; max-height: 85vh; overflow-y: auto; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; }
+        .evidence-item { background: #f8fafc; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -278,7 +190,7 @@
             <h1>AMEVA-Sentinel</h1>
         </div>
         <div class="header-controls">
-            <span class="tomcat-badge badge-shadow">v1.0.0</span>
+            <span class="tomcat-badge badge-shadow">v0.5 Vertical Slice</span>
             <a href="https://github.com/uno-km/AMEVA-Sentinel" target="_blank" class="header-btn primary">🐙 GitHub</a>
         </div>
     </header>
@@ -289,11 +201,12 @@
                 <div class="status-title">
                     <span>🛡️ Security Observability Manager</span>
                     <span class="tomcat-badge badge-shadow">Shadow Mode</span>
-                    <span class="tomcat-badge badge-demo">LocalStorage (Browser)</span>
+                    <span class="tomcat-badge badge-demo">LocalStorage (v0.5 Vertical Slice)</span>
                 </div>
                 <div style="font-size: 0.85em; color: var(--text-muted); margin-top: 4px;">
                     Policy: <strong>v2026-08-21.1</strong> &bull; 
                     Storage: <span id="banner-events-count"><strong>0 Events</strong></span> &bull; 
+                    Multi-Tab Sync: <span class="tomcat-badge badge-live">Active</span> &bull;
                     Last Evaluation: <span id="banner-last-event">None</span>
                 </div>
             </div>
@@ -304,11 +217,11 @@
 
         <div class="control-panel">
             <div style="font-weight: 700; color: var(--primary-color);">
-                ⚡ Live Event Generator:
-                <span style="font-size:0.85em; font-weight:normal; color:#64748b;">클릭 시 실제 <code>sentinel.score()</code>를 실행하여 브라우저 로컬 저장소에 즉시 기록합니다.</span>
+                ⚡ Live Browser Telemetry &amp; Ingestion:
+                <span style="font-size:0.85em; font-weight:normal; color:#64748b;">현재 브라우저의 실제 물리 신호(isTrusted, navigator.webdriver) 또는 시뮬레이션 신호를 즉시 평가합니다.</span>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn-tomcat" style="color:#15803d; border-color:#86efac;" onclick="simulateEvent('clean')">👤 Simulate Clean User</button>
+                <button class="btn-tomcat primary" onclick="evaluateRealBrowserTelemetry()">📡 Evaluate Real Browser (Live SDK)</button>
                 <button class="btn-tomcat" style="color:#b91c1c; border-color:#fca5a5;" onclick="simulateEvent('webdriver')">🤖 Simulate Headless Bot</button>
                 <button class="btn-tomcat" style="color:#b91c1c; border-color:#fca5a5;" onclick="simulateEvent('burst')">💥 Simulate Burst Attack</button>
                 <button class="btn-tomcat danger" onclick="clearEventStore()">🗑️ Clear Store</button>
@@ -319,7 +232,7 @@
             <div class="tomcat-card">
                 <div class="card-label">Observed Sessions</div>
                 <div class="card-value" id="stat-total">0</div>
-                <div class="card-sub">Recorded in LocalStorage</div>
+                <div class="card-sub">LocalStorage events (deduplicated)</div>
             </div>
             <div class="tomcat-card">
                 <div class="card-label">High Risk Sessions</div>
@@ -329,12 +242,12 @@
             <div class="tomcat-card">
                 <div class="card-label">Average Risk Score</div>
                 <div class="card-value" id="stat-avg-score">0 / 100</div>
-                <div class="card-sub">Score threshold: &gt;=70 (High)</div>
+                <div class="card-sub">Threshold: &gt;=70 (High)</div>
             </div>
             <div class="tomcat-card">
-                <div class="card-label">Average Confidence</div>
+                <div class="card-label">Evidence Confidence Index</div>
                 <div class="card-value" id="stat-avg-conf" style="color:#15803d;">0.00</div>
-                <div class="card-sub">Mathematical Q*C*F*S score</div>
+                <div class="card-sub">Completeness Index (Q*C*F*S)</div>
             </div>
             <div class="tomcat-card">
                 <div class="card-label">Enforcement Mode</div>
@@ -418,12 +331,12 @@
                     <thead>
                         <tr>
                             <th style="width:130px;">Trace ID</th>
-                            <th style="width:90px;">Risk Score</th>
-                            <th style="width:90px;">Confidence</th>
+                            <th style="width:80px;">Score</th>
+                            <th style="width:90px;">Evidence Conf</th>
                             <th style="width:110px;">Action (Shadow)</th>
                             <th style="width:140px;">Recommended</th>
                             <th>Triggered Evidence</th>
-                            <th style="width:100px;">Time</th>
+                            <th style="width:90px;">Time</th>
                         </tr>
                     </thead>
                     <tbody id="sessions-tbody">
@@ -447,7 +360,7 @@
                     <div style="font-size:1.3em; font-weight:800; font-family:monospace;" id="modal-score">0</div>
                 </div>
                 <div style="background:#f8fafc; border:1px solid var(--border-color); padding:8px; border-radius:3px;">
-                    <div style="font-size:0.75em; color:#64748b; font-weight:700;">CONFIDENCE</div>
+                    <div style="font-size:0.75em; color:#64748b; font-weight:700;">EVIDENCE CONF</div>
                     <div style="font-size:1.3em; font-weight:800; font-family:monospace;" id="modal-confidence">0.00</div>
                 </div>
                 <div style="background:#f8fafc; border:1px solid var(--border-color); padding:8px; border-radius:3px;">
@@ -467,6 +380,14 @@
 
     <script>
         const STORAGE_KEY = 'ameva:sentinel:risk-events';
+
+        const pageLoadTime = Date.now();
+        let trustedHardwareEvents = 0;
+        ['pointermove', 'click', 'keydown', 'touchstart'].forEach(type => {
+            window.addEventListener(type, (e) => {
+                if (e.isTrusted === true) trustedHardwareEvents++;
+            }, { passive: true });
+        });
 
         function calculateConfidence(signals) {
             const qSignal = signals.hasSignedToken ? 1.0 : 0.5;
@@ -500,13 +421,20 @@
                     })
                 },
                 {
-                    id: 'interaction.no_physics',
+                    id: 'interaction.trusted_input_absent',
                     weight: 20,
-                    evaluate: (s) => ({
-                        triggered: s.isTrustedEventsCount === 0 && (s.burstCount10s || 1) > 5,
-                        attributes: { is_trusted_count: 0, burst_count: s.burstCount10s || 1 },
-                        message: 'Zero trusted user interaction physics observed under burst'
-                    })
+                    evaluate: (s) => {
+                        if (!s.telemetryObserved) return { triggered: false, attributes: { telemetry_observed: false }, message: 'Telemetry not observed' };
+                        const dur = s.observationDurationMs || 0;
+                        const isTrusted = s.isTrustedEventsCount || 0;
+                        const burst = s.burstCount10s || 1;
+                        const isTriggered = dur >= 5000 && isTrusted === 0 && burst >= 5;
+                        return {
+                            triggered: isTriggered,
+                            attributes: { observation_duration_ms: dur, is_trusted_count: isTrusted, burst_count: burst },
+                            message: 'No trusted interaction events observed during active sampling window'
+                        };
+                    }
                 },
                 {
                     id: 'environment.touch_mismatch',
@@ -535,7 +463,7 @@
             }
 
             score = Math.min(100, Math.max(0, score));
-            const confidence = calculateConfidence(signals);
+            const evidenceConfidence = calculateConfidence(signals);
 
             let action = 'ALLOW';
             if (score >= 85) action = 'TEMPORARY_DENY';
@@ -544,9 +472,10 @@
             else if (score > 20) action = 'OBSERVE';
 
             return {
+                schemaVersion: '1.0',
                 traceId: 'trc_' + Math.random().toString(36).substring(2, 10),
                 score,
-                confidence,
+                evidenceConfidence,
                 action: action !== 'ALLOW' ? 'OBSERVE' : 'ALLOW',
                 recommendedAction: action,
                 enforcementMode: 'SHADOW',
@@ -567,18 +496,21 @@
         }
 
         function saveReports(reports) {
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(reports.slice(0, 500))); } catch (e) {}
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(reports.slice(0, 500)));
+                window.dispatchEvent(new CustomEvent('sentinel:risk-event-appended'));
+            } catch (e) {}
         }
 
         function seedInitialDataIfEmpty() {
             const current = getStoredReports();
             if (current.length === 0) {
                 const seeds = [
-                    evaluateSignals({ webdriver: false, burstCount10s: 2, isTrustedEventsCount: 8, hasSignedToken: true }),
-                    evaluateSignals({ webdriver: true, burstCount10s: 48, isTrustedEventsCount: 0, hasSignedToken: true }),
-                    evaluateSignals({ webdriver: false, burstCount10s: 35, isTrustedEventsCount: 4, touchMismatch: true, hasSignedToken: true }),
-                    evaluateSignals({ webdriver: false, burstCount10s: 1, isTrustedEventsCount: 12, hasSignedToken: true }),
-                    evaluateSignals({ webdriver: true, burstCount10s: 6, isTrustedEventsCount: 0, hasSignedToken: false })
+                    evaluateSignals({ webdriver: false, burstCount10s: 2, telemetryObserved: true, observationDurationMs: 8000, isTrustedEventsCount: 8, hasSignedToken: true }),
+                    evaluateSignals({ webdriver: true, burstCount10s: 48, telemetryObserved: true, observationDurationMs: 12000, isTrustedEventsCount: 0, hasSignedToken: true }),
+                    evaluateSignals({ webdriver: false, burstCount10s: 35, telemetryObserved: true, observationDurationMs: 5000, isTrustedEventsCount: 4, touchMismatch: true, hasSignedToken: true }),
+                    evaluateSignals({ webdriver: false, burstCount10s: 1, telemetryObserved: false, hasSignedToken: true }),
+                    evaluateSignals({ webdriver: true, burstCount10s: 6, telemetryObserved: true, observationDurationMs: 7000, isTrustedEventsCount: 0, hasSignedToken: false })
                 ];
                 saveReports(seeds);
             }
@@ -593,7 +525,7 @@
             const high = reports.filter(r => r.score >= 70).length;
 
             const avgScore = total === 0 ? 0 : Math.round(reports.reduce((s, r) => s + r.score, 0) / total);
-            const avgConf = total === 0 ? 0 : (reports.reduce((s, r) => s + r.confidence, 0) / total).toFixed(2);
+            const avgConf = total === 0 ? 0 : (reports.reduce((s, r) => s + (r.evidenceConfidence || 0.8), 0) / total).toFixed(2);
 
             document.getElementById('stat-total').innerText = total.toLocaleString();
             document.getElementById('stat-high').innerText = high.toLocaleString();
@@ -645,7 +577,7 @@
 
             const tbody = document.getElementById('sessions-tbody');
             if (reports.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding:20px;">No events in store. Click "Simulate" buttons to generate real events!</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding:20px;">No events in store. Click buttons above to generate real events!</td></tr>';
             } else {
                 tbody.innerHTML = reports.map((r, idx) => {
                     const scoreCls = r.score >= 70 ? 'score-high' : r.score >= 30 ? 'score-med' : 'score-low';
@@ -657,7 +589,7 @@
                         <tr onclick="showReportDetail(${idx})">
                             <td><code>${r.traceId}</code></td>
                             <td><span class="score-box ${scoreCls}">${r.score}</span></td>
-                            <td style="font-family:monospace;">${r.confidence}</td>
+                            <td style="font-family:monospace;">${r.evidenceConfidence || 0.85}</td>
                             <td><span class="pill-action pill-observe">${r.action}</span></td>
                             <td><span class="pill-action ${pillCls}">${r.recommendedAction}</span></td>
                             <td>${evidenceSummary}</td>
@@ -677,14 +609,36 @@
             return date.toLocaleTimeString();
         }
 
+        function evaluateRealBrowserTelemetry() {
+            const isWebdriver = !!navigator.webdriver;
+            const duration = Date.now() - pageLoadTime;
+            const hasTouch = 'ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0;
+            const isMobileUA = /Android|iPhone|iPad/i.test(navigator.userAgent);
+
+            const signals = {
+                webdriver: isWebdriver,
+                telemetryObserved: true,
+                observationDurationMs: duration,
+                isTrustedEventsCount: trustedHardwareEvents,
+                touchMismatch: isMobileUA && !hasTouch,
+                suspiciousUA: !navigator.userAgent,
+                hasSignedToken: true,
+                burstCount10s: 1
+            };
+
+            const report = evaluateSignals(signals);
+            const current = getStoredReports();
+            current.unshift(report);
+            saveReports(current);
+            renderDashboard();
+        }
+
         function simulateEvent(type) {
             let signals = {};
-            if (type === 'clean') {
-                signals = { webdriver: false, burstCount10s: 2, isTrustedEventsCount: 6, hasSignedToken: true };
-            } else if (type === 'webdriver') {
-                signals = { webdriver: true, burstCount10s: 45, isTrustedEventsCount: 0, hasSignedToken: true };
+            if (type === 'webdriver') {
+                signals = { webdriver: true, burstCount10s: 45, telemetryObserved: true, observationDurationMs: 10000, isTrustedEventsCount: 0, hasSignedToken: true };
             } else if (type === 'burst') {
-                signals = { webdriver: false, burstCount10s: 65, isTrustedEventsCount: 0, touchMismatch: true, hasSignedToken: true };
+                signals = { webdriver: false, burstCount10s: 65, telemetryObserved: true, observationDurationMs: 6000, isTrustedEventsCount: 0, touchMismatch: true, hasSignedToken: true };
             }
 
             const report = evaluateSignals(signals);
@@ -739,7 +693,7 @@
 
             document.getElementById('modal-trace-id').innerText = `Session Trace: ${r.traceId}`;
             document.getElementById('modal-score').innerText = r.score;
-            document.getElementById('modal-confidence').innerText = r.confidence;
+            document.getElementById('modal-confidence').innerText = r.evidenceConfidence || 0.85;
             document.getElementById('modal-action').innerText = r.recommendedAction;
 
             const modalEvidenceList = document.getElementById('modal-evidence-list');
@@ -766,6 +720,13 @@
         function closeSessionModal() {
             document.getElementById('session-modal').style.display = 'none';
         }
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === STORAGE_KEY) renderDashboard();
+        });
+        window.addEventListener('sentinel:risk-event-appended', () => {
+            renderDashboard();
+        });
 
         seedInitialDataIfEmpty();
         renderDashboard();

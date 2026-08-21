@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "node tests/engine.test.js && node tests/sentinel.test.js",
+    "test": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js",
     "build": "npm run --workspaces build"
   },
   "keywords": [
