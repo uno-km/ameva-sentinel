@@ -312,15 +312,15 @@ const provenanceData = {
 // Generate Unified All-in-One Markdown Master Report
 let md = `# 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Unified Master Verification & Audit Report
 
-> **Release Target**: \`v0.6.0-alpha.1\`  
-> **Generated Timestamp**: \`${summaryData.generatedAt}\`  
-> **Git Branch**: [\`${gitBranch}\`](https://github.com/uno-km/ameva-sentinel/tree/${gitBranch})  
-> **Implementation Commit**: \`${gitCommit}\`  
-> **Source Snapshot SHA-256**: \`${exportSha256 || 'Calculated at Export'}\`  
-> **Working Tree State**: \`${summaryData.workingTreeAtExport}\`  
-> **Overall Gate Status**: \`${overallStatus}\`  
-> **Final Score**: \`${finalScore.toFixed(1)} / ${maxTotalScore} pts (Grade ${grade})\`  
-> **Total Release Checks**: \`${totalPassed} Executable Gates + ${packagingPassedCount} Monorepo Packaging Gates = ${releasePassed} / ${releaseTotal} Release Checks (100% ALL PASS)\`  
+- **Release Target**: \`v0.6.0-alpha.1\`
+- **Generated Timestamp**: \`${summaryData.generatedAt}\`
+- **Git Branch**: [\`${gitBranch}\`](https://github.com/uno-km/ameva-sentinel/tree/${gitBranch})
+- **Implementation Commit**: \`${gitCommit}\`
+- **Source Snapshot SHA-256**: \`${exportSha256 || 'Calculated at Export'}\`
+- **Working Tree State**: \`${summaryData.workingTreeAtExport}\`
+- **Overall Gate Status**: \`${overallStatus}\`
+- **Final Score**: \`${finalScore.toFixed(1)} / ${maxTotalScore} pts (Grade ${grade})\`
+- **Total Release Checks**: \`${totalPassed} Executable Gates + ${packagingPassedCount} Monorepo Packaging Gates = ${releasePassed} / ${releaseTotal} Release Checks (100% ALL PASS)\`
 
 ---
 

@@ -31,6 +31,18 @@ def generate_tree(path: Path, prefix="") -> str:
                 lines.append(child_tree)
     return "\n".join(lines)
 
+def get_file_content(root: Path, rel_posix: str) -> str:
+    try:
+        res = subprocess.run(["git", "show", f"HEAD:{rel_posix}"], cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if res.returncode == 0:
+            return res.stdout
+    except Exception:
+        pass
+    try:
+        return (root / rel_posix).read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        return f"<에러 발생 또는 바이너리 파일: {e}>"
+
 def main():
     root = Path(__file__).resolve().parent.parent
     now = datetime.now()
@@ -63,7 +75,7 @@ def main():
     header = (
         f"# 프로젝트 디렉터리\n#root\n{generate_tree(root)}\n\n\n"
         f"# PROJECT_METADATA\nProject: AMEVA-Sentinel\nSnapshot Date: {now:%Y-%m-%d}\nBranch: {branch}\nCommit: {commit}\n"
-        f"Working Tree: {working_tree_state}\nSnapshot State: {'HEAD snapshot' if is_clean else 'HEAD + working tree snapshot'}\n"
+        f"Working Tree: {working_tree_state}\nSnapshot State: {'HEAD snapshot (Git commit blob-bound)' if is_clean else 'HEAD + working tree snapshot'}\n"
         f"Operating System: {sys.platform}\nPython Version: {sys.version.split()[0]}\nNode Version: {cmd(['node', '-v']) or 'Unknown'}\n"
         f"Package Manager: npm\nCurrent Stage: v0.6.0-alpha.1 Target Discrimination & Trust Boundary\nTarget Release: 1.0.0 OSS Release\n\n\n"
     )
@@ -89,10 +101,7 @@ def main():
             if any(p.match(pat) for pat in EXCLUDE_FILES):
                 continue
             lang = LANG_MAP.get(p.suffix.lower(), "text")
-            try:
-                content = p.read_text(encoding="utf-8")
-            except Exception as e:
-                content = f"<에러 발생 또는 바이너리 파일: {e}>"
+            content = get_file_content(root, rel_posix)
             out.write(
                 f"{sep}\nFILE_BEGIN\n{sep}\nFILE_NAME: {p.name}\nFILE_PATH: {rel_posix}\n"
                 f"FILE_LANGUAGE: {lang}\n{sep}\nFILE_CONTENT_BEGIN\n{sep}\n\n"

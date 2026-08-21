@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -17,10 +18,32 @@ const EXPECTED_ARTIFACT = 'scripts/codes/source_export.txt';
 const EXPECTED_TOTAL_CHECKS = 86;
 const GIT_SHA_RE = /^[a-f0-9]{40}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
+const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+const EXPECTED_KEYS = [
+  'artifactPath',
+  'branch',
+  'passedChecks',
+  'schemaVersion',
+  'sha256',
+  'sourceCommit',
+  'status',
+  'timestamp',
+  'totalChecks',
+  'workingTreeAtExport'
+].sort();
 
 function fail(message) {
   console.error(`❌ FAIL: ${message}`);
   process.exit(1);
+}
+
+function git(args) {
+  return execFileSync('git', args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  }).trim();
 }
 
 console.log('🔒 Verifying AMEVA Sentinel Provenance Certificate & Artifact Integrity...');
@@ -46,6 +69,12 @@ try {
   prov = JSON.parse(reportProvBytes.toString('utf8'));
 } catch (e) {
   fail(`Malformed JSON in provenance certificate: ${e.message}`);
+}
+
+// 3.1 Closed Schema Keys Validation
+const actualKeys = Object.keys(prov).sort();
+if (JSON.stringify(actualKeys) !== JSON.stringify(EXPECTED_KEYS)) {
+  fail(`Unexpected provenance schema keys: ${actualKeys.join(', ')}`);
 }
 
 if (prov.schemaVersion !== EXPECTED_SCHEMA) {
@@ -74,6 +103,20 @@ if (typeof prov.sourceCommit !== 'string' || !GIT_SHA_RE.test(prov.sourceCommit)
   fail(`Invalid sourceCommit: "${prov.sourceCommit}" (must be 40-character lowercase hexadecimal Git SHA)`);
 }
 
+// Validate against live repository HEAD and branch
+try {
+  const actualHead = git(['rev-parse', 'HEAD']);
+  if (actualHead && prov.sourceCommit !== actualHead) {
+    fail(`sourceCommit does not match current repository HEAD: certificate=${prov.sourceCommit}, HEAD=${actualHead}`);
+  }
+  const actualBranch = git(['branch', '--show-current']);
+  if (actualBranch && prov.branch !== actualBranch) {
+    fail(`branch does not match current checkout: certificate=${prov.branch}, actual=${actualBranch}`);
+  }
+} catch (e) {
+  // If git command fails (e.g. tarball environment without .git), rely on SHA format check
+}
+
 // Validate SHA-256 hash existence and format
 if (typeof prov.sha256 !== 'string' || !SHA256_RE.test(prov.sha256)) {
   fail(`Missing or invalid provenance SHA-256 string: "${prov.sha256}"`);
@@ -97,9 +140,13 @@ if (prov.status !== 'PASS') {
   fail(`Provenance certificate status is not PASS: "${prov.status}"`);
 }
 
-// Validate timestamp
-if (typeof prov.timestamp !== 'string' || !Number.isFinite(Date.parse(prov.timestamp))) {
-  fail(`Invalid ISO-8601 timestamp: "${prov.timestamp}"`);
+// Validate strict ISO-8601 UTC timestamp
+if (
+  typeof prov.timestamp !== 'string' ||
+  !ISO_UTC_RE.test(prov.timestamp) ||
+  new Date(prov.timestamp).toISOString() !== prov.timestamp
+) {
+  fail(`Invalid canonical UTC timestamp: "${prov.timestamp}"`);
 }
 
 // 4. Compute and compare SHA-256 hash using crypto.timingSafeEqual
@@ -115,10 +162,10 @@ if (expectedHashBuf.length !== computedHashBuf.length || !crypto.timingSafeEqual
 
 console.log('✅ Provenance Certificate Fully Verified (Fail-Closed Validated):');
 console.log(`   Schema Version     : ${prov.schemaVersion}`);
-console.log(`   Source Commit      : ${prov.sourceCommit}`);
+console.log(`   Source Commit (HEAD): ${prov.sourceCommit}`);
 console.log(`   Artifact Path      : ${prov.artifactPath}`);
 console.log(`   Artifact SHA-256   : ${computedHash}`);
 console.log(`   Working Tree State : ${prov.workingTreeAtExport}`);
 console.log(`   Release Quality    : ${prov.passedChecks}/${prov.totalChecks} Quality Gates (STATUS: ${prov.status})`);
-console.log(`   Timestamp          : ${prov.timestamp}`);
+console.log(`   Timestamp (UTC)    : ${prov.timestamp}`);
 console.log('🎉 Provenance verification successfully passed.');
