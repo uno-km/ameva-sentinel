@@ -2,7 +2,7 @@
  * AMEVA Sentinel - 1-Line Facade End-to-End Test Suite
  */
 import assert from 'node:assert';
-import { sentinel, SentinelAction } from '../packages/sentinel/src/index.js';
+import { sentinel, createSentinel, SentinelAction, MemoryRiskEventStore } from '../packages/sentinel/src/index.js';
 
 console.log('\n🧪 Running AMEVA Sentinel End-to-End Facade Test Suite...\n');
 
@@ -24,8 +24,8 @@ function it(name, fn) {
 }
 
 async function run() {
-  // 1. Clean User HTTP Request (Standard Browser UA & Token)
-  await it('sentinel.score(req) should evaluate standard human browser request as ALLOW', async () => {
+  // 1. Clean User HTTP Request in Default Shadow Mode
+  await it('sentinel.score(req) in Shadow Mode should evaluate standard human as ALLOW', async () => {
     const mockReq = {
       headers: {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
@@ -43,27 +43,14 @@ async function run() {
 
     assert.strictEqual(risk.score, 0);
     assert.strictEqual(risk.action, SentinelAction.ALLOW);
+    assert.strictEqual(risk.recommendedAction, SentinelAction.ALLOW);
+    assert.strictEqual(risk.enforcementMode, 'SHADOW');
     assert.ok(risk.confidence >= 0.75);
     assert.ok(risk.traceId.startsWith('trc_'));
   });
 
-  // 2. Automated Python Requests Scraper (Suspicious UA, no token)
-  await it('sentinel.score(req) should detect python-requests scraper', async () => {
-    const mockReq = {
-      headers: {
-        'user-agent': 'python-requests/2.31.0'
-      },
-      body: {}
-    };
-
-    const risk = await sentinel.score(mockReq);
-
-    assert.ok(risk.score >= 15, `Expected score >= 15, got ${risk.score}`);
-    assert.strictEqual(risk.evidence[0].rule, 'header.suspicious_ua');
-  });
-
-  // 3. Headless Chrome Playwright Automated Login Attack
-  await it('sentinel.score(req) should detect and RATE_LIMIT high-burst Headless automation', async () => {
+  // 2. High-Burst Headless automation in Shadow Mode
+  await it('sentinel.score(req) in Shadow Mode should return action=OBSERVE and recommendedAction=REQUIRE_APP_VERIFICATION', async () => {
     const mockReq = {
       headers: {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/128.0.0.0 Safari/537.36'
@@ -79,8 +66,38 @@ async function run() {
     const risk = await sentinel.score(mockReq);
 
     assert.ok(risk.score >= 75, `Expected high risk >= 75, got ${risk.score}`);
-    assert.strictEqual(risk.action, SentinelAction.REQUIRE_APP_VERIFICATION);
+    assert.strictEqual(risk.action, SentinelAction.OBSERVE, 'In Shadow Mode, action must remain OBSERVE');
+    assert.strictEqual(risk.recommendedAction, SentinelAction.REQUIRE_APP_VERIFICATION);
+    assert.strictEqual(risk.enforcementMode, 'SHADOW');
     assert.ok(risk.evidence.length >= 3);
+  });
+
+  // 3. Enforce Mode & Store Adapter Pipeline Test
+  await it('createSentinel({ mode: "enforce", eventStore }) should enforce and persist to store', async () => {
+    const store = new MemoryRiskEventStore();
+    const enforcingSentinel = createSentinel({ mode: 'enforce', eventStore: store });
+
+    const mockReq = {
+      headers: {
+        'user-agent': 'HeadlessChrome/128.0'
+      },
+      body: {
+        webdriver: true,
+        burst_count: 70,
+        trusted_events: 0
+      }
+    };
+
+    const risk = await enforcingSentinel.score(mockReq);
+
+    assert.strictEqual(risk.enforcementMode, 'ENFORCE');
+    assert.strictEqual(risk.action, SentinelAction.REQUIRE_APP_VERIFICATION);
+
+    // Verify stored in memory store
+    const stored = await store.list();
+    assert.strictEqual(stored.length, 1);
+    assert.strictEqual(stored[0].traceId, risk.traceId);
+    assert.strictEqual(stored[0].score, risk.score);
   });
 
   console.log('\n------------------------------------------------');

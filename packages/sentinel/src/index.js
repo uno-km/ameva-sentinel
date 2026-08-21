@@ -3,7 +3,9 @@ import {
   defaultPolicy,
   evaluate,
   createPolicy,
-  rules
+  rules,
+  MemoryRiskEventStore,
+  LocalStorageRiskEventStore
 } from '../../risk-core/src/index.js';
 
 export {
@@ -11,28 +13,45 @@ export {
   defaultPolicy,
   createPolicy,
   rules,
-  evaluate
+  evaluate,
+  MemoryRiskEventStore,
+  LocalStorageRiskEventStore
 };
 
 export class Sentinel {
   constructor(options = {}) {
     this.policy = options.policy || defaultPolicy;
+    this.mode = options.mode || 'shadow'; // 'shadow' | 'enforce'
+    this.eventStore = options.eventStore || null;
   }
 
   /**
-   * 1-Line Signature API: Evaluates HTTP request and returns an explainable SentinelRiskReport
-   * Pipeline: score() -> collect() -> verify() -> evaluate() -> recommend()
+   * Evaluates HTTP request, handles shadow mode enforcement, and persists to store if provided.
    */
   async score(req) {
     const ctx = await this.collect(req);
     const verified = await this.verify(ctx);
-    const report = evaluate(verified, this.policy);
+    const evaluated = evaluate(verified, this.policy);
+
+    // Apply Shadow Mode semantics
+    const isShadow = this.mode === 'shadow';
+    const report = {
+      ...evaluated,
+      action: isShadow && evaluated.action !== SentinelAction.ALLOW ? SentinelAction.OBSERVE : evaluated.action,
+      recommendedAction: evaluated.action,
+      enforcementMode: isShadow ? 'SHADOW' : 'ENFORCE'
+    };
+
+    // Store in event store if configured
+    if (this.eventStore && typeof this.eventStore.append === 'function') {
+      try {
+        await this.eventStore.append(report);
+      } catch (e) {}
+    }
+
     return report;
   }
 
-  /**
-   * 1. Collect: Extract signals from HTTP headers and client telemetry body
-   */
   async collect(req) {
     if (!req) return {};
 
@@ -45,7 +64,6 @@ export class Sentinel {
     const ua = getHeader('user-agent');
     const secChUaMobile = getHeader('sec-ch-ua-mobile');
 
-    // Parse Body if present
     let body = {};
     if (typeof req.json === 'function') {
       try { body = await req.json(); } catch (e) {}
@@ -69,13 +87,13 @@ export class Sentinel {
     };
   }
 
-  /**
-   * 2. Verify: Validate token authenticity and replay protection
-   */
   async verify(signals) {
-    // In production, verifies token signature with HMAC secret
     return signals;
   }
+}
+
+export function createSentinel(options = {}) {
+  return new Sentinel(options);
 }
 
 export const sentinel = new Sentinel();

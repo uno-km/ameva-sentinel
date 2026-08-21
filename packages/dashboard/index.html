@@ -37,7 +37,6 @@
             flex-direction: column;
         }
 
-        /* ── Top Bar ────────────────────────────────────────────────────────────── */
         header.top-bar {
             background-color: var(--bg-card);
             border-bottom: 1px solid var(--border);
@@ -49,407 +48,184 @@
             top: 0;
             z-index: 100;
         }
-        .brand-group {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .brand-title {
-            font-size: 1.15em;
-            font-weight: 700;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .badge-mode {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--accent-green);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            font-size: 0.75em;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .btn {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.15s ease;
-        }
+        .brand-group { display: flex; align-items: center; gap: 12px; }
+        .brand-title { font-size: 1.15em; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; text-decoration: none; }
+        .badge-mode { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.75em; font-weight: 600; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-demo { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.75em; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+        .header-actions { display: flex; align-items: center; gap: 10px; }
+        .btn { background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; transition: all 0.15s ease; }
         .btn:hover { background: var(--bg-card-hover); border-color: var(--border-highlight); }
         .btn-primary { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
         .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: rgba(16,185,129,0.2); border-color: var(--accent-green); color: var(--accent-green); }
+        .btn-danger { background: rgba(239,68,68,0.2); border-color: var(--accent-red); color: var(--accent-red); }
 
-        /* ── Main Layout ────────────────────────────────────────────────────────── */
-        .dashboard-container {
-            max-width: 1480px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 20px 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+        .demo-banner { background: #111a28; border-bottom: 1px solid #1e2e46; padding: 8px 24px; font-size: 0.82em; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .demo-status-pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); }
+        .demo-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green); display: inline-block; }
 
-        /* ── Stats Row ──────────────────────────────────────────────────────────── */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 14px;
-        }
-        .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .stat-label {
-            font-size: 0.85em;
-            color: var(--text-muted);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .stat-value {
-            font-size: 1.8em;
-            font-weight: 800;
-            color: #fff;
-            margin: 8px 0 4px 0;
-            font-family: var(--font-mono);
-        }
-        .stat-desc {
-            font-size: 0.8em;
-            color: var(--text-dim);
-        }
+        .dashboard-container { max-width: 1480px; width: 100%; margin: 0 auto; padding: 16px 24px 32px 24px; display: flex; flex-direction: column; gap: 18px; }
+        .simulator-bar { background: var(--bg-card); border: 1px solid var(--border-highlight); border-radius: 6px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .sim-title { font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
+        .sim-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 
-        /* ── Two-Column Layout ─────────────────────────────────────────────────── */
-        .split-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-        }
-        @media (max-width: 1024px) {
-            .split-grid { grid-template-columns: 1fr; }
-        }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; }
+        .stat-label { font-size: 0.82em; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
+        .stat-value { font-size: 1.7em; font-weight: 800; color: #fff; margin: 6px 0 2px 0; font-family: var(--font-mono); }
+        .stat-desc { font-size: 0.78em; color: var(--text-dim); }
 
-        .panel {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-        }
-        .panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 10px;
-        }
-        .panel-title {
-            font-size: 1.05em;
-            font-weight: 700;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .split-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
+        @media (max-width: 1024px) { .split-grid { grid-template-columns: 1fr; } }
 
-        /* ── Risk Distribution Bar ──────────────────────────────────────────────── */
-        .dist-bar-container {
-            display: flex;
-            height: 18px;
-            border-radius: 4px;
-            overflow: hidden;
-            background: #1e293b;
-            margin: 8px 0;
-        }
-        .dist-seg {
-            height: 100%;
-            transition: width 0.3s ease;
-        }
-        .dist-seg.low { background: var(--accent-green); width: 88%; }
-        .dist-seg.med { background: var(--accent-amber); width: 10%; }
-        .dist-seg.high { background: var(--accent-red); width: 2%; }
+        .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+        .panel-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .panel-title { font-size: 1em; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
 
-        .dist-legend {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8em;
-            color: var(--text-muted);
-        }
-        .dist-legend-item { display: flex; align-items: center; gap: 6px; }
+        .dist-bar-container { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: #1e293b; margin: 6px 0; }
+        .dist-seg { height: 100%; transition: width 0.3s ease; }
+        .dist-seg.low { background: var(--accent-green); }
+        .dist-seg.med { background: var(--accent-amber); }
+        .dist-seg.high { background: var(--accent-red); }
+
+        .dist-legend { display: flex; justify-content: space-between; font-size: 0.78em; color: var(--text-muted); flex-wrap: wrap; gap: 6px; }
+        .dist-legend-item { display: flex; align-items: center; gap: 5px; }
         .dist-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-        /* ── Table Styling ──────────────────────────────────────────────────────── */
-        .table-responsive {
-            overflow-x: auto;
-        }
-        table.data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.88em;
-            text-align: left;
-        }
-        table.data-table th {
-            background: var(--bg-input);
-            color: var(--text-muted);
-            padding: 10px 12px;
-            font-weight: 600;
-            border-bottom: 1px solid var(--border);
-        }
-        table.data-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-main);
-        }
-        table.data-table tr:hover td {
-            background: var(--bg-card-hover);
-            cursor: pointer;
-        }
-        .badge-action {
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.78em;
-            font-weight: 700;
-            font-family: var(--font-mono);
-            display: inline-block;
-        }
+        .table-responsive { overflow-x: auto; max-height: 380px; }
+        table.data-table { width: 100%; border-collapse: collapse; font-size: 0.85em; text-align: left; }
+        table.data-table th { background: var(--bg-input); color: var(--text-muted); padding: 8px 12px; font-weight: 600; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+        table.data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        table.data-table tr:hover td { background: var(--bg-card-hover); cursor: pointer; }
+        .badge-action { padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 700; font-family: var(--font-mono); display: inline-block; }
         .badge-action.RATE_LIMIT { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid rgba(239,68,68,0.4); }
         .badge-action.OBSERVE { background: rgba(245, 158, 11, 0.2); color: var(--accent-amber); border: 1px solid rgba(245,158,11,0.4); }
         .badge-action.ALLOW { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.4); }
         .badge-action.REQUIRE_APP_VERIFICATION { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); border: 1px solid rgba(139,92,246,0.4); }
+        .badge-action.TEMPORARY_DENY { background: rgba(239, 68, 68, 0.3); color: #fca5a5; border: 1px solid var(--accent-red); }
 
-        .score-pill {
-            font-weight: 800;
-            font-family: var(--font-mono);
-            padding: 2px 6px;
-            border-radius: 3px;
-        }
+        .score-pill { font-weight: 800; font-family: var(--font-mono); padding: 2px 6px; border-radius: 3px; }
         .score-high { color: var(--accent-red); background: rgba(239,68,68,0.15); }
         .score-med { color: var(--accent-amber); background: rgba(245,158,11,0.15); }
         .score-low { color: var(--accent-green); background: rgba(16,185,129,0.15); }
 
-        /* ── Modal / Slideover (Session Detail) ─────────────────────────────────── */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
-            backdrop-filter: blur(4px);
-        }
-        .modal-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-highlight);
-            border-radius: 8px;
-            width: 90%;
-            max-width: 680px;
-            max-height: 85vh;
-            overflow-y: auto;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 12px;
-        }
-        .evidence-row {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 12px;
-            margin-bottom: 8px;
-        }
-        .evidence-head {
-            display: flex;
-            justify-content: space-between;
-            font-weight: 700;
-            font-family: var(--font-mono);
-            margin-bottom: 4px;
-        }
-        .evidence-attr {
-            font-size: 0.82em;
-            color: var(--text-muted);
-            font-family: var(--font-mono);
-            background: #0d131d;
-            padding: 6px;
-            border-radius: 3px;
-            margin-top: 6px;
-        }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); display: none; justify-content: center; align-items: center; z-index: 200; backdrop-filter: blur(4px); }
+        .modal-card { background: var(--bg-card); border: 1px solid var(--border-highlight); border-radius: 8px; width: 90%; max-width: 680px; max-height: 85vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .evidence-row { background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px; padding: 10px; margin-bottom: 6px; }
+        .evidence-head { display: flex; justify-content: space-between; font-weight: 700; font-family: var(--font-mono); margin-bottom: 4px; }
+        .evidence-attr { font-size: 0.8em; color: var(--text-muted); font-family: var(--font-mono); background: #0d131d; padding: 6px; border-radius: 3px; margin-top: 4px; }
 
-        /* ── Policy Simulator Sliders ───────────────────────────────────────────── */
-        .slider-group {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 8px;
-        }
-        .slider-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .slider-label-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85em;
-            font-weight: 600;
-        }
-        input[type="range"] {
-            accent-color: var(--accent-blue);
-            cursor: pointer;
-        }
-
-        .sim-result-box {
-            background: var(--bg-input);
-            border: 1px dashed var(--accent-blue);
-            border-radius: 6px;
-            padding: 14px;
-            margin-top: 10px;
-        }
+        .slider-group { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+        .slider-item { display: flex; flex-direction: column; gap: 2px; }
+        .slider-label-row { display: flex; justify-content: space-between; font-size: 0.82em; font-weight: 600; }
+        input[type="range"] { accent-color: var(--accent-blue); cursor: pointer; }
+        .sim-result-box { background: var(--bg-input); border: 1px dashed var(--accent-blue); border-radius: 6px; padding: 12px; margin-top: 8px; }
     </style>
 </head>
 <body>
-    <!-- Top Header -->
     <header class="top-bar">
         <div class="brand-group">
             <div class="brand-title">
                 <span>🛡️ AMEVA Sentinel</span>
-                <span class="badge-mode">Shadow Mode Active</span>
+                <span class="badge-mode">Shadow Mode</span>
+                <span class="badge-demo">Demo Mode (LocalStorage)</span>
             </div>
         </div>
         <div class="header-actions">
-            <span style="color: var(--text-dim); font-size: 0.85em;">Policy: <strong>v2026-08-21.1</strong></span>
-            <button class="btn" onclick="triggerSimulation()">🔄 Refresh Metrics</button>
+            <span style="color: var(--text-dim); font-size: 0.82em;">Policy: <strong>v2026-08-21.1</strong></span>
             <a href="https://github.com/uno-km/AMEVA-Sentinel" target="_blank" class="btn btn-primary">🐙 GitHub OSS</a>
         </div>
     </header>
 
-    <!-- Main Container -->
+    <div class="demo-banner">
+        <div class="demo-status-pill">
+            <span class="demo-dot"></span>
+            <span>Data Source: <strong>LocalStorage (Browser-Bound)</strong></span>
+            <span>&bull;</span>
+            <span id="banner-events-count">Events: 0</span>
+            <span>&bull;</span>
+            <span id="banner-last-event">Last event: None</span>
+        </div>
+        <div style="font-family: var(--font-mono); color: var(--text-dim);">
+            SDK Engine: <span style="color:var(--accent-green);">Live Eval</span> &bull; 
+            Enforcement: <span style="color:var(--accent-amber);">SHADOW ONLY</span>
+        </div>
+    </div>
+
     <div class="dashboard-container">
         
-        <!-- 1. Stats Row -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Total Requests (24h) <span>📡</span></div>
-                <div class="stat-value">7,811,420</div>
-                <div class="stat-desc">Zero Long-Task latency impact</div>
+        <div class="simulator-bar">
+            <div class="sim-title">
+                <span>⚡ SDK Vertical Plumbing Simulator:</span>
+                <span style="font-size:0.85em; font-weight:normal; color:var(--text-muted);">실제 <code>sentinel.score(req)</code> 엔진을 브라우저에서 실행하고 대시보드에 즉시 적재합니다.</span>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">High Risk Sessions <span>🚨</span></div>
-                <div class="stat-value" style="color: var(--accent-red);">12,830</div>
-                <div class="stat-desc">1.64% of total traffic</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Avg Risk Score <span>📊</span></div>
-                <div class="stat-value">23 / 100</div>
-                <div class="stat-desc">Low overall automated threat</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Avg Confidence <span>🎯</span></div>
-                <div class="stat-value" style="color: var(--accent-green);">0.78</div>
-                <div class="stat-desc">High mathematical completeness</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Eval Latency (p95) <span>⚡</span></div>
-                <div class="stat-value">1.8ms</div>
-                <div class="stat-desc">Edge runtime execution</div>
+            <div class="sim-buttons">
+                <button class="btn btn-success" onclick="simulateEvent('clean')">👤 Simulate Clean User</button>
+                <button class="btn btn-danger" onclick="simulateEvent('webdriver')">🤖 Simulate Headless Bot</button>
+                <button class="btn btn-danger" onclick="simulateEvent('burst')">💥 Simulate Burst Attack</button>
+                <button class="btn" onclick="clearEventStore()">🗑️ Clear Store</button>
             </div>
         </div>
 
-        <!-- 2. Risk Distribution & Top Rules -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Observed Sessions <span>📡</span></div>
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-desc">Stored in LocalStorage</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">High Risk Sessions <span>🚨</span></div>
+                <div class="stat-value" id="stat-high" style="color: var(--accent-red);">0</div>
+                <div class="stat-desc" id="stat-high-pct">0% of observed traffic</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Risk Score <span>📊</span></div>
+                <div class="stat-value" id="stat-avg-score">0 / 100</div>
+                <div class="stat-desc">Dynamically aggregated</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Confidence <span>🎯</span></div>
+                <div class="stat-value" id="stat-avg-conf" style="color: var(--accent-green);">0.00</div>
+                <div class="stat-desc">Calculated via Q*C*F*S</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Enforcement Mode <span>🛡️</span></div>
+                <div class="stat-value" style="font-size:1.3em; color:var(--accent-amber); margin-top:8px;">SHADOW</div>
+                <div class="stat-desc">Non-blocking evaluation</div>
+            </div>
+        </div>
+
         <div class="split-grid">
             <div class="panel">
                 <div class="panel-header">
-                    <div class="panel-title">📈 24h Risk Distribution &amp; Classification</div>
-                    <span style="color: var(--text-dim); font-size:0.8em;">Sample: Last 100,000 sessions</span>
+                    <div class="panel-title">📈 Observed Risk Distribution</div>
+                    <span id="dist-count-label" style="color: var(--text-dim); font-size:0.8em;">0 events</span>
                 </div>
                 <div class="dist-bar-container">
-                    <div class="dist-seg low" title="Low Risk (0-29): 88%"></div>
-                    <div class="dist-seg med" title="Medium Risk (30-69): 10%"></div>
-                    <div class="dist-seg high" title="High Risk (70-100): 2%"></div>
+                    <div class="dist-seg low" id="dist-bar-low" style="width: 100%;"></div>
+                    <div class="dist-seg med" id="dist-bar-med" style="width: 0%;"></div>
+                    <div class="dist-seg high" id="dist-bar-high" style="width: 0%;"></div>
                 </div>
                 <div class="dist-legend">
-                    <div class="dist-legend-item"><span class="dist-dot" style="background:var(--accent-green);"></span> 0~29 Low Risk (88% - 6,874,049)</div>
-                    <div class="dist-legend-item"><span class="dist-dot" style="background:var(--accent-amber);"></span> 30~69 Suspicious (10% - 781,142)</div>
-                    <div class="dist-legend-item"><span class="dist-dot" style="background:var(--accent-red);"></span> 70+ High Risk (2% - 156,228)</div>
+                    <div class="dist-legend-item"><span class="dist-dot" style="background:var(--accent-green);"></span> 0~29 Low Risk: <strong id="legend-low-pct">0% (0)</strong></div>
+                    <div class="dist-legend-item"><span class="dist-dot" style="background:var(--accent-amber);"></span> 30~69 Suspicious: <strong id="legend-med-pct">0% (0)</strong></div>
+                    <div class="dist-legend-item"><span class="dist-dot" style="background:var(--accent-red);"></span> 70+ High Risk: <strong id="legend-high-pct">0% (0)</strong></div>
                 </div>
 
-                <div style="margin-top: 14px;">
-                    <div style="font-size: 0.88em; font-weight: 700; color: #fff; margin-bottom: 8px;">Top Triggered Rules (24h)</div>
-                    <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85em;">
-                        <div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                                <span>1. <code>rate.burst_request</code> (High frequency burst)</span>
-                                <strong>42%</strong>
-                            </div>
-                            <div style="height:6px; background:#1e293b; border-radius:3px; overflow:hidden;"><div style="width:42%; height:100%; background:var(--accent-blue);"></div></div>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                                <span>2. <code>automation.webdriver</code> (navigator.webdriver=true)</span>
-                                <strong>31%</strong>
-                            </div>
-                            <div style="height:6px; background:#1e293b; border-radius:3px; overflow:hidden;"><div style="width:31%; height:100%; background:var(--accent-red);"></div></div>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                                <span>3. <code>environment.touch_mismatch</code> (Client-Hints mismatch)</span>
-                                <strong>14%</strong>
-                            </div>
-                            <div style="height:6px; background:#1e293b; border-radius:3px; overflow:hidden;"><div style="width:14%; height:100%; background:var(--accent-amber);"></div></div>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                                <span>4. <code>interaction.no_physics</code> (Zero trusted physics)</span>
-                                <strong>8%</strong>
-                            </div>
-                            <div style="height:6px; background:#1e293b; border-radius:3px; overflow:hidden;"><div style="width:8%; height:100%; background:var(--accent-purple);"></div></div>
-                        </div>
+                <div style="margin-top: 10px;">
+                    <div style="font-size: 0.88em; font-weight: 700; color: #fff; margin-bottom: 6px;">Top Triggered Rules (Stored Events)</div>
+                    <div id="top-rules-container" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.82em;">
+                        <div style="color:var(--text-dim);">No rules triggered in stored events.</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Policy Simulator -->
             <div class="panel">
                 <div class="panel-header">
-                    <div class="panel-title">🎛️ Policy Simulator (Impact Forecast)</div>
-                    <span class="badge-mode" style="font-size:0.7em;">Live Test</span>
+                    <div class="panel-title">🎛️ Policy Simulator (Local Re-Evaluation)</div>
                 </div>
-                <p style="font-size:0.85em; color:var(--text-muted);">가중치를 조절하여 과거 24시간 세션에 대한 위험 세션 및 예상 오탐률(FPR) 변화를 시뮬레이션합니다.</p>
+                <p style="font-size:0.82em; color:var(--text-muted);">현재 저장된 실제 이벤트를 새로운 가중치로 메모리에서 즉시 재계산하여 위험 세션 재분류 영향을 시뮬레이션합니다.</p>
                 
                 <div class="slider-group">
                     <div class="slider-item">
@@ -457,39 +233,38 @@
                             <span><code>automation.webdriver</code> Weight</span>
                             <span id="val-webdriver" style="font-family:var(--font-mono); color:var(--accent-blue);">25</span>
                         </div>
-                        <input type="range" id="slider-webdriver" min="5" max="50" value="25" oninput="updateSimulation()">
+                        <input type="range" id="slider-webdriver" min="5" max="50" value="25" oninput="runPolicySimulation()">
                     </div>
                     <div class="slider-item">
                         <div class="slider-label-row">
                             <span><code>rate.burst_request</code> Weight</span>
                             <span id="val-burst" style="font-family:var(--font-mono); color:var(--accent-blue);">30</span>
                         </div>
-                        <input type="range" id="slider-burst" min="10" max="60" value="30" oninput="updateSimulation()">
+                        <input type="range" id="slider-burst" min="10" max="60" value="30" oninput="runPolicySimulation()">
                     </div>
                 </div>
 
                 <div class="sim-result-box">
-                    <div style="font-size:0.85em; font-weight:700; color:#fff; margin-bottom:6px;">📊 Simulation Forecast</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85em;">
+                    <div style="font-size:0.82em; font-weight:700; color:#fff; margin-bottom:4px;">📊 Local Reclassification Result</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.82em;">
                         <div>
-                            <div style="color:var(--text-dim);">Predicted High Risk:</div>
-                            <div id="sim-high-risk" style="font-weight:800; font-family:var(--font-mono); font-size:1.2em; color:var(--accent-amber);">12,830 (+0%)</div>
+                            <div style="color:var(--text-dim);">High Risk (Original):</div>
+                            <div id="sim-orig-high" style="font-weight:800; font-family:var(--font-mono); font-size:1.1em; color:var(--text-main);">0</div>
                         </div>
                         <div>
-                            <div style="color:var(--text-dim);">Est. False Positive (FPR):</div>
-                            <div id="sim-fpr" style="font-weight:800; font-family:var(--font-mono); font-size:1.2em; color:var(--accent-green);">0.13%</div>
+                            <div style="color:var(--text-dim);">High Risk (Simulated):</div>
+                            <div id="sim-new-high" style="font-weight:800; font-family:var(--font-mono); font-size:1.1em; color:var(--accent-amber);">0 (+0)</div>
                         </div>
                     </div>
+                    <div style="margin-top:6px; font-size:0.75em; color:var(--text-dim);" id="sim-reclassified-ids">Reclassified: None</div>
                 </div>
-                <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="alert('✅ Policy updated and saved to Git Policy-as-Code registry!')">🚀 Apply &amp; Commit Policy as Code</button>
             </div>
         </div>
 
-        <!-- 3. Recent High Risk Sessions Table -->
         <div class="panel">
             <div class="panel-header">
-                <div class="panel-title">🚨 Recent High Risk Sessions (Click for 5-Second Evidence Breakdown)</div>
-                <div style="font-size:0.8em; color:var(--text-dim);">Real-Time Ingestion Stream</div>
+                <div class="panel-title">🚨 Recent Evaluated Sessions Stream (Stored in LocalStorage)</div>
+                <div style="font-size:0.8em; color:var(--text-dim);" id="table-count-label">0 total entries</div>
             </div>
 
             <div class="table-responsive">
@@ -499,121 +274,45 @@
                             <th>Trace ID</th>
                             <th>Risk Score</th>
                             <th>Confidence</th>
-                            <th>Action</th>
-                            <th>Endpoint</th>
-                            <th>Triggered Summary</th>
+                            <th>Action (Shadow)</th>
+                            <th>Recommended</th>
+                            <th>Triggered Evidence</th>
                             <th>Evaluated At</th>
                         </tr>
                     </thead>
                     <tbody id="sessions-tbody">
-                        <tr onclick="openSessionModal('trc_91af8b', 91, 0.94, 'RATE_LIMIT', '/api/login', 'WebDriver + Burst + No Physics')">
-                            <td><code>trc_91af8b</code></td>
-                            <td><span class="score-pill score-high">91</span></td>
-                            <td>0.94</td>
-                            <td><span class="badge-action RATE_LIMIT">RATE_LIMIT</span></td>
-                            <td><code>/api/login</code></td>
-                            <td><code>webdriver (+25)</code>, <code>burst (+30)</code>, <code>no_physics (+20)</code></td>
-                            <td style="color:var(--text-dim);">Just now</td>
-                        </tr>
-                        <tr onclick="openSessionModal('trc_8811e2', 88, 0.88, 'REQUIRE_APP_VERIFICATION', '/checkout/pay', 'Burst Request + Touch Mismatch')">
-                            <td><code>trc_8811e2</code></td>
-                            <td><span class="score-pill score-high">88</span></td>
-                            <td>0.88</td>
-                            <td><span class="badge-action REQUIRE_APP_VERIFICATION">REQUIRE_APP_VERIFICATION</span></td>
-                            <td><code>/checkout/pay</code></td>
-                            <td><code>burst (+30)</code>, <code>touch_mismatch (+15)</code></td>
-                            <td style="color:var(--text-dim);">2m ago</td>
-                        </tr>
-                        <tr onclick="openSessionModal('trc_713bac', 74, 0.81, 'RATE_LIMIT', '/api/search', 'High Frequency Scraping Burst')">
-                            <td><code>trc_713bac</code></td>
-                            <td><span class="score-pill score-high">74</span></td>
-                            <td>0.81</td>
-                            <td><span class="badge-action RATE_LIMIT">RATE_LIMIT</span></td>
-                            <td><code>/api/search</code></td>
-                            <td><code>burst (+30)</code>, <code>suspicious_ua (+15)</code></td>
-                            <td style="color:var(--text-dim);">5m ago</td>
-                        </tr>
-                        <tr onclick="openSessionModal('trc_620cab', 62, 0.74, 'OBSERVE', '/register', 'WebDriver Active in Shadow Mode')">
-                            <td><code>trc_620cab</code></td>
-                            <td><span class="score-pill score-med">62</span></td>
-                            <td>0.74</td>
-                            <td><span class="badge-action OBSERVE">OBSERVE</span></td>
-                            <td><code>/register</code></td>
-                            <td><code>webdriver (+25)</code>, <code>no_physics (+20)</code></td>
-                            <td style="color:var(--text-dim);">12m ago</td>
-                        </tr>
+                        <!-- Dynamic Entries -->
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 4. Known Bots & Bot Intelligence -->
-        <div class="split-grid">
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">🤖 Known AI &amp; Search Crawlers (Verified vs Unverified)</div>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.85em;">
-                    <div>
-                        <div style="font-weight:700; color:var(--accent-green); margin-bottom:8px;">✅ Verified Legit Crawlers</div>
-                        <ul style="list-style:none; display:flex; flex-direction:column; gap:6px;">
-                            <li style="display:flex; justify-content:space-between;"><span>Googlebot</span> <strong>4,881 req</strong></li>
-                            <li style="display:flex; justify-content:space-between;"><span>Bingbot</span> <strong>1,123 req</strong></li>
-                            <li style="display:flex; justify-content:space-between;"><span>GPTBot (OpenAI)</span> <strong>711 req</strong></li>
-                            <li style="display:flex; justify-content:space-between;"><span>ClaudeBot (Anthropic)</span> <strong>294 req</strong></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <div style="font-weight:700; color:var(--accent-red); margin-bottom:8px;">⚠️ Unverified Spoofed Claims</div>
-                        <ul style="list-style:none; display:flex; flex-direction:column; gap:6px;">
-                            <li style="display:flex; justify-content:space-between;"><span>Fake GPTBot</span> <strong style="color:var(--accent-red);">103 (Spoofed UA)</strong></li>
-                            <li style="display:flex; justify-content:space-between;"><span>Fake Googlebot</span> <strong style="color:var(--accent-red);">92 (Spoofed IP)</strong></li>
-                            <li style="display:flex; justify-content:space-between;"><span>Fake ClaudeBot</span> <strong style="color:var(--accent-red);">41 (Spoofed ASN)</strong></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">⚖️ Privacy &amp; Data Sovereignty Status</div>
-                </div>
-                <ul style="list-style:none; font-size:0.85em; display:flex; flex-direction:column; gap:8px;">
-                    <li style="display:flex; justify-content:space-between;"><span>Raw IP Storage:</span> <strong style="color:var(--accent-green);">0 Bytes (100% Ephemeral)</strong></li>
-                    <li style="display:flex; justify-content:space-between;"><span>IP Pseudonymization:</span> <strong>HMAC-SHA256 (Daily Key)</strong></li>
-                    <li style="display:flex; justify-content:space-between;"><span>Retention Policy:</span> <strong>30-Day Auto Partition Drop</strong></li>
-                    <li style="display:flex; justify-content:space-between;"><span>Data Location:</span> <strong>Customer VPC / Neon Postgres</strong></li>
-                </ul>
-            </div>
-        </div>
-
     </div>
 
-    <!-- Session Detail Modal -->
     <div class="modal-overlay" id="session-modal" onclick="closeSessionModal(event)">
         <div class="modal-card" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <div style="font-size:1.15em; font-weight:700; color:#fff;" id="modal-trace-id">Session Detail</div>
+                <div style="font-size:1.1em; font-weight:700; color:#fff;" id="modal-trace-id">Session Detail</div>
                 <button class="btn" onclick="closeSessionModal()">✕ Close</button>
             </div>
             
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
                 <div class="stat-card">
                     <div class="stat-label">Score</div>
-                    <div class="stat-value" id="modal-score" style="color:var(--accent-red);">91</div>
+                    <div class="stat-value" id="modal-score" style="color:var(--accent-red);">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Confidence</div>
-                    <div class="stat-value" id="modal-confidence">0.94</div>
+                    <div class="stat-value" id="modal-confidence">0.00</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Action</div>
-                    <div class="stat-value" id="modal-action" style="font-size:1.1em; margin-top:12px;">RATE_LIMIT</div>
+                    <div class="stat-label">Recommended</div>
+                    <div class="stat-value" id="modal-action" style="font-size:1.0em; margin-top:10px;">ALLOW</div>
                 </div>
             </div>
 
             <div>
-                <div style="font-size:0.95em; font-weight:700; color:#fff; margin-bottom:8px;">🔬 Explainable Evidence Breakdown</div>
+                <div style="font-size:0.9em; font-weight:700; color:#fff; margin-bottom:6px;">🔬 Machine-Readable Evidence Breakdown</div>
                 <div id="modal-evidence-list">
                     <!-- Dynamic -->
                 </div>
@@ -622,59 +321,306 @@
     </div>
 
     <script>
-        function openSessionModal(traceId, score, confidence, action, endpoint, summary) {
-            document.getElementById('modal-trace-id').innerText = `Session: ${traceId} (${endpoint})`;
-            document.getElementById('modal-score').innerText = score;
-            document.getElementById('modal-confidence').innerText = confidence;
-            document.getElementById('modal-action').innerText = action;
+        const STORAGE_KEY = 'ameva:sentinel:risk-events';
 
-            const list = document.getElementById('modal-evidence-list');
-            list.innerHTML = `
-                <div class="evidence-row">
-                    <div class="evidence-head"><span>1. automation.webdriver</span> <span style="color:var(--accent-red);">+25</span></div>
-                    <div style="font-size:0.85em; color:#fff;">navigator.webdriver automation flag is active</div>
-                    <div class="evidence-attr">{"observed": true, "property": "navigator.webdriver"}</div>
-                </div>
-                <div class="evidence-row">
-                    <div class="evidence-head"><span>2. rate.burst_request</span> <span style="color:var(--accent-red);">+30</span></div>
-                    <div style="font-size:0.85em; color:#fff;">High frequency request burst (51 requests / 10s)</div>
-                    <div class="evidence-attr">{"window": "10s", "count": 51, "threshold": 30}</div>
-                </div>
-                <div class="evidence-row">
-                    <div class="evidence-head"><span>3. interaction.no_physics</span> <span style="color:var(--accent-red);">+20</span></div>
-                    <div style="font-size:0.85em; color:#fff;">Zero trusted user interaction physics observed under burst</div>
-                    <div class="evidence-attr">{"mouse_events": 0, "touch_events": 0, "is_trusted_count": 0}</div>
-                </div>
-            `;
-
-            document.getElementById('session-modal').style.display = 'flex';
+        function calculateConfidence(signals) {
+            const qSignal = signals.hasSignedToken ? 1.0 : 0.5;
+            const validKeys = ['webdriver', 'burstCount10s', 'isTrustedEventsCount', 'touchMismatch', 'suspiciousUA'];
+            const presentCount = validKeys.filter(k => signals[k] !== undefined).length;
+            const cRules = Math.min(1.0, Math.max(0.4, presentCount / 4));
+            const latency = signals.tokenFreshnessMs || 100;
+            const fFreshness = latency < 5000 ? 1.0 : 0.8;
+            const sCompleteness = signals.isTrustedEventsCount !== undefined ? 1.0 : 0.6;
+            return Math.min(1.0, Math.max(0.05, Math.round(qSignal * cRules * fFreshness * sCompleteness * 100) / 100));
         }
 
-        function closeSessionModal(e) {
-            document.getElementById('session-modal').style.display = 'none';
+        function evaluateSignals(signals, customRules = null) {
+            const defaultRules = [
+                {
+                    id: 'automation.webdriver',
+                    weight: customRules?.webdriver ?? 25,
+                    evaluate: (s) => ({
+                        triggered: !!s.webdriver,
+                        attributes: { observed: !!s.webdriver, property: 'navigator.webdriver' },
+                        message: 'navigator.webdriver automation flag is active'
+                    })
+                },
+                {
+                    id: 'rate.burst_request',
+                    weight: customRules?.burst ?? 30,
+                    evaluate: (s) => ({
+                        triggered: (s.burstCount10s || 1) >= 30,
+                        attributes: { window: '10s', count: s.burstCount10s || 1, threshold: 30 },
+                        message: `High frequency request burst (${s.burstCount10s || 1} req / 10s)`
+                    })
+                },
+                {
+                    id: 'interaction.no_physics',
+                    weight: 20,
+                    evaluate: (s) => ({
+                        triggered: s.isTrustedEventsCount === 0 && (s.burstCount10s || 1) > 5,
+                        attributes: { is_trusted_count: 0, burst_count: s.burstCount10s || 1 },
+                        message: 'Zero trusted user interaction physics observed under burst'
+                    })
+                },
+                {
+                    id: 'environment.touch_mismatch',
+                    weight: 15,
+                    evaluate: (s) => ({
+                        triggered: !!s.touchMismatch,
+                        attributes: { touch_mismatch: true },
+                        message: 'Mobile platform Client-Hints and touch capability mismatch'
+                    })
+                }
+            ];
+
+            let score = 0;
+            const evidence = [];
+            for (const rule of defaultRules) {
+                const res = rule.evaluate(signals);
+                if (res.triggered) {
+                    score += rule.weight;
+                    evidence.push({
+                        rule: rule.id,
+                        score: rule.weight,
+                        attributes: res.attributes,
+                        message: res.message
+                    });
+                }
+            }
+
+            score = Math.min(100, Math.max(0, score));
+            const confidence = calculateConfidence(signals);
+
+            let action = 'ALLOW';
+            if (score >= 85) action = 'TEMPORARY_DENY';
+            else if (score >= 70) action = 'REQUIRE_APP_VERIFICATION';
+            else if (score >= 50) action = 'RATE_LIMIT';
+            else if (score > 20) action = 'OBSERVE';
+
+            return {
+                traceId: 'trc_' + Math.random().toString(36).substring(2, 10),
+                score,
+                confidence,
+                action: action !== 'ALLOW' ? 'OBSERVE' : 'ALLOW',
+                recommendedAction: action,
+                enforcementMode: 'SHADOW',
+                policyVersion: '2026-08-21.1',
+                evidence,
+                signals,
+                evaluatedAt: new Date().toISOString()
+            };
         }
 
-        function updateSimulation() {
+        function getStoredReports() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return [];
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) { return []; }
+        }
+
+        function saveReports(reports) {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(reports.slice(0, 500))); } catch (e) {}
+        }
+
+        function seedInitialDataIfEmpty() {
+            const current = getStoredReports();
+            if (current.length === 0) {
+                const seeds = [
+                    evaluateSignals({ webdriver: false, burstCount10s: 2, isTrustedEventsCount: 8, hasSignedToken: true }),
+                    evaluateSignals({ webdriver: true, burstCount10s: 48, isTrustedEventsCount: 0, hasSignedToken: true }),
+                    evaluateSignals({ webdriver: false, burstCount10s: 35, isTrustedEventsCount: 4, touchMismatch: true, hasSignedToken: true }),
+                    evaluateSignals({ webdriver: false, burstCount10s: 1, isTrustedEventsCount: 12, hasSignedToken: true }),
+                    evaluateSignals({ webdriver: true, burstCount10s: 6, isTrustedEventsCount: 0, hasSignedToken: false })
+                ];
+                saveReports(seeds);
+            }
+        }
+
+        function renderDashboard() {
+            const reports = getStoredReports();
+            const total = reports.length;
+
+            const low = reports.filter(r => r.score < 30).length;
+            const med = reports.filter(r => r.score >= 30 && r.score < 70).length;
+            const high = reports.filter(r => r.score >= 70).length;
+
+            const avgScore = total === 0 ? 0 : Math.round(reports.reduce((s, r) => s + r.score, 0) / total);
+            const avgConf = total === 0 ? 0 : (reports.reduce((s, r) => s + r.confidence, 0) / total).toFixed(2);
+
+            document.getElementById('stat-total').innerText = total.toLocaleString();
+            document.getElementById('stat-high').innerText = high.toLocaleString();
+            document.getElementById('stat-high-pct').innerText = total === 0 ? '0%' : `${Math.round((high / total) * 100)}% of observed traffic`;
+            document.getElementById('stat-avg-score').innerText = `${avgScore} / 100`;
+            document.getElementById('stat-avg-conf').innerText = avgConf;
+
+            document.getElementById('banner-events-count').innerText = `Events: ${total}`;
+            document.getElementById('banner-last-event').innerText = total > 0 ? `Last event: ${new Date(reports[0].evaluatedAt).toLocaleTimeString()}` : 'None';
+            document.getElementById('dist-count-label').innerText = `${total} total events`;
+            document.getElementById('table-count-label').innerText = `${total} total entries`;
+
+            const lowPct = total === 0 ? 100 : Math.round((low / total) * 100);
+            const medPct = total === 0 ? 0 : Math.round((med / total) * 100);
+            const highPct = total === 0 ? 0 : Math.round((high / total) * 100);
+
+            document.getElementById('dist-bar-low').style.width = `${lowPct}%`;
+            document.getElementById('dist-bar-med').style.width = `${medPct}%`;
+            document.getElementById('dist-bar-high').style.width = `${highPct}%`;
+
+            document.getElementById('legend-low-pct').innerText = `${lowPct}% (${low})`;
+            document.getElementById('legend-med-pct').innerText = `${medPct}% (${med})`;
+            document.getElementById('legend-high-pct').innerText = `${highPct}% (${high})`;
+
+            const ruleCounts = {};
+            reports.forEach(r => {
+                (r.evidence || []).forEach(e => {
+                    ruleCounts[e.rule] = (ruleCounts[e.rule] || 0) + 1;
+                });
+            });
+
+            const topRulesContainer = document.getElementById('top-rules-container');
+            const sortedRules = Object.entries(ruleCounts).sort((a, b) => b[1] - a[1]);
+            if (sortedRules.length === 0) {
+                topRulesContainer.innerHTML = '<div style="color:var(--text-dim);">No rules triggered in stored events.</div>';
+            } else {
+                topRulesContainer.innerHTML = sortedRules.map(([rule, count]) => {
+                    const pct = total === 0 ? 0 : Math.round((count / total) * 100);
+                    return `
+                        <div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                <span><code>${rule}</code></span>
+                                <strong>${count} (${pct}%)</strong>
+                            </div>
+                            <div style="height:5px; background:#1e293b; border-radius:3px; overflow:hidden;">
+                                <div style="width:${pct}%; height:100%; background:var(--accent-blue);"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const tbody = document.getElementById('sessions-tbody');
+            if (reports.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-dim); padding:20px;">No events in store. Click "Simulate" buttons above to generate real events!</td></tr>';
+            } else {
+                tbody.innerHTML = reports.map((r, idx) => {
+                    const scoreCls = r.score >= 70 ? 'score-high' : r.score >= 30 ? 'score-med' : 'score-low';
+                    const evidenceSummary = (r.evidence || []).map(e => `<code>${e.rule.split('.')[1] || e.rule} (+${e.score})</code>`).join(', ') || '<span style="color:var(--text-dim);">Clean</span>';
+                    const timeAgo = formatTimeAgo(new Date(r.evaluatedAt));
+
+                    return `
+                        <tr onclick="showReportDetail(${idx})">
+                            <td><code>${r.traceId}</code></td>
+                            <td><span class="score-pill ${scoreCls}">${r.score}</span></td>
+                            <td>${r.confidence}</td>
+                            <td><span class="badge-action ${r.action}">${r.action}</span></td>
+                            <td><span class="badge-action ${r.recommendedAction}">${r.recommendedAction}</span></td>
+                            <td>${evidenceSummary}</td>
+                            <td style="color:var(--text-dim);">${timeAgo}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            runPolicySimulation();
+        }
+
+        function formatTimeAgo(date) {
+            const sec = Math.round((Date.now() - date.getTime()) / 1000);
+            if (sec < 60) return `${sec}s ago`;
+            if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
+            return date.toLocaleTimeString();
+        }
+
+        function simulateEvent(type) {
+            let signals = {};
+            if (type === 'clean') {
+                signals = { webdriver: false, burstCount10s: 2, isTrustedEventsCount: 6, hasSignedToken: true };
+            } else if (type === 'webdriver') {
+                signals = { webdriver: true, burstCount10s: 45, isTrustedEventsCount: 0, hasSignedToken: true };
+            } else if (type === 'burst') {
+                signals = { webdriver: false, burstCount10s: 65, isTrustedEventsCount: 0, touchMismatch: true, hasSignedToken: true };
+            }
+
+            const report = evaluateSignals(signals);
+            const current = getStoredReports();
+            current.unshift(report);
+            saveReports(current);
+            renderDashboard();
+        }
+
+        function clearEventStore() {
+            localStorage.removeItem(STORAGE_KEY);
+            renderDashboard();
+        }
+
+        function runPolicySimulation() {
             const w1 = parseInt(document.getElementById('slider-webdriver').value, 10);
             const w2 = parseInt(document.getElementById('slider-burst').value, 10);
 
             document.getElementById('val-webdriver').innerText = w1;
             document.getElementById('val-burst').innerText = w2;
 
-            const baseCount = 12830;
-            const multiplier = ((w1 - 25) * 180) + ((w2 - 30) * 240);
-            const newCount = Math.max(8000, baseCount + multiplier);
-            const diffPercent = Math.round(((newCount - baseCount) / baseCount) * 100);
+            const reports = getStoredReports();
+            const origHigh = reports.filter(r => r.score >= 70).length;
 
-            const fpr = (0.13 + (Math.max(0, diffPercent) * 0.008)).toFixed(2);
+            let reclassifiedHigh = 0;
+            const reclassifiedIds = [];
 
-            document.getElementById('sim-high-risk').innerText = `${newCount.toLocaleString()} (${diffPercent >= 0 ? '+' : ''}${diffPercent}%)`;
-            document.getElementById('sim-fpr').innerText = `${fpr}%`;
+            reports.forEach(r => {
+                const simReport = evaluateSignals(r.signals || {}, { webdriver: w1, burst: w2 });
+                if (simReport.score >= 70) {
+                    reclassifiedHigh++;
+                    if (r.score < 70) {
+                        reclassifiedIds.push(r.traceId);
+                    }
+                }
+            });
+
+            const diff = reclassifiedHigh - origHigh;
+            document.getElementById('sim-orig-high').innerText = origHigh;
+            document.getElementById('sim-new-high').innerText = `${reclassifiedHigh} (${diff >= 0 ? '+' : ''}${diff})`;
+
+            const idLabel = reclassifiedIds.length > 0
+                ? `Reclassified to High-Risk: ${reclassifiedIds.slice(0, 3).join(', ')}${reclassifiedIds.length > 3 ? '...' : ''}`
+                : 'Reclassified: None';
+            document.getElementById('sim-reclassified-ids').innerText = idLabel;
         }
 
-        function triggerSimulation() {
-            alert('🔄 Live stream refreshed! All metrics synchronized with edge nodes.');
+        function showReportDetail(idx) {
+            const reports = getStoredReports();
+            const r = reports[idx];
+            if (!r) return;
+
+            document.getElementById('modal-trace-id').innerText = `Session Trace: ${r.traceId}`;
+            document.getElementById('modal-score').innerText = r.score;
+            document.getElementById('modal-confidence').innerText = r.confidence;
+            document.getElementById('modal-action').innerText = r.recommendedAction;
+
+            const modalEvidenceList = document.getElementById('modal-evidence-list');
+            if (!r.evidence || r.evidence.length === 0) {
+                modalEvidenceList.innerHTML = '<div style="color:var(--accent-green); padding:10px;">✅ Clean session. Zero suspicious evidence rules triggered.</div>';
+            } else {
+                modalEvidenceList.innerHTML = r.evidence.map((e, i) => `
+                    <div class="evidence-row">
+                        <div class="evidence-head"><span>${i + 1}. ${e.rule}</span> <span style="color:var(--accent-red);">+${e.score}</span></div>
+                        <div style="font-size:0.85em; color:#fff;">${e.message}</div>
+                        <div class="evidence-attr">${JSON.stringify(e.attributes)}</div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('session-modal').style.display = 'flex';
         }
+
+        function closeSessionModal() {
+            document.getElementById('session-modal').style.display = 'none';
+        }
+
+        seedInitialDataIfEmpty();
+        renderDashboard();
     </script>
 </body>
 </html>

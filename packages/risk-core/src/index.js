@@ -1,5 +1,48 @@
 // Pure ESM compiled JavaScript for risk-core
 
+export class MemoryRiskEventStore {
+  constructor(maxItems = 500) {
+    this.events = [];
+    this.maxItems = maxItems;
+  }
+  async append(report) {
+    this.events.unshift({ ...report, evaluatedAt: report.evaluatedAt || new Date().toISOString() });
+    if (this.events.length > this.maxItems) this.events = this.events.slice(0, this.maxItems);
+  }
+  async list(options = {}) {
+    return this.events.slice(0, options.limit ?? this.maxItems);
+  }
+  async clear() {
+    this.events = [];
+  }
+}
+
+export class LocalStorageRiskEventStore {
+  constructor(key = 'ameva:sentinel:risk-events', maxItems = 500) {
+    this.key = key;
+    this.maxItems = maxItems;
+  }
+  async append(report) {
+    if (typeof localStorage === 'undefined') return;
+    const current = await this.list({ limit: this.maxItems });
+    const next = [{ ...report, evaluatedAt: report.evaluatedAt || new Date().toISOString() }, ...current].slice(0, this.maxItems);
+    try { localStorage.setItem(this.key, JSON.stringify(next)); } catch (e) {}
+  }
+  async list(options = {}) {
+    if (typeof localStorage === 'undefined') return [];
+    const raw = localStorage.getItem(this.key);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.slice(0, options.limit ?? this.maxItems) : [];
+    } catch (e) { return []; }
+  }
+  async clear() {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.removeItem(this.key);
+  }
+}
+
 export const SentinelAction = {
   ALLOW: 'ALLOW',
   OBSERVE: 'OBSERVE',
