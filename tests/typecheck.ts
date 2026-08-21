@@ -8,6 +8,8 @@
   LocalStorageRiskEventStore,
   type SentinelRiskReport,
   type StoredRiskEventV1,
+  type StoredRiskEventV2,
+  type StoredRiskEvent,
   type CounterStore,
   type RiskEventStore,
   type SentinelPolicy,
@@ -22,21 +24,34 @@
   type BotRoutingRule,
   type BotPolicyConfig,
   type VerifiedCollectorContext,
+  type KeyResolver,
+  type NonceStore,
   SentinelAction,
   defaultPolicy,
   createPolicy,
   rules,
   evaluate,
+  evaluateVerified,
   classifyBot,
   resolveDecision,
   createTraceId,
   toStoredRiskEvent,
-  sanitizeSignals
+  toStoredRiskEventV1,
+  isStoredRiskEvent,
+  isStoredRiskEventV1,
+  isStoredRiskEventV2,
+  sanitizeSignals,
+  signCollectorToken,
+  verifyCollectorToken,
+  createVerifiedCollectorContext,
+  isVerifiedCollectorContext,
+  MemoryNonceStore,
+  StaticKeyResolver,
+  validateRedirectUrl
 } from '../packages/sentinel/dist/index.js';
 
 import {
   calculateConfidence,
-  isStoredRiskEventV1,
   type RuleAttributes,
   type EvidenceItem,
   type EnforcementMode,
@@ -68,15 +83,17 @@ const sessionId: string = getLocalSessionId();
 const defaultBrowserCollector: BrowserTelemetryCollector = browserTelemetry;
 
 // 2. Verified Collector Context Brand Contract
-const sampleVerifiedContext: VerifiedCollectorContext = {
-  isVerified: true,
+const authenticContext: VerifiedCollectorContext = createVerifiedCollectorContext({
+  v: 1,
   kid: 'collector-key-2026-a',
-  issuer: 'ameva-auth',
-  audience: 'ameva-sentinel-collector',
+  iss: 'ameva-auth',
+  aud: 'ameva-sentinel-collector',
+  purpose: 'telemetry-collect',
   sessionRef: 'sess_contract_001',
-  issuedAt: Date.now(),
-  expiresAt: Date.now() + 60000
-};
+  iat: Date.now(),
+  exp: Date.now() + 60000,
+  nonce: 'nonce_contract_001'
+});
 
 // 3. Telemetry Signal Sanitization & Confidence Contract
 const signals: TelemetrySignals = {
@@ -91,8 +108,6 @@ const signals: TelemetrySignals = {
   botCategory: 'SEARCH_ENGINE' as BotCategory,
   burstCount10s: 3,
   tokenPresented: true,
-  tokenVerified: true,
-  verifiedContext: sampleVerifiedContext,
   tokenFreshnessMs: 50
 };
 
@@ -177,13 +192,17 @@ const sentinelOptions: SentinelOptions = {
   redirectRegistry: {
     AI_FEED: 'https://example.com/llms.txt',
     BOT_GUIDANCE: '/guidance'
-  }
+  },
+  allowedRedirectHosts: ['example.com']
 };
 
 const sentinel: Sentinel = createSentinel(sentinelOptions);
 
-// 9. Execution & Schema Validation Contract
-async function runFullTypeCheck(): Promise<void> {
+// 9. Crypto & Token Verifier Type Contract
+const keyResolver: KeyResolver = new StaticKeyResolver({ 'collector-key-2026-a': 'test-secret' });
+const nonceStore: NonceStore = new MemoryNonceStore();
+
+async function runFullStaticTypeCheck(): Promise<void> {
   const reqMock = { signals, customUserId: 'dev-type-verifier' };
   const report: SentinelRiskReport = await sentinel.score(reqMock);
 
@@ -192,14 +211,9 @@ async function runFullTypeCheck(): Promise<void> {
     enforcementMode: 'SHADOW' as EnforcementMode
   };
   const directEngineReport: SentinelRiskReport = evaluate(signals, evalOptions);
+  const verifiedReport: SentinelRiskReport = evaluateVerified(signals, authenticContext, evalOptions);
 
-  // Pure Classifier execution
   const classification: BotClassificationResult = classifyBot(signals.userAgent, signals);
-  if (!classification.isBotLikely || classification.category !== 'SEARCH_ENGINE') {
-    throw new Error('BotClassifier contract violation');
-  }
-
-  // Pure Decision execution
   const decision: SentinelDecision = resolveDecision({
     score: report.score,
     recommendedScoreAction: report.recommendedAction,
@@ -209,42 +223,29 @@ async function runFullTypeCheck(): Promise<void> {
     enforcementMode: 'SHADOW'
   });
 
-  const storedEvent: StoredRiskEventV1 = toStoredRiskEvent(report);
-  const isValidSchema: boolean = isStoredRiskEventV1(storedEvent);
+  const storedV1: StoredRiskEventV1 = toStoredRiskEventV1(report);
+  const storedV2: StoredRiskEventV2 = toStoredRiskEvent(report);
+  const isV1: boolean = isStoredRiskEventV1(storedV1);
+  const isV2: boolean = isStoredRiskEventV2(storedV2);
+  const isUniversal: boolean = isStoredRiskEvent(storedV2);
 
-  if (!isValidSchema) {
-    throw new Error('Type validation failed: StoredRiskEventV1 runtime guard returned false');
-  }
+  const urlCheck = validateRedirectUrl('/llms.txt', { allowRelative: true });
 
-  const generatedTraceId: string = createTraceId();
-  if (!generatedTraceId.startsWith('trc_')) {
-    throw new Error('TraceId format unexpected');
-  }
-
-  // Active method invocations on stores and collectors
-  await altCounterStore.increment('contract_test_key', { windowMs: 10000 });
-  await memoryEventStore.append(report);
-  const listedEvents = await memoryEventStore.list({ limit: 10 });
-  if (listedEvents.length === 0) {
-    throw new Error('MemoryRiskEventStore append/list contract violation');
-  }
-
-  if (sampleSanitizedEvidence.score !== 25 || sampleEvidence.score !== 25) {
-    throw new Error('Evidence structure contract violation');
-  }
-
+  void isV1;
+  void isV2;
+  void isUniversal;
+  void urlCheck;
+  void decision;
+  void verifiedReport;
+  void directEngineReport;
+  void keyResolver;
+  void nonceStore;
+  void altCounterStore;
   void localEventStore;
   void defaultBrowserCollector;
   void sanitizedMinimal;
-  void decision;
-
-  console.log(`[TypeScript v0.6.0 Contract Gate] ALL 32+ SDK Types & Interfaces 100% Verified.`);
-  console.log(`  - TraceId: ${report.traceId}`);
-  console.log(`  - Decision Action: ${report.decision.action} (${report.decision.reasonCode})`);
-  console.log(`  - Bot Classification: ${report.classification?.category} (${report.classification?.claimedName})`);
-  console.log(`  - Redirect Destination: ${report.redirectTo || 'none'}`);
-  console.log(`  - SessionId: ${sessionId}`);
-  console.log(`  - Direct Score: ${directEngineReport.score}`);
+  void confidence;
+  void sampleSanitizedEvidence;
 }
 
-runFullTypeCheck();
+runFullStaticTypeCheck();

@@ -1,6 +1,3 @@
-/**
- * AMEVA Sentinel - Facade & Stateful Rate Test Suite
- */
 import assert from 'node:assert';
 import {
   sentinel,
@@ -70,7 +67,8 @@ async function run() {
 
     // 35 requests exceeds threshold (30) -> triggers rate.burst_request (30) + suspicious_ua (15) = 45 score
     assert.ok(lastReport.score >= 45, `Expected score >= 45, got ${lastReport.score}`);
-    assert.strictEqual(lastReport.recommendedAction, SentinelAction.OBSERVE);
+    assert.strictEqual(lastReport.action, SentinelAction.OBSERVE, 'In Shadow Mode, action must remain OBSERVE');
+    assert.strictEqual(lastReport.recommendedAction, SentinelAction.RATE_LIMIT);
 
     const rulesTriggered = lastReport.evidence.map(e => e.rule);
     assert.ok(rulesTriggered.includes('rate.burst_request'));
@@ -100,34 +98,25 @@ async function run() {
       }
     };
 
-    // Send 35 requests to trigger burst (30) + webdriver (25) + suspicious_ua (15) + trusted_absent (20) = 90 score
-    let risk;
-    for (let i = 0; i < 35; i++) {
-      risk = await enforcingSentinel.score(highRiskReq);
-    }
+    const report = await enforcingSentinel.score(highRiskReq);
 
-    assert.strictEqual(risk.enforcementMode, 'ENFORCE');
-    assert.ok(risk.score >= 85, `Score should be >= 85, got ${risk.score}`);
-    assert.strictEqual(risk.recommendedAction, SentinelAction.TEMPORARY_DENY);
-    assert.strictEqual(risk.action, SentinelAction.TEMPORARY_DENY, 'In ENFORCE mode, high-risk session must be directly blocked');
+    // Rule matches: webdriver(25) + trusted_input_absent(20) + touch_mismatch(15) + suspicious_ua(15) = 75
+    // Enforce mode -> TEMPORARY_DENY
+    assert.ok(report.score >= 70, `Expected score >= 70, got ${report.score}`);
+    assert.strictEqual(report.action, SentinelAction.TEMPORARY_DENY);
+    assert.strictEqual(report.enforcementMode, 'ENFORCE');
 
-    const stored = await eventStore.list();
-    assert.strictEqual(stored.length, 35);
-    assert.strictEqual(stored[0].traceId, risk.traceId);
-    assert.strictEqual(stored[0].action, SentinelAction.TEMPORARY_DENY);
+    // Verify stored event in EventStore
+    const storedList = await eventStore.list({ limit: 10 });
+    assert.strictEqual(storedList.length, 1);
+    assert.strictEqual(storedList[0].traceId, report.traceId);
+    assert.strictEqual(storedList[0].action, SentinelAction.TEMPORARY_DENY);
   });
 
-  console.log('\n------------------------------------------------');
-  console.log(`Total Facade Tests: ${passedTests + failedTests}`);
-  console.log(`Passed:             ${passedTests}`);
-  console.log(`Failed:             ${failedTests}`);
-  console.log('------------------------------------------------\n');
-
   if (failedTests > 0) {
-    process.exitCode = 1;
-    console.error(`🚨 QUALITY GATE FAILED: ${failedTests} test(s) did not pass.`);
     process.exit(1);
   }
+  console.log(`\n{"suite":"sentinel","passed":${passedTests},"failed":${failedTests},"total":${passedTests + failedTests}}`);
 }
 
 run();

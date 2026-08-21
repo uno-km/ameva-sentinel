@@ -82,8 +82,10 @@ export interface BotPolicyConfig {
   heuristicClassification?: boolean;
 }
 
+export const VERIFIED_COLLECTOR_BRAND = Symbol('AMEVA_VERIFIED_COLLECTOR_BRAND');
+
 export interface VerifiedCollectorContext {
-  readonly isVerified: true;
+  readonly [VERIFIED_COLLECTOR_BRAND]: true;
   readonly kid: string;
   readonly issuer: string;
   readonly audience: string;
@@ -97,6 +99,13 @@ export interface RuleAttributes {
 }
 
 export interface EvidenceItem {
+  rule: string;
+  score: number;
+  attributes: RuleAttributes;
+  message: string;
+}
+
+export interface SanitizedEvidence {
   rule: string;
   score: number;
   attributes: RuleAttributes;
@@ -117,8 +126,6 @@ export interface TelemetrySignals {
   botCategory?: BotCategory;
   userAgent?: string;
   tokenPresented?: boolean;
-  tokenVerified?: boolean;
-  verifiedContext?: VerifiedCollectorContext;
   tokenFreshnessMs?: number;
   customSignals?: Record<string, any>;
 }
@@ -131,6 +138,11 @@ export interface SentinelRiskReport {
   recommendedAction: SentinelAction;   // Evaluated policy recommendation
   decision: SentinelDecision;          // Structured 4-stage decision object
   classification?: BotClassificationResult; // Heuristic bot classification
+  verification?: {
+    state: 'NONE' | 'FAILED' | 'VERIFIED';
+    issuer?: string;
+    kid?: string;
+  };
   redirectTo?: string;                 // Resolved redirect URL or destination ID
   redirectStatusCode?: 302 | 307;
   enforcementMode: EnforcementMode;    // 'SHADOW' | 'ENFORCE'
@@ -140,9 +152,80 @@ export interface SentinelRiskReport {
   signals?: TelemetrySignals;
 }
 
+export interface StoredRiskEventV1 {
+  schemaVersion: '1.0';
+  traceId: string;
+  evaluatedAt: string;
+  score: number;
+  evidenceConfidence: number;
+  action: SentinelAction;
+  enforcementMode: EnforcementMode;
+  policyVersion: string;
+  evidence: SanitizedEvidence[];
+  derivedSignals: {
+    webdriver: boolean;
+    burstCount10s: number;
+    hasPhysics: boolean;
+  };
+}
+
+export interface StoredRiskEventV2 {
+  schemaVersion: '2.0';
+  traceId: string;
+  evaluatedAt: string;
+  score: number;
+  evidenceConfidence: number;
+  action: SentinelAction;
+  decision: SentinelDecision;
+  classification?: {
+    category: BotCategory;
+    identityState: BotIdentityState;
+    claimedName?: string;
+  };
+  verification?: {
+    state: 'NONE' | 'FAILED' | 'VERIFIED';
+    issuer?: string;
+    kid?: string;
+  };
+  evidence: SanitizedEvidence[];
+}
+
+export type StoredRiskEvent = StoredRiskEventV1 | StoredRiskEventV2;
+
+export type CollectorErrorCode =
+  | 'MALFORMED_TOKEN'
+  | 'UNKNOWN_KEY_ID'
+  | 'INVALID_SIGNATURE'
+  | 'TOKEN_EXPIRED'
+  | 'INVALID_TIMESTAMP_FRESHNESS'
+  | 'AUDIENCE_MISMATCH'
+  | 'PURPOSE_MISMATCH'
+  | 'REPLAY_ATTACK_DETECTED';
+
+export interface CollectorTokenPayload {
+  v: 1;
+  kid: string;
+  iss: string;
+  aud: string;
+  purpose: string;
+  sessionRef: string;
+  iat: number;
+  exp: number;
+  nonce: string;
+}
+
+export interface KeyResolver {
+  resolveKey(kid: string): Promise<string | null>;
+}
+
+export interface NonceStore {
+  consume(nonce: string, expiresAt: number): Promise<boolean>;
+}
+
 export function createTraceId(): string {
   const uuid = typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
     ? globalThis.crypto.randomUUID()
     : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
   return `trc_${uuid.replace(/-/g, '').slice(0, 16)}`;
 }
+

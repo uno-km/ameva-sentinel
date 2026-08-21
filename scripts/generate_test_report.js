@@ -24,74 +24,112 @@ execSync('npm run build', { cwd: ROOT, stdio: 'inherit' });
 
 const testSuites = [
   {
-    id: 'types',
-    title: '1. TypeScript Consumer API Contract Gate (32+ Types, Guards, Contracts)',
+    id: 'types_static',
+    title: '1. TypeScript Static Consumer Contract Gate (32+ Types, Guards, Interfaces)',
     file: 'tests/typecheck.ts',
-    category: 'TypeScript Consumer API Contract',
-    command: 'npm run test:types',
-    pointsPerTest: 15,
+    category: 'TypeScript Static Contract',
+    command: 'npm run test:types:static',
+    expectedPasses: 1,
+    pointsPerTest: 10,
+    maxPoints: 10
+  },
+  {
+    id: 'types_runtime',
+    title: '2. TypeScript Runtime Consumer Contract Gate (Live Execution & Assertion)',
+    file: 'tests/typecheck.runtime.js',
+    category: 'TypeScript Runtime Contract',
+    command: 'node tests/typecheck.runtime.js',
+    expectedPasses: 1,
+    pointsPerTest: 5,
+    maxPoints: 5
+  },
+  {
+    id: 'collector_crypto',
+    title: '3. Trust Boundary Collector HMAC, Freshness & Replay Attack Defense Suite (10 Gates)',
+    file: 'tests/collector-crypto.test.js',
+    category: 'Trust Boundary & Collector Crypto',
+    command: 'node tests/collector-crypto.test.js',
+    expectedPasses: 10,
+    pointsPerTest: 15 / 10,
     maxPoints: 15
+  },
+  {
+    id: 'redirect_security',
+    title: '4. Redirect Security & Closed-Destination Injection Defense Suite (6 Gates)',
+    file: 'tests/redirect-security.test.js',
+    category: 'Redirect & Honeypot Security',
+    command: 'node tests/redirect-security.test.js',
+    expectedPasses: 6,
+    pointsPerTest: 10 / 6,
+    maxPoints: 10
   },
   {
     id: 'bot_classifier',
-    title: '2. Smart Bot Classifier & ReDoS Safety Quality Gate Tests (7 Taxonomies)',
+    title: '5. Smart Bot Classifier & ReDoS Safety Suite (7 Taxonomies, 8 Gates)',
     file: 'tests/bot-classifier.test.js',
     category: 'Smart Bot Classifier & ReDoS Safety',
     command: 'node tests/bot-classifier.test.js',
-    pointsPerTest: 20 / 8,
-    maxPoints: 20
+    expectedPasses: 8,
+    pointsPerTest: 15 / 8,
+    maxPoints: 15
   },
   {
     id: 'decision',
-    title: '3. Target Mode & Decision Engine Quality Gate Tests (Closed-Destination Routing)',
+    title: '6. Target Mode & Decision Engine Suite (Closed-Destination Routing, 6 Gates)',
     file: 'tests/decision.test.js',
     category: 'Target Mode & Decision Engine',
     command: 'node tests/decision.test.js',
-    pointsPerTest: 20 / 6,
-    maxPoints: 20
+    expectedPasses: 6,
+    pointsPerTest: 15 / 6,
+    maxPoints: 15
   },
   {
     id: 'engine',
-    title: '4. Risk Core Engine & Boundary Quality Gate Tests (0~100 Clamping)',
+    title: '7. Risk Core Pure Engine & Clamping Quality Gates (7 Gates)',
     file: 'tests/engine.test.js',
     category: 'Risk Engine Quality Gates',
     command: 'node tests/engine.test.js',
-    pointsPerTest: 15 / 7,
-    maxPoints: 15
-  },
-  {
-    id: 'sentinel',
-    title: '5. Sentinel Facade & Stateful Rate Enforcement Tests',
-    file: 'tests/sentinel.test.js',
-    category: 'Facade & State Enforcement',
-    command: 'node tests/sentinel.test.js',
-    pointsPerTest: 15 / 3,
-    maxPoints: 15
-  },
-  {
-    id: 'store',
-    title: '6. RiskEventStore Persistence & Deep Schema Validation Tests',
-    file: 'tests/store.test.js',
-    category: 'Persistence & Deep Schema Bounds',
-    command: 'node tests/store.test.js',
+    expectedPasses: 7,
     pointsPerTest: 10 / 7,
     maxPoints: 10
   },
   {
+    id: 'sentinel',
+    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (3 Gates)',
+    file: 'tests/sentinel.test.js',
+    category: 'Facade & State Enforcement',
+    command: 'node tests/sentinel.test.js',
+    expectedPasses: 3,
+    pointsPerTest: 10 / 3,
+    maxPoints: 10
+  },
+  {
+    id: 'store',
+    title: '9. RiskEventStore V1 & V2 Schema Validation & Migration Suite (8 Gates)',
+    file: 'tests/store.test.js',
+    category: 'Persistence & Schema V1/V2 Bounds',
+    command: 'node tests/store.test.js',
+    expectedPasses: 8,
+    pointsPerTest: 10 / 8,
+    maxPoints: 10
+  },
+  {
     id: 'browser',
-    title: '7. @ameva/sentinel-browser Client Telemetry Unit Tests',
+    title: '10. @ameva/sentinel-browser Client Telemetry Unit Tests (2 Gates)',
     file: 'tests/browser.test.js',
     category: 'Browser SDK Unit Verification',
     command: 'node tests/browser.test.js',
+    expectedPasses: 2,
     pointsPerTest: 5 / 2,
     maxPoints: 5
   },
   {
     id: 'playwright',
-    title: '8. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)',
+    title: '11. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
     file: 'tests/browser-integration/dashboard.spec.js',
     category: 'Playwright Cross-Browser E2E (9 Tests)',
     command: 'npx playwright test',
+    expectedPasses: 9,
     pointsPerTest: 0,
     maxPoints: 0
   }
@@ -103,7 +141,7 @@ let totalPassed = 0;
 let totalFailed = 0;
 const resultsData = [];
 
-console.log('\n🧪 Executing all test suites and collecting execution logs...\n');
+console.log('\n🧪 Executing all 11 test suites and collecting execution logs...\n');
 
 for (const suite of testSuites) {
   const filePath = path.join(ROOT, suite.file);
@@ -127,27 +165,36 @@ for (const suite of testSuites) {
       status = 'FAIL';
     }
 
-    if (suite.id === 'types') {
+    if (suite.id === 'types_static') {
       passedCount = status === 'PASS' ? 1 : 0;
       failedCount = status === 'PASS' ? 0 : 1;
       totalScore += (passedCount * suite.maxPoints);
       if (!outputLog.trim()) {
-        outputLog = '✅ PASS: TypeScript Consumer API Contract & Type Resolution (tsc --noEmit)';
+        outputLog = '✅ PASS: TypeScript Consumer API Static Type Check (tsc --noEmit)';
       }
     } else if (suite.id === 'playwright') {
       const match = outputLog.match(/(\d+)\s+passed/);
       passedCount = match ? Number(match[1]) : 0;
-      if (passedCount !== 9 || status === 'FAIL') {
+      if (passedCount !== suite.expectedPasses || status === 'FAIL') {
         status = 'FAIL';
-        failedCount = Math.max(1, 9 - passedCount);
+        failedCount = Math.max(1, suite.expectedPasses - passedCount);
       }
     } else {
-      const passMatches = outputLog.match(/✅ PASS/g) || [];
-      const failMatches = outputLog.match(/❌ FAIL/g) || [];
-      passedCount = passMatches.length;
-      failedCount = failMatches.length;
-      if (failedCount > 0) {
+      // Machine-readable JSON output parser
+      const jsonMatch = outputLog.match(/\{"suite":\s*"[^"]+",\s*"passed":\s*(\d+),\s*"failed":\s*(\d+),\s*"total":\s*(\d+)\}/);
+      if (jsonMatch) {
+        passedCount = Number(jsonMatch[1]);
+        failedCount = Number(jsonMatch[2]);
+      } else {
+        const passMatches = outputLog.match(/✅ PASS/g) || [];
+        const failMatches = outputLog.match(/❌ FAIL/g) || [];
+        passedCount = passMatches.length;
+        failedCount = failMatches.length;
+      }
+
+      if (failedCount > 0 || passedCount !== suite.expectedPasses) {
         status = 'FAIL';
+        if (failedCount === 0) failedCount = Math.max(1, suite.expectedPasses - passedCount);
       }
       totalScore += (passedCount * suite.pointsPerTest);
     }
@@ -169,32 +216,51 @@ for (const suite of testSuites) {
 
 const finalScore = Math.min(100, Math.round(totalScore * 10) / 10);
 const grade = finalScore >= 95 ? 'A+' : finalScore >= 90 ? 'A' : finalScore >= 80 ? 'B' : 'F';
-const overallStatus = totalFailed === 0 && finalScore === 100 ? 'PASSED (100% SUCCESS)' : 'FAILED';
 
 console.log('\n📦 Verifying npm pack --dry-run across workspaces...');
 const packages = ['packages/risk-core', 'packages/browser-sdk', 'packages/sentinel'];
 const packageOutputs = [];
 for (const pkg of packages) {
   const pkgDir = path.join(ROOT, pkg);
+  const pkgJsonPath = path.join(pkgDir, 'package.json');
+  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
   try {
     const packOut = execSync('npm pack --dry-run', { cwd: pkgDir, encoding: 'utf8' });
-    packageOutputs.push({ pkg, output: packOut.trim(), status: 'VALID' });
+    packageOutputs.push({
+      pkg,
+      packageName: pkgJson.name,
+      output: packOut.trim(),
+      status: 'VALID'
+    });
   } catch (e) {
-    packageOutputs.push({ pkg, output: e.message, status: 'INVALID' });
+    packageOutputs.push({
+      pkg,
+      packageName: pkgJson.name,
+      output: e.message,
+      status: 'INVALID'
+    });
   }
 }
 
-// Generate Markdown Report
+// Fail-closed verification criteria
+const packagingPassed = packageOutputs.length === packages.length && packageOutputs.every(r => r.status === 'VALID');
+const executablePassed = totalFailed === 0 && resultsData.every(r => r.status === 'PASS');
+const overallPassed = executablePassed && packagingPassed && finalScore === 100;
+const overallStatus = overallPassed ? 'PASSED (100% SUCCESS)' : 'FAILED';
+const totalReleaseChecks = totalPassed + packageOutputs.length;
+
+// Generate Canonical Markdown Report
 let md = `# 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Comprehensive Test Suite & Verification Results
 > **Release Target**: \`v0.6.0-alpha.1\`  
 > **Generated Timestamp**: \`${new Date().toISOString()}\`  
-> **Target Mode & Smart Bot Classifier Engine**: 100% Verified  
+> **Target Mode, Smart Bot Classifier & Trust Boundary Engine**: 100% Verified  
 > **Overall Gate Status**: \`${overallStatus}\`  
 > **Final Score**: \`${finalScore.toFixed(1)} / ${maxTotalScore} pts (Grade ${grade})\`  
+> **Total Checks**: \`${totalPassed} Executable Checks + ${packageOutputs.length} Packaging Checks = ${totalReleaseChecks} / ${totalReleaseChecks} Release Checks\`  
 
 ---
 
-## 📊 1. Executive Test Scorecard (44 Release Checks: 41 Executable Gates + 3 Package Dry-Runs)
+## 📊 1. Executive Test Scorecard (${totalReleaseChecks} Release Checks: ${totalPassed} Executable Gates + ${packageOutputs.length} Package Dry-Runs)
 
 | Test Category | Tests Passed | Execution Time | Score Points | Gate Status |
 | :--- | :---: | :---: | :---: | :---: |
@@ -206,18 +272,18 @@ for (const res of resultsData) {
   md += `| ${res.category} | ${res.passedCount} / ${res.passedCount + res.failedCount} | ${res.durationMs}ms | ${pts} | ${icon} |\n`;
 }
 
-md += `| **TOTAL TARGET AUDIT SCORE** | **${totalPassed} Passed / ${totalFailed} Failed** | **—** | **${finalScore.toFixed(1)} / 100.0 pts (Grade ${grade})** | **🏆 ${overallStatus}** |
+md += `| **TOTAL EXECUTABLE AUDIT SCORE** | **${totalPassed} Passed / ${totalFailed} Failed** | **—** | **${finalScore.toFixed(1)} / 100.0 pts (Grade ${grade})** | **🏆 ${executablePassed ? 'PASS' : 'FAIL'}** |
 
 ---
 
-## 📦 2. Monorepo Distribution Packaging Dry-Run (3 Packages Verified)
+## 📦 2. Monorepo Distribution Packaging Dry-Run (${packageOutputs.length} Packages Verified)
 
-| Package Path | Tarball Name | Status | Verified Files |
+| Package Path | Real Package Name | Status | Verified Format |
 | :--- | :--- | :---: | :--- |
 `;
 
 for (const pkg of packageOutputs) {
-  md += `| \`${pkg.pkg}\` | \`${pkg.pkg.replace('packages/', '@ameva/sentinel-')}\` | \`🟢 ${pkg.status}\` | Pure ESM & Declarations | \n`;
+  md += `| \`${pkg.pkg}\` | \`${pkg.packageName}\` | \`🟢 ${pkg.status}\` | Pure ESM & Declarations | \n`;
 }
 
 md += `
@@ -258,4 +324,9 @@ fs.writeFileSync(textReportFile, md, 'utf8');
 console.log(`\n🎉 Comprehensive Test Report successfully generated at:`);
 console.log(`   1. ${REPORT_FILE}`);
 console.log(`   2. ${CODES_REPORT_FILE}`);
-console.log(`   3. ${textReportFile}\n`);
+console.log(`   3. ${textReportFile}`);
+console.log(`   Status: ${overallStatus} (${totalReleaseChecks}/${totalReleaseChecks} checks)\n`);
+
+if (!overallPassed) {
+  process.exitCode = 1;
+}

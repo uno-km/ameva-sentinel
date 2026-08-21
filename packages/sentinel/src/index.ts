@@ -1,16 +1,28 @@
-﻿import {
+import {
   SentinelAction,
   defaultPolicy,
   evaluate,
+  evaluateVerified,
   createPolicy,
   rules,
   classifyBot,
   resolveDecision,
+  verifyCollectorToken,
+  signCollectorToken,
+  createVerifiedCollectorContext,
+  isVerifiedCollectorContext,
+  MemoryNonceStore,
+  StaticKeyResolver,
+  validateRedirectUrl,
   MemoryFixedWindowCounterStore,
   MemoryCounterStore,
   MemoryRiskEventStore,
   LocalStorageRiskEventStore,
   toStoredRiskEvent,
+  toStoredRiskEventV1,
+  isStoredRiskEvent,
+  isStoredRiskEventV1,
+  isStoredRiskEventV2,
   sanitizeSignals,
   createTraceId
 } from '@ameva/sentinel-risk-core';
@@ -19,7 +31,9 @@ import type {
   SentinelRiskReport,
   TelemetrySignals,
   SentinelPolicy,
+  StoredRiskEvent,
   StoredRiskEventV1,
+  StoredRiskEventV2,
   CounterStore,
   RiskEventStore,
   TrafficTargetMode,
@@ -31,7 +45,9 @@ import type {
   SentinelDecision,
   BotRoutingRule,
   BotPolicyConfig,
-  VerifiedCollectorContext
+  VerifiedCollectorContext,
+  KeyResolver,
+  NonceStore
 } from '@ameva/sentinel-risk-core';
 
 export {
@@ -40,13 +56,25 @@ export {
   createPolicy,
   rules,
   evaluate,
+  evaluateVerified,
   classifyBot,
   resolveDecision,
+  verifyCollectorToken,
+  signCollectorToken,
+  createVerifiedCollectorContext,
+  isVerifiedCollectorContext,
+  MemoryNonceStore,
+  StaticKeyResolver,
+  validateRedirectUrl,
   MemoryFixedWindowCounterStore,
   MemoryCounterStore,
   MemoryRiskEventStore,
   LocalStorageRiskEventStore,
   toStoredRiskEvent,
+  toStoredRiskEventV1,
+  isStoredRiskEvent,
+  isStoredRiskEventV1,
+  isStoredRiskEventV2,
   sanitizeSignals,
   createTraceId
 };
@@ -55,7 +83,9 @@ export type {
   SentinelRiskReport,
   TelemetrySignals,
   SentinelPolicy,
+  StoredRiskEvent,
   StoredRiskEventV1,
+  StoredRiskEventV2,
   CounterStore,
   RiskEventStore,
   TrafficTargetMode,
@@ -67,7 +97,9 @@ export type {
   SentinelDecision,
   BotRoutingRule,
   BotPolicyConfig,
-  VerifiedCollectorContext
+  VerifiedCollectorContext,
+  KeyResolver,
+  NonceStore
 };
 
 export interface SentinelOptions {
@@ -77,6 +109,7 @@ export interface SentinelOptions {
   eventStore?: RiskEventStore | null;
   rateKeyProvider?: (req: any) => string | null;
   redirectRegistry?: Record<string, string | URL>;
+  allowedRedirectHosts?: string[];
 }
 
 export class Sentinel {
@@ -86,6 +119,7 @@ export class Sentinel {
   private eventStore: RiskEventStore | null;
   private rateKeyProvider?: (req: any) => string | null;
   private redirectRegistry: Record<string, string | URL>;
+  private allowedRedirectHosts?: string[];
 
   constructor(options: SentinelOptions = {}) {
     this.policy = options.policy || defaultPolicy;
@@ -98,6 +132,7 @@ export class Sentinel {
       BOT_GUIDANCE: '/bot-guidance',
       DECOY_SERVICE: '/security/decoy'
     };
+    this.allowedRedirectHosts = options.allowedRedirectHosts;
   }
 
   async score(req: any): Promise<SentinelRiskReport> {
@@ -123,10 +158,17 @@ export class Sentinel {
       enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW'
     });
 
-    // Resolve Destination ID against closed server registry if available
+    // Resolve Destination ID against closed server registry and validate URL
     if (report.redirectTo && this.redirectRegistry[report.redirectTo]) {
-      const resolved = this.redirectRegistry[report.redirectTo];
-      report.redirectTo = typeof resolved === 'string' ? resolved : resolved.toString();
+      const rawTarget = this.redirectRegistry[report.redirectTo];
+      const targetStr = typeof rawTarget === 'string' ? rawTarget : rawTarget.toString();
+      const validation = validateRedirectUrl(targetStr, { allowedHosts: this.allowedRedirectHosts, allowRelative: true });
+      if (validation.valid && validation.sanitizedUrl) {
+        report.redirectTo = validation.sanitizedUrl;
+      } else {
+        // Unsafe destination in registry -> Fallback to safe internal guidance
+        report.redirectTo = '/bot-guidance';
+      }
     }
 
     if (this.eventStore && typeof this.eventStore.append === 'function') {
@@ -175,7 +217,6 @@ export class Sentinel {
         claimedBot: s.claimedBot,
         verifiedBot: s.verifiedBot,
         tokenPresented: Boolean(s.token),
-        tokenVerified: false,
         tokenFreshnessMs: typeof s.tokenFreshnessMs === 'number' ? s.tokenFreshnessMs : 100
       };
     }
@@ -198,7 +239,7 @@ export class Sentinel {
 
     const isWebdriver = !!body.webdriver || /HeadlessChrome|PhantomJS|Selenium|Playwright/i.test(ua);
     const isTouchMismatch = secChUaMobile === '?1' && body.is_touch === false;
-    const isSuspiciousUA = ua.length === 0 || /python-requests|curl|wget|scrapy|aiohttp/i.test(ua);
+    const isSuspiciousUA = ua.length === 0 || /python-requests|curl|wget|scrapy|aiohttp|HeadlessChrome|PhantomJS|Selenium|Playwright/i.test(ua);
 
     return {
       webdriver: isWebdriver,
@@ -211,7 +252,6 @@ export class Sentinel {
       userAgent: ua,
       claimedBot: body.claimed_bot || (ua.includes('Bot') ? 'claimed_bot' : undefined),
       tokenPresented: Boolean(body.token),
-      tokenVerified: false,
       tokenFreshnessMs: body.timestamp ? Date.now() - body.timestamp : 100
     };
   }

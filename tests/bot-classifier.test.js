@@ -3,14 +3,18 @@ import { classifyBot } from '../packages/risk-core/dist/index.js';
 
 console.log('\n🤖 Running @ameva/sentinel-risk-core Bot Classifier Quality Gate Tests...\n');
 
+let passedTests = 0;
+let failedTests = 0;
+
 function runTest(name, fn) {
   try {
     fn();
     console.log(`  ✅ PASS: ${name}`);
+    passedTests++;
   } catch (err) {
     console.error(`  ❌ FAIL: ${name}`);
     console.error(err);
-    process.exitCode = 1;
+    failedTests++;
   }
 }
 
@@ -136,15 +140,18 @@ runTest('should classify clean standard browser User-Agents as NOT_BOT and NONE 
 });
 
 // 8. ReDoS & Bounded Execution Resilience
-runTest('should handle malicious 10,000+ char strings and control chars in < 5ms without ReDoS', () => {
+runTest('10,000+ character adversarial input completed in < 10ms in local benchmark execution', () => {
   const evilPayload = 'Mozilla/5.0 ' + 'bot-'.repeat(2000) + 'xyz\u0000\u001f';
   const t0 = performance.now();
   const res = classifyBot(evilPayload);
   const elapsed = performance.now() - t0;
 
-  assert.ok(elapsed < 10, `ReDoS protection breached: elapsed=${elapsed}ms`);
+  assert.ok(elapsed < 10, `Adversarial input execution took ${elapsed}ms (expected < 10ms)`);
   assert.strictEqual(res.isBotLikely, true);
   assert.ok(res.evidenceCodes.length > 0);
 });
 
-console.log('\n🎉 ALL 8 BOT CLASSIFIER QUALITY GATES PASSED!\n');
+if (failedTests > 0) {
+  process.exit(1);
+}
+console.log(`\n{"suite":"bot_classifier","passed":${passedTests},"failed":${failedTests},"total":${passedTests + failedTests}}`);

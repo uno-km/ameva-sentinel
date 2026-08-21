@@ -1,15 +1,17 @@
-import {
+﻿import {
   SentinelAction,
   SentinelRiskReport,
   TelemetrySignals,
   EvidenceItem,
   EnforcementMode,
+  VerifiedCollectorContext,
   createTraceId
 } from './types.js';
 import { calculateConfidence } from './confidence.js';
 import { SentinelPolicy, defaultPolicy } from './policy.js';
 import { classifyBot } from './bot-classifier.js';
 import { resolveDecision } from './decision.js';
+import { isVerifiedCollectorContext } from './collector-crypto.js';
 
 export interface EvaluateOptions {
   policy?: SentinelPolicy;
@@ -135,4 +137,31 @@ export function evaluate(
     evaluatedAt: new Date().toISOString(),
     signals: safeSignals
   };
+}
+
+/**
+ * Evaluates with cryptographically verified Server Context
+ * General user API cannot spoof verified context.
+ */
+export function evaluateVerified(
+  signals: TelemetrySignals = {},
+  verifiedContext: VerifiedCollectorContext | null | undefined,
+  optionsOrPolicy: EvaluateOptions | SentinelPolicy = defaultPolicy
+): SentinelRiskReport {
+  const isAuthentic = isVerifiedCollectorContext(verifiedContext);
+  const enrichedSignals: TelemetrySignals = {
+    ...signals,
+    verifiedBot: isAuthentic
+  };
+  const report = evaluate(enrichedSignals, optionsOrPolicy);
+  if (isAuthentic && verifiedContext) {
+    report.verification = {
+      state: 'VERIFIED',
+      issuer: verifiedContext.issuer,
+      kid: verifiedContext.kid
+    };
+  } else if (verifiedContext) {
+    report.verification = { state: 'FAILED' };
+  }
+  return report;
 }

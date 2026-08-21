@@ -13,8 +13,10 @@
   "scripts": {
     "build": "npm run --workspaces build",
     "serve:test": "npx --no-install http-server . -p 4173 -c-1",
-    "test:types": "tsc --noEmit tests/typecheck.ts --target es2022 --module NodeNext --moduleResolution NodeNext",
-    "test:unit": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js && node tests/bot-classifier.test.js && node tests/decision.test.js",
+    "test:types:static": "tsc --noEmit tests/typecheck.ts --target es2022 --module NodeNext --moduleResolution NodeNext",
+    "test:types:runtime": "node tests/typecheck.runtime.js",
+    "test:types": "npm run test:types:static && npm run test:types:runtime",
+    "test:unit": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js && node tests/bot-classifier.test.js && node tests/decision.test.js && node tests/collector-crypto.test.js && node tests/redirect-security.test.js",
     "test": "npm run build && npm run test:types && npm run test:unit",
     "test:e2e": "npm run build && playwright test",
     "test:all": "npm run build && npm run test:types && npm run test:unit && playwright test",
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.50.1",
+    "@types/node": "^26.2.0",
     "http-server": "^14.1.1",
     "tsup": "^8.5.1",
     "typescript": "^5.7.3"

@@ -1,4 +1,4 @@
-﻿import {
+import {
   SentinelAction,
   SentinelDecision,
   BotPolicyConfig,
@@ -39,7 +39,7 @@ export function resolveDecision(context: DecisionContext): SentinelDecision {
   const allowlist = new Set(botPolicy.allowlist || []);
   const denylist = new Set(botPolicy.denylist || []);
   const categoryRouting = botPolicy.categoryRouting || {};
-  const isVerified = signals.verifiedBot === true || signals.verifiedContext?.isVerified === true;
+  const isVerified = signals.verifiedBot === true;
 
   // =========================================================================
   // 1. Target Mode: VERIFIED_PARTNERS_ONLY

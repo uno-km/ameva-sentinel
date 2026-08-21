@@ -11,8 +11,8 @@ export function calculateConfidence(signals: TelemetrySignals = {}): number {
     return 0.10;
   }
 
-  // 1. Signal Verification Factor (Requires verified cryptographic signature)
-  const qSignal = signals.tokenVerified === true ? 1.0 : 0.5;
+  // 1. Signal Verification Factor (Verified partner token or observed telemetry)
+  const qSignal = signals.verifiedBot === true ? 1.0 : (signals.telemetryObserved ? 1.0 : 0.6);
 
   // 2. Rule Coverage Factor (Number of evaluated signal attributes)
   const validSignalKeys: (keyof TelemetrySignals)[] = [

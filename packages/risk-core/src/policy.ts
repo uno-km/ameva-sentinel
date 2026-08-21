@@ -25,9 +25,9 @@ export function createPolicy(options: CreatePolicyOptions = {}): SentinelPolicy 
   return {
     version: options.version || '2026-08-21.v0.6',
     thresholds: {
-      rateLimit: options.thresholds?.rateLimit ?? 50,
-      appVerification: options.thresholds?.appVerification ?? 70,
-      deny: options.thresholds?.deny ?? 85
+      rateLimit: options.thresholds?.rateLimit ?? 30,
+      appVerification: options.thresholds?.appVerification ?? 50,
+      deny: options.thresholds?.deny ?? 75
     },
     rules: options.rules || [
       rules.webdriver({ weight: 25 }),

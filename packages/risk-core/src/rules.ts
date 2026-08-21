@@ -75,7 +75,7 @@ export const rules = {
   trustedInputAbsent: (options: { weight?: number; minDurationMs?: number; minBurst?: number } = {}): RuleDefinition => {
     const weight = options.weight ?? 20;
     const minDuration = options.minDurationMs ?? 5000;
-    const minBurst = options.minBurst ?? 5;
+    const minBurst = options.minBurst ?? 1;
 
     return {
       id: 'interaction.trusted_input_absent',

@@ -1,29 +1,29 @@
 # 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Comprehensive Test Suite & Verification Results
 > **Release Target**: `v0.6.0-alpha.1`  
-> **Generated Timestamp**: `2026-08-21T04:07:29.730Z`  
+> **Generated Timestamp**: `2026-08-21T04:00:39.226Z`  
 > **Target Mode, Smart Bot Classifier & Trust Boundary Engine**: 100% Verified  
-> **Overall Gate Status**: `PASSED (100% SUCCESS)`  
+> **Overall Gate Status**: `FAILED`  
 > **Final Score**: `100.0 / 100 pts (Grade A+)`  
-> **Total Checks**: `61 Executable Checks + 3 Packaging Checks = 64 / 64 Release Checks`  
+> **Total Checks**: `55 Executable Checks + 3 Packaging Checks = 58 / 58 Release Checks`  
 
 ---
 
-## 📊 1. Executive Test Scorecard (64 Release Checks: 61 Executable Gates + 3 Package Dry-Runs)
+## 📊 1. Executive Test Scorecard (58 Release Checks: 55 Executable Gates + 3 Package Dry-Runs)
 
 | Test Category | Tests Passed | Execution Time | Score Points | Gate Status |
 | :--- | :---: | :---: | :---: | :---: |
-| TypeScript Static Contract | 1 / 1 | 2960ms | 10.0 / 10 pts | 🟢 PASS |
-| TypeScript Runtime Contract | 1 / 1 | 94ms | 5.0 / 5 pts | 🟢 PASS |
-| Trust Boundary & Collector Crypto | 10 / 10 | 94ms | 15.0 / 15 pts | 🟢 PASS |
-| Redirect & Honeypot Security | 6 / 6 | 87ms | 10.0 / 10 pts | 🟢 PASS |
-| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 87ms | 15.0 / 15 pts | 🟢 PASS |
-| Target Mode & Decision Engine | 6 / 6 | 97ms | 15.0 / 15 pts | 🟢 PASS |
-| Risk Engine Quality Gates | 7 / 7 | 91ms | 10.0 / 10 pts | 🟢 PASS |
-| Facade & State Enforcement | 3 / 3 | 89ms | 10.0 / 10 pts | 🟢 PASS |
-| Persistence & Schema V1/V2 Bounds | 8 / 8 | 85ms | 10.0 / 10 pts | 🟢 PASS |
-| Browser SDK Unit Verification | 2 / 2 | 83ms | 5.0 / 5 pts | 🟢 PASS |
-| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 15780ms | E2E Verified | 🟢 PASS |
-| **TOTAL EXECUTABLE AUDIT SCORE** | **61 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
+| TypeScript Static Contract | 1 / 1 | 3766ms | 10.0 / 10 pts | 🟢 PASS |
+| TypeScript Runtime Contract | 1 / 1 | 139ms | 5.0 / 5 pts | 🟢 PASS |
+| Trust Boundary & Collector Crypto | 10 / 10 | 118ms | 15.0 / 15 pts | 🟢 PASS |
+| Redirect & Honeypot Security | 6 / 6 | 102ms | 10.0 / 10 pts | 🟢 PASS |
+| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 92ms | 15.0 / 15 pts | 🟢 PASS |
+| Target Mode & Decision Engine | 6 / 6 | 98ms | 15.0 / 15 pts | 🟢 PASS |
+| Risk Engine Quality Gates | 7 / 7 | 88ms | 10.0 / 10 pts | 🟢 PASS |
+| Facade & State Enforcement | 3 / 3 | 99ms | 10.0 / 10 pts | 🟢 PASS |
+| Persistence & Schema V1/V2 Bounds | 8 / 8 | 95ms | 10.0 / 10 pts | 🟢 PASS |
+| Browser SDK Unit Verification | 2 / 2 | 90ms | 5.0 / 5 pts | 🟢 PASS |
+| Playwright Cross-Browser E2E (9 Tests) | 3 / 9 | 237464ms | E2E Verified | 🔴 FAIL |
+| **TOTAL EXECUTABLE AUDIT SCORE** | **55 Passed / 6 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 FAIL** |
 
 ---
 
@@ -41,7 +41,7 @@
 
 ### 1. TypeScript Static Consumer Contract Gate (32+ Types, Guards, Interfaces)
 * **Target File**: [`tests/typecheck.ts`](../../tests/typecheck.ts)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 2960ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 3766ms)
 
 #### Execution Console Output:
 ```text
@@ -309,14 +309,14 @@ runFullStaticTypeCheck();
 
 ### 2. TypeScript Runtime Consumer Contract Gate (Live Execution & Assertion)
 * **Target File**: [`tests/typecheck.runtime.js`](../../tests/typecheck.runtime.js)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 94ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 139ms)
 
 #### Execution Console Output:
 ```text
 🔍 Running TypeScript Consumer API Runtime Contract Gate...
 
 [TypeScript v0.6.0 Contract Gate] ALL 32+ SDK Types & Runtime Interfaces 100% Verified.
-  - TraceId: trc_9361840e04894cb9
+  - TraceId: trc_131b31ef51df49a9
   - Decision Action: ALLOW (BOT_ALLOWLIST_PASSED)
   - Bot Classification: SEARCH_ENGINE (Googlebot)
   - SessionId: ephemeral_local_session
@@ -458,7 +458,7 @@ runRuntimeContract().catch(err => {
 
 ### 3. Trust Boundary Collector HMAC, Freshness & Replay Attack Defense Suite (10 Gates)
 * **Target File**: [`tests/collector-crypto.test.js`](../../tests/collector-crypto.test.js)
-* **Execution Status**: `PASS` (10 passed, 0 failed in 94ms)
+* **Execution Status**: `PASS` (10 passed, 0 failed in 118ms)
 
 #### Execution Console Output:
 ```text
@@ -685,7 +685,7 @@ main();
 
 ### 4. Redirect Security & Closed-Destination Injection Defense Suite (6 Gates)
 * **Target File**: [`tests/redirect-security.test.js`](../../tests/redirect-security.test.js)
-* **Execution Status**: `PASS` (6 passed, 0 failed in 87ms)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 102ms)
 
 #### Execution Console Output:
 ```text
@@ -785,7 +785,7 @@ console.log(`\n{"suite":"redirect_security","passed":${passedTests},"failed":${f
 
 ### 5. Smart Bot Classifier & ReDoS Safety Suite (7 Taxonomies, 8 Gates)
 * **Target File**: [`tests/bot-classifier.test.js`](../../tests/bot-classifier.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 87ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 92ms)
 
 #### Execution Console Output:
 ```text
@@ -969,7 +969,7 @@ console.log(`\n{"suite":"bot_classifier","passed":${passedTests},"failed":${fail
 
 ### 6. Target Mode & Decision Engine Suite (Closed-Destination Routing, 6 Gates)
 * **Target File**: [`tests/decision.test.js`](../../tests/decision.test.js)
-* **Execution Status**: `PASS` (6 passed, 0 failed in 97ms)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 98ms)
 
 #### Execution Console Output:
 ```text
@@ -1169,7 +1169,7 @@ main();
 
 ### 7. Risk Core Pure Engine & Clamping Quality Gates (7 Gates)
 * **Target File**: [`tests/engine.test.js`](../../tests/engine.test.js)
-* **Execution Status**: `PASS` (7 passed, 0 failed in 91ms)
+* **Execution Status**: `PASS` (7 passed, 0 failed in 88ms)
 
 #### Execution Console Output:
 ```text
@@ -1335,7 +1335,7 @@ console.log(`\n{"suite":"engine","passed":${passedTests},"failed":${failedTests}
 
 ### 8. Sentinel Facade & Stateful Rate Enforcement Tests (3 Gates)
 * **Target File**: [`tests/sentinel.test.js`](../../tests/sentinel.test.js)
-* **Execution Status**: `PASS` (3 passed, 0 failed in 89ms)
+* **Execution Status**: `PASS` (3 passed, 0 failed in 99ms)
 
 #### Execution Console Output:
 ```text
@@ -1479,7 +1479,7 @@ run();
 
 ### 9. RiskEventStore V1 & V2 Schema Validation & Migration Suite (8 Gates)
 * **Target File**: [`tests/store.test.js`](../../tests/store.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 85ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 95ms)
 
 #### Execution Console Output:
 ```text
@@ -1662,7 +1662,7 @@ console.log(`\n{"suite":"store","passed":${passedTests},"failed":${failedTests},
 
 ### 10. @ameva/sentinel-browser Client Telemetry Unit Tests (2 Gates)
 * **Target File**: [`tests/browser.test.js`](../../tests/browser.test.js)
-* **Execution Status**: `PASS` (2 passed, 0 failed in 83ms)
+* **Execution Status**: `PASS` (2 passed, 0 failed in 90ms)
 
 #### Execution Console Output:
 ```text
@@ -1728,23 +1728,370 @@ console.log(`\n{"suite":"browser","passed":${passedTests},"failed":${failedTests
 
 ### 11. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)
 * **Target File**: [`tests/browser-integration/dashboard.spec.js`](../../tests/browser-integration/dashboard.spec.js)
-* **Execution Status**: `PASS` (9 passed, 0 failed in 15780ms)
+* **Execution Status**: `FAIL` (3 passed, 6 failed in 237464ms)
 
 #### Execution Console Output:
 ```text
 Running 9 tests using 1 worker
 
-  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (737ms)
-  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (590ms)
-  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (155ms)
-  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (2.6s)
-  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.3s)
-  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (385ms)
-  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (920ms)
-  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (821ms)
-  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (298ms)
+  x  1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (30.0s)
+  x  2 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (retry #1) (30.1s)
+  x  3 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (5.6s)
+  x  4 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (retry #1) (5.7s)
+  ok 5 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (183ms)
+  x  6 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (30.1s)
+  x  7 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (retry #1) (30.4s)
+  x  8 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (6.8s)
+  x  9 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (retry #1) (7.7s)
+  ok 10 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (1.3s)
+  x  11 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (30.1s)
+  x  12 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (retry #1) (30.1s)
+  x  13 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (6.0s)
+  x  14 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (retry #1) (6.5s)
+  ok 15 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (285ms)
 
-  9 passed (14.0s)
+
+  1) [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.textContent: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="latest-trace-id"]')
+
+
+      17 |
+      18 |     // Read generated latest traceId
+    > 19 |     const firstTraceId = await page.locator('[data-testid="latest-trace-id"]').textContent();
+         |                                                                                ^
+      20 |     expect(firstTraceId).toBeTruthy();
+      21 |
+      22 |     // Reload page
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:19:80
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-chromium\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.textContent: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="latest-trace-id"]')
+
+
+      17 |
+      18 |     // Read generated latest traceId
+    > 19 |     const firstTraceId = await page.locator('[data-testid="latest-trace-id"]').textContent();
+         |                                                                                ^
+      20 |     expect(firstTraceId).toBeTruthy();
+      21 |
+      22 |     // Reload page
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:19:80
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-chromium-retry1\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="event-count"]')
+    Expected: "1"
+    Received: "0"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for locator('[data-testid="event-count"]')
+        14 × locator resolved to <div id="stat-total" class="card-value" data-testid="event-count">0</div>
+           - unexpected value "0"
+
+
+      42 |
+      43 |       // Verify dashboard tab updates count dynamically without reload
+    > 44 |       await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+         |                                                                      ^
+      45 |     } finally {
+      46 |       await producer.close().catch(() => {});
+      47 |       await dashboard.close().catch(() => {});
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:44:70
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-chromium\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="event-count"]')
+    Expected: "1"
+    Received: "0"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for locator('[data-testid="event-count"]')
+        14 × locator resolved to <div id="stat-total" class="card-value" data-testid="event-count">0</div>
+           - unexpected value "0"
+
+
+      42 |
+      43 |       // Verify dashboard tab updates count dynamically without reload
+    > 44 |       await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+         |                                                                      ^
+      45 |     } finally {
+      46 |       await producer.close().catch(() => {});
+      47 |       await dashboard.close().catch(() => {});
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:44:70
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-chromium-retry1\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.textContent: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="latest-trace-id"]')
+
+
+      17 |
+      18 |     // Read generated latest traceId
+    > 19 |     const firstTraceId = await page.locator('[data-testid="latest-trace-id"]').textContent();
+         |                                                                                ^
+      20 |     expect(firstTraceId).toBeTruthy();
+      21 |
+      22 |     // Reload page
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:19:80
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-firefox\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.textContent: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="latest-trace-id"]')
+
+
+      17 |
+      18 |     // Read generated latest traceId
+    > 19 |     const firstTraceId = await page.locator('[data-testid="latest-trace-id"]').textContent();
+         |                                                                                ^
+      20 |     expect(firstTraceId).toBeTruthy();
+      21 |
+      22 |     // Reload page
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:19:80
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-firefox-retry1\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-firefox-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-firefox-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="event-count"]')
+    Expected: "1"
+    Received: "0"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for locator('[data-testid="event-count"]')
+        13 × locator resolved to <div id="stat-total" class="card-value" data-testid="event-count">0</div>
+           - unexpected value "0"
+
+
+      42 |
+      43 |       // Verify dashboard tab updates count dynamically without reload
+    > 44 |       await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+         |                                                                      ^
+      45 |     } finally {
+      46 |       await producer.close().catch(() => {});
+      47 |       await dashboard.close().catch(() => {});
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:44:70
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-firefox\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="event-count"]')
+    Expected: "1"
+    Received: "0"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for locator('[data-testid="event-count"]')
+        14 × locator resolved to <div id="stat-total" class="card-value" data-testid="event-count">0</div>
+           - unexpected value "0"
+
+
+      42 |
+      43 |       // Verify dashboard tab updates count dynamically without reload
+    > 44 |       await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+         |                                                                      ^
+      45 |     } finally {
+      46 |       await producer.close().catch(() => {});
+      47 |       await dashboard.close().catch(() => {});
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:44:70
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-firefox-retry1\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-firefox-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-firefox-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.textContent: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="latest-trace-id"]')
+
+
+      17 |
+      18 |     // Read generated latest traceId
+    > 19 |     const firstTraceId = await page.locator('[data-testid="latest-trace-id"]').textContent();
+         |                                                                                ^
+      20 |     expect(firstTraceId).toBeTruthy();
+      21 |
+      22 |     // Reload page
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:19:80
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-webkit\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.textContent: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="latest-trace-id"]')
+
+
+      17 |
+      18 |     // Read generated latest traceId
+    > 19 |     const firstTraceId = await page.locator('[data-testid="latest-trace-id"]').textContent();
+         |                                                                                ^
+      20 |     expect(firstTraceId).toBeTruthy();
+      21 |
+      22 |     // Reload page
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:19:80
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-webkit-retry1\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-webkit-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\dashboard-AMEVA-Sentinel-R-f97d2-load-with-identical-traceId-webkit-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="event-count"]')
+    Expected: "1"
+    Received: "0"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for locator('[data-testid="event-count"]')
+        14 × locator resolved to <div id="stat-total" class="card-value" data-testid="event-count">0</div>
+           - unexpected value "0"
+
+
+      42 |
+      43 |       // Verify dashboard tab updates count dynamically without reload
+    > 44 |       await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+         |                                                                      ^
+      45 |     } finally {
+      46 |       await producer.close().catch(() => {});
+      47 |       await dashboard.close().catch(() => {});
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:44:70
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-webkit\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="event-count"]')
+    Expected: "1"
+    Received: "0"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for locator('[data-testid="event-count"]')
+        13 × locator resolved to <div id="stat-total" class="card-value" data-testid="event-count">0</div>
+           - unexpected value "0"
+
+
+      42 |
+      43 |       // Verify dashboard tab updates count dynamically without reload
+    > 44 |       await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+         |                                                                      ^
+      45 |     } finally {
+      46 |       await producer.close().catch(() => {});
+      47 |       await dashboard.close().catch(() => {});
+        at C:\Users\GAME\Desktop\uno-km\dev\ameva-sentinel\tests\browser-integration\dashboard.spec.js:44:70
+
+    Error Context: test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-webkit-retry1\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-webkit-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\dashboard-AMEVA-Sentinel-R-4e3fa-ed-in-real-time-across-tabs-webkit-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6 failed
+    [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId 
+    [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs 
+    [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId 
+    [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs 
+    [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId 
+    [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs 
+  3 passed (3.9m)
+
+
+Command failed: npx playwright test
 ```
 
 #### Source Code Verification (`tests/browser-integration/dashboard.spec.js`):

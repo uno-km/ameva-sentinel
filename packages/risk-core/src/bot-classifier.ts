@@ -1,4 +1,4 @@
-﻿import {
+import {
   BotCategory,
   BotClassificationResult,
   BotIdentityState,
@@ -111,7 +111,7 @@ export function classifyBot(uaString?: string, signals?: TelemetrySignals): BotC
         evidenceCodes.push('SIGNAL_WEBDRIVER_ACTIVE');
       }
 
-      const isVerified = signals?.verifiedBot === true || signals?.verifiedContext?.isVerified === true;
+      const isVerified = signals?.verifiedBot === true;
       const identityState: BotIdentityState = isVerified
         ? 'VERIFIED'
         : (entry.category === 'AUTOMATED_TOOL' ? 'SUSPECTED' : 'CLAIMED');
