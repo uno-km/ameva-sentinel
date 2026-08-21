@@ -231,7 +231,8 @@ export type CollectorErrorCode =
   | 'REPLAY_ATTACK_DETECTED'
   | 'CONFIGURATION_ERROR'
   | 'REQUEST_BODY_TOO_LARGE'
-  | 'MALFORMED_REQUEST_BODY';
+  | 'MALFORMED_REQUEST_BODY'
+  | 'NONCE_STORE_CAPACITY_REACHED';
 
 export interface CollectorTokenPayload {
   v: 1;

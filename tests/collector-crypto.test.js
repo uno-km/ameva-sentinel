@@ -259,6 +259,21 @@ async function main() {
     assert.strictEqual(hex, '5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843');
   });
 
+  // 16. MemoryNonceStore Capacity Exhaustion Defense
+  await runTest('MemoryNonceStore throws NONCE_STORE_CAPACITY_REACHED when store capacity is saturated', async () => {
+    const tinyStore = new MemoryNonceStore({ maxEntries: 2 });
+    const now = Date.now();
+    const res1 = await tinyStore.consume({ issuer: 'iss1', kid: 'k1', nonce: 'n1' }, now + 60000);
+    const res2 = await tinyStore.consume({ issuer: 'iss1', kid: 'k1', nonce: 'n2' }, now + 60000);
+    assert.strictEqual(res1, true);
+    assert.strictEqual(res2, true);
+
+    await assert.rejects(
+      async () => tinyStore.consume({ issuer: 'iss1', kid: 'k1', nonce: 'n3' }, now + 60000),
+      { name: 'CollectorVerificationError', code: 'NONCE_STORE_CAPACITY_REACHED' }
+    );
+  });
+
   if (failedTests > 0) {
     process.exit(1);
   }

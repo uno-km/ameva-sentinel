@@ -69,7 +69,7 @@ Collection tokens must follow the deterministic format:
 sv1.<base64url_canonical_payload>.<base64url_hmac_sha256>
 ```
 
-### 3.2 Token Payload Schema
+### 3.2 Token Payload Schema (Epoch Milliseconds)
 ```json
 {
   "v": 1,
@@ -77,13 +77,13 @@ sv1.<base64url_canonical_payload>.<base64url_hmac_sha256>
   "iss": "ameva-app-auth",
   "aud": "ameva-sentinel-collector",
   "purpose": "telemetry-collect",
-  "iat": 1787277600,
-  "exp": 1787277660,
+  "iat": 1787277600000,
+  "exp": 1787277660000,
   "nonce": "c4b8d1e2f3a4567890abcdef",
-  "sessionRef": "sess_89a7fbc2",
-  "clientIpPrefix": "203.0.113."
+  "sessionRef": "sess_89a7fbc2"
 }
 ```
+> **Timestamp Unit Requirement**: `iat` and `exp` must be positive integer Unix timestamps in **milliseconds** (e.g. `Date.now()`).
 
 ### 3.3 AMEVA Deterministic Canonical JSON Subset
 > *AMEVA deterministic canonical JSON subset. This is not a complete RFC 8785 implementation.*
@@ -95,7 +95,7 @@ sv1.<base64url_canonical_payload>.<base64url_hmac_sha256>
 ### 3.4 Verification & Replay Protection Invariants
 When the Collector receives a token:
 1. **Size Limit Check**: Raw token string $\le 4096$ characters.
-2. **Key Ring Resolution**: Extract `kid`. If unknown or retired, reject with HTTP `401 Unauthorized`.
+2. **Key Ring Resolution**: Extract `kid`. If unknown or retired, reject with HTTP `401 Unauthorized` (`UNKNOWN_KEY_ID`).
 3. **Length Pre-Checked Constant-Time Verification**:
    ```typescript
    if (actualSignatureBuffer.length !== expectedSignatureBuffer.length) {
@@ -103,15 +103,15 @@ When the Collector receives a token:
    }
    const isValid = crypto.timingSafeEqual(actualSignatureBuffer, expectedSignatureBuffer);
    ```
-4. **Domain & Purpose Isolation**: Verify `aud === "ameva-sentinel-collector"` and `purpose === "telemetry-collect"`.
+4. **Domain & Purpose Isolation**: Verify `aud === options.expectedAudience` and `purpose === options.expectedPurpose`.
 5. **Freshness Window Check**:
-   $$|t_{\text{server}} - t_{\text{iat}}| \le 30\,\text{seconds} \quad \text{and} \quad t_{\text{server}} \le t_{\text{exp}}$$
-6. **Atomic Nonce Consumption**:
-   - Nonce key: `sentinel:nonce:<kid>:<nonce>`
-   - Atomic execution: `SET sentinel:nonce:<kid>:<nonce> 1 EX 60 NX`
+   $$|t_{\text{server}} - t_{\text{iat}}| \le 30,000\,\text{ms} \quad \text{and} \quad t_{\text{server}} \le t_{\text{exp}}$$
+6. **Multi-Tenant Nonce Consumption**:
+   - Single instance: `MemoryNonceStore` synchronous in-memory consumption.
+   - Distributed architecture: `SET sentinel:nonce:<iss>:<kid>:<nonce> 1 EX 60 NX` (Redis).
    - **If key already existed (Replay Attack)**:
      - Terminate pipeline immediately.
-     - Return **HTTP `409 Conflict` (or `401 Unauthorized`)**.
+     - Return **HTTP `409 Conflict` (`REPLAY_ATTACK_DETECTED`)**.
      - Emit separate `SecurityAuditEvent` (`REPLAY_ATTACK_DETECTED`) to the security audit ledger.
      - **DO NOT** feed replayed payload into standard Risk Event store.
 

@@ -23,7 +23,8 @@ export class CollectorVerificationError extends Error {
 const VERIFIED_COLLECTOR_BRAND = Symbol('AMEVA_VERIFIED_COLLECTOR_INTERNAL');
 
 /**
- * In-memory atomic Nonce Store with bounded capacity and multi-tenant namespace
+ * In-memory Nonce Store with bounded capacity and multi-tenant namespace (Single-thread synchronous execution).
+ * Note: For distributed multi-instance architectures, deploy Redis SET NX or equivalent distributed adapters.
  */
 export class MemoryNonceStore implements NonceStore {
   private nonces = new Map<string, number>();
@@ -47,7 +48,11 @@ export class MemoryNonceStore implements NonceStore {
     if (this.nonces.size >= this.maxEntries) {
       this.prune();
       if (this.nonces.size >= this.maxEntries) {
-        return false;
+        throw new CollectorVerificationError(
+          'NONCE_STORE_CAPACITY_REACHED',
+          `Nonce store capacity limit (${this.maxEntries} entries) reached`,
+          503
+        );
       }
     }
 
@@ -445,7 +450,7 @@ export async function verifyCollectorToken(
     }
   }
 
-  // Step 11: Replay Defense (Atomic Multi-Tenant Nonce Consumption)
+  // Step 11: Replay Defense (Multi-Tenant Nonce Consumption in single-threaded event loop)
   const namespace: NonceNamespace = {
     issuer: payload.iss,
     kid: payload.kid,

@@ -32,6 +32,10 @@ export interface BrowserTelemetrySnapshot {
   collectedAt: string;
 }
 
+/**
+ * Ephemeral browser session identifier (pseudo-random, non-cryptographic).
+ * Scoped exclusively to browser tab sessionStorage lifetime.
+ */
 export function getLocalSessionId(): string {
   if (typeof sessionStorage === 'undefined') return 'ephemeral_local_session';
   const key = 'ameva:sentinel:session-id';

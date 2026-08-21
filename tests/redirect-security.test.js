@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import { validateRedirectUrl, createSentinel } from '../packages/sentinel/dist/index.js';
 
 console.log('\n🛡️ Running AMEVA Sentinel Redirect Security & Open Redirect Prevention Tests...\n');
@@ -76,6 +76,16 @@ runTest('should enforce allowedHosts whitelist and fail constructor on invalid r
       }
     });
   }, /Invalid redirectRegistry URL/);
+});
+
+// 7. Exact Hostname vs Subdomain Whitelist Controls
+runTest('should enforce exact hostname when allowSubdomains is false', () => {
+  const optionsStrict = { allowedHosts: ['example.com'], allowSubdomains: false };
+  assert.strictEqual(validateRedirectUrl('https://example.com/bot', optionsStrict).valid, true);
+  assert.strictEqual(validateRedirectUrl('https://sub.example.com/bot', optionsStrict).valid, false);
+
+  const optionsPermissive = { allowedHosts: ['example.com'], allowSubdomains: true };
+  assert.strictEqual(validateRedirectUrl('https://sub.example.com/bot', optionsPermissive).valid, true);
 });
 
 if (failedTests > 0) {

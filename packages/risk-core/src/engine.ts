@@ -1,4 +1,4 @@
-﻿import {
+import {
   SentinelAction,
   SentinelRiskReport,
   TelemetrySignals,
@@ -101,7 +101,7 @@ function evaluateWithTrust(
   const evidence: EvidenceItem[] = [];
   let calculatedScore = 0;
 
-  // Defensive copy to guarantee input immutability
+  // Defensive copy to prevent input object mutation (top-level shallow clone)
   const safeSignals: TelemetrySignals = { ...signals };
 
   // =========================================================================

@@ -1,4 +1,4 @@
-﻿export interface RedirectValidationResult {
+export interface RedirectValidationResult {
   valid: boolean;
   error?: string;
   sanitizedUrl?: string;
@@ -7,12 +7,19 @@
 const FORBIDDEN_PROTOCOLS = /^(javascript|data|file|vbscript|about):/i;
 const CONTROL_CHARACTERS = /[\u0000-\u001F\u007F\r\n]/;
 
+export interface RedirectValidationOptions {
+  allowedHosts?: string[];
+  allowSubdomains?: boolean; // default true: permits 'sub.example.com' for allowedHost 'example.com'
+  allowRelative?: boolean;   // default true: permits '/path' relative redirects
+}
+
 /**
- * Validates redirect destination URLs against Open Redirect and injection attacks.
+ * Validates redirect destination URLs against Open Redirect, CRLF, and protocol injection attacks.
+ * Supports exact hostname matching and optional subdomain matching (allowSubdomains: true by default).
  */
 export function validateRedirectUrl(
   rawUrl: string,
-  options: { allowedHosts?: string[]; allowRelative?: boolean } = {}
+  options: RedirectValidationOptions = {}
 ): RedirectValidationResult {
   if (typeof rawUrl !== 'string' || !rawUrl.trim()) {
     return { valid: false, error: 'Redirect URL must be a non-empty string' };
@@ -82,7 +89,10 @@ export function validateRedirectUrl(
 
   // Host Whitelist check
   if (options.allowedHosts && options.allowedHosts.length > 0) {
-    const hostAllowed = options.allowedHosts.some(h => parsed.hostname === h || parsed.hostname.endsWith(`.${h}`));
+    const allowSub = options.allowSubdomains !== false;
+    const hostAllowed = options.allowedHosts.some(h => (
+      parsed.hostname === h || (allowSub && parsed.hostname.endsWith(`.${h}`))
+    ));
     if (!hostAllowed) {
       return { valid: false, error: `Host ${parsed.hostname} is not in allowed redirect whitelist` };
     }

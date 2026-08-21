@@ -45,22 +45,22 @@ const testSuites = [
   },
   {
     id: 'collector_crypto',
-    title: '3. Trust Boundary Collector HMAC, RFC 4231 Vectors, Freshness, Replay Attack & 100-Race Suite (15 Gates)',
+    title: '3. Trust Boundary Collector HMAC, RFC 4231 Vectors, Freshness, Replay Attack, Capacity Saturation & 100-Race Suite (16 Gates)',
     file: 'tests/collector-crypto.test.js',
     category: 'Trust Boundary & Collector Crypto',
     command: 'node tests/collector-crypto.test.js',
-    expectedPasses: 15,
-    pointsPerTest: 15 / 15,
+    expectedPasses: 16,
+    pointsPerTest: 15 / 16,
     maxPoints: 15
   },
   {
     id: 'redirect_security',
-    title: '4. Redirect Security & Closed-Destination Injection Defense Suite (6 Gates)',
+    title: '4. Redirect Security & Closed-Destination Injection Defense Suite (7 Gates)',
     file: 'tests/redirect-security.test.js',
     category: 'Redirect Security & Injection Defense',
     command: 'node tests/redirect-security.test.js',
-    expectedPasses: 6,
-    pointsPerTest: 10 / 6,
+    expectedPasses: 7,
+    pointsPerTest: 10 / 7,
     maxPoints: 10
   },
   {
