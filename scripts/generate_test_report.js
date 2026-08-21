@@ -8,10 +8,15 @@ const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
 const REPORT_DIR = path.join(ROOT, 'reports');
+const CODES_DIR = path.join(ROOT, 'scripts', 'codes');
 const REPORT_FILE = path.join(REPORT_DIR, 'TEST_SUITE_AND_RESULTS.md');
+const CODES_REPORT_FILE = path.join(CODES_DIR, 'TEST_SUITE_AND_RESULTS.md');
 
 if (!fs.existsSync(REPORT_DIR)) {
   fs.mkdirSync(REPORT_DIR, { recursive: true });
+}
+if (!fs.existsSync(CODES_DIR)) {
+  fs.mkdirSync(CODES_DIR, { recursive: true });
 }
 
 console.log('🔨 Building packages from TypeScript single source...');
@@ -126,6 +131,10 @@ for (const suite of testSuites) {
 
 // Generate Markdown Document
 const now = new Date();
+const pad = (n, len = 2) => String(n).padStart(len, '0');
+const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}_${pad(now.getMilliseconds(), 3)}`;
+const timestampedFile = path.join(CODES_DIR, `${timestamp}_test_report.txt`);
+
 const lines = [];
 
 lines.push('# 🛡️ AMEVA-Sentinel — Comprehensive Test Suite & Execution Results Report\n');
@@ -176,5 +185,16 @@ for (const res of resultsData) {
   lines.push('---\n');
 }
 
-fs.writeFileSync(REPORT_FILE, lines.join('\n'), 'utf8');
-console.log(`\n🎉 Comprehensive Test Report successfully generated at:\n   ${REPORT_FILE}\n`);
+const content = lines.join('\n');
+
+// 1. Save canonical report in reports/
+fs.writeFileSync(REPORT_FILE, content, 'utf8');
+
+// 2. Save in scripts/codes/ for quick user access
+fs.writeFileSync(CODES_REPORT_FILE, content, 'utf8');
+fs.writeFileSync(timestampedFile, content, 'utf8');
+
+console.log(`\n🎉 Comprehensive Test Report successfully generated at:`);
+console.log(`   1. ${REPORT_FILE}`);
+console.log(`   2. ${CODES_REPORT_FILE}`);
+console.log(`   3. ${timestampedFile}\n`);
