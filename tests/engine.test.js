@@ -71,7 +71,8 @@ it('shadow mode never enforces a denial action directly (returns OBSERVE with re
     observationDurationMs: 10000,
     isTrustedEventsCount: 0,     // +20
     touchMismatch: true,         // +15
-    hasSignedToken: true
+    tokenPresented: true,
+    tokenVerified: false
   };
 
   // Shadow Mode (Default)

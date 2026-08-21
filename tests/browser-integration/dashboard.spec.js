@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
 test.describe('AMEVA Sentinel Real-Browser Integration', () => {
 
   test('stored report survives page reload with identical traceId', async ({ page }) => {
-    await page.goto('/sdk/sentinel/dashboard.html');
+    await page.goto('/packages/dashboard/index.html');
 
     // Click "Evaluate Real Browser" button
     await page.getByRole('button', { name: /evaluate real browser/i }).click();
@@ -30,8 +30,8 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
     const producer = await context.newPage();
     const dashboard = await context.newPage();
 
-    await producer.goto('/sdk/sentinel/dashboard.html');
-    await dashboard.goto('/sdk/sentinel/dashboard.html');
+    await producer.goto('/packages/dashboard/index.html');
+    await dashboard.goto('/packages/dashboard/index.html');
 
     const before = Number(await dashboard.locator('[data-testid="event-count"]').textContent());
 
@@ -43,7 +43,7 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
   });
 
   test('destroy() stops active telemetry collection and listener observation', async ({ page }) => {
-    await page.goto('/sdk/sentinel/telemetry-test.html');
+    await page.goto('/tests/fixtures/telemetry-test.html');
 
     const before = await page.evaluate(() => {
       window.testTelemetry.start();

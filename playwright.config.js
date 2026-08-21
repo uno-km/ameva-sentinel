@@ -27,7 +27,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx http-server c:/Users/GAME/Desktop/uno-km/dev/uno-km -p 4173',
+    command: 'npm run serve:test',
     port: 4173,
     reuseExistingServer: !process.env.CI,
   },

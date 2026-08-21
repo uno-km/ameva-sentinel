@@ -129,6 +129,7 @@ export class Sentinel {
       return {
         webdriver: !!s.webdriverObserved || !!s.webdriver,
         telemetryObserved: !!s.telemetryObserved,
+        sampleComplete: !!s.sampleComplete,
         observationDurationMs: typeof s.observationDurationMs === 'number' ? s.observationDurationMs : 6000,
         isTrustedEventsCount: typeof s.trustedInputCount === 'number' ? s.trustedInputCount : (typeof s.isTrustedEventsCount === 'number' ? s.isTrustedEventsCount : 0),
         touchMismatch: !!s.touchMismatch,
@@ -162,6 +163,7 @@ export class Sentinel {
     return {
       webdriver: isWebdriver,
       telemetryObserved: body.telemetry_observed !== undefined ? !!body.telemetry_observed : (body.trusted_events !== undefined),
+      sampleComplete: body.sample_complete !== undefined ? !!body.sample_complete : false,
       observationDurationMs: typeof body.observation_duration_ms === 'number' ? body.observation_duration_ms : 6000,
       isTrustedEventsCount: typeof body.trusted_events === 'number' ? body.trusted_events : 0,
       touchMismatch: isTouchMismatch,

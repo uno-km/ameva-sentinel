@@ -22,6 +22,7 @@ export interface EvidenceItem {
 export interface TelemetrySignals {
   webdriver?: boolean;
   telemetryObserved?: boolean;
+  sampleComplete?: boolean;
   observationDurationMs?: number;
   isTrustedEventsCount?: number;
   burstCount10s?: number;

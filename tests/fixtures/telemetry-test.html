@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Telemetry Test Fixture</title>
+</head>
+<body>
+    <h1>Telemetry Test Fixture</h1>
+    <div id="test-area" style="width: 500px; height: 500px; background: #eee;"></div>
+
+    <script type="module">
+        import { createBrowserTelemetry } from '../../packages/browser-sdk/dist/index.js';
+        window.testTelemetry = createBrowserTelemetry({ autoStart: false });
+    </script>
+</body>
+</html>

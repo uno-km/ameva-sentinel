@@ -27,12 +27,12 @@
        │                      (Throttled 100ms pointermove, discrete click/touch unthrottled)
        ▼
 [sentinel.score(request)] ──► Session-scoped fixed-window counter + Policy-as-Code evaluation
-       │                      (Deterministic 0~100 clamp, strict UUID traceIds, tokenVerified gate)
+       │                      (Deterministic 0~100 clamp, crypto.randomUUID trace IDs with fallback)
        ▼
 [StoredRiskEventV1] ───────► Explicit schema conversion (zero raw cookies/auth/headers/PII)
        │
        ▼
-[Shadow Mode Dashboard] ───► Single Risk Core engine import (100% DOM XSS Immune via DOM API)
+[Shadow Mode Dashboard] ───► Single Risk Core engine import (DOM API & textContent rendering)
 ```
 
 ---
@@ -93,6 +93,7 @@ console.log(report);
 - **CounterStore**: `MemoryFixedWindowCounterStore` is intended for local testing and single-instance Node runtimes. Serverless/distributed edge deployments require external state engines (e.g. Redis / Durable Objects).
 - **Software-Observed Signals**: Interaction metrics (`isTrusted`, `webdriver`) represent browser-reported software signals, not unforgeable hardware biometric proofs.
 - **Token Verification**: In v0.5, client tokens are marked `tokenPresented: true, tokenVerified: false`. Cryptographic HMAC signature verification will be enforced in the server-side Collector (v0.6).
+- **Security Design**: Stored event fields are rendered through DOM APIs and `textContent`, eliminating the previously identified HTML injection sinks.
 
 ---
 

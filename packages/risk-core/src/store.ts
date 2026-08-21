@@ -10,6 +10,7 @@ export interface SanitizedEvidence {
 export interface MinimalDerivedSignals {
   webdriverObserved?: boolean;
   telemetryObserved?: boolean;
+  sampleComplete?: boolean;
   observationDurationMs?: number;
   trustedInputCount?: number;
   burstCount10s?: number;
@@ -36,18 +37,55 @@ export interface StoredRiskEventV1 {
   storedAt: string;
 }
 
+const VALID_ACTIONS = new Set<string>(Object.values(SentinelAction));
+const VALID_MODES = new Set<string>(['SHADOW', 'ENFORCE']);
+
+function isIsoDate(value: unknown): value is string {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value));
+}
+
+function isValidEvidenceItem(item: any): item is SanitizedEvidence {
+  return (
+    item !== null &&
+    typeof item === 'object' &&
+    typeof item.rule === 'string' &&
+    typeof item.score === 'number' &&
+    Number.isFinite(item.score) &&
+    typeof item.message === 'string' &&
+    item.attributes !== null &&
+    typeof item.attributes === 'object'
+  );
+}
+
+/**
+ * Comprehensive runtime type guard validating full structure, date formats, action enums, and score bounds.
+ */
 export function isStoredRiskEventV1(value: unknown): value is StoredRiskEventV1 {
   if (value === null || typeof value !== 'object') return false;
-  const item = value as Record<string, unknown>;
+  const item = value as Record<string, any>;
+
   return (
     item.schemaVersion === '1.0' &&
     typeof item.traceId === 'string' &&
+    item.traceId.length > 0 &&
     typeof item.score === 'number' &&
     Number.isFinite(item.score) &&
     item.score >= 0 &&
     item.score <= 100 &&
-    typeof item.evaluatedAt === 'string' &&
-    Array.isArray(item.evidence)
+    typeof item.evidenceConfidence === 'number' &&
+    Number.isFinite(item.evidenceConfidence) &&
+    item.evidenceConfidence >= 0 &&
+    item.evidenceConfidence <= 1 &&
+    typeof item.action === 'string' &&
+    VALID_ACTIONS.has(item.action) &&
+    typeof item.recommendedAction === 'string' &&
+    VALID_ACTIONS.has(item.recommendedAction) &&
+    typeof item.enforcementMode === 'string' &&
+    VALID_MODES.has(item.enforcementMode) &&
+    typeof item.policyVersion === 'string' &&
+    isIsoDate(item.evaluatedAt) &&
+    Array.isArray(item.evidence) &&
+    item.evidence.every(isValidEvidenceItem)
   );
 }
 
@@ -55,6 +93,7 @@ export function sanitizeSignals(signals: any = {}): MinimalDerivedSignals {
   return {
     webdriverObserved: !!signals.webdriver || !!signals.webdriverObserved,
     telemetryObserved: !!signals.telemetryObserved,
+    sampleComplete: !!signals.sampleComplete,
     observationDurationMs: typeof signals.observationDurationMs === 'number' ? signals.observationDurationMs : 0,
     trustedInputCount: typeof signals.isTrustedEventsCount === 'number' ? signals.isTrustedEventsCount : (typeof signals.trustedInputCount === 'number' ? signals.trustedInputCount : 0),
     burstCount10s: typeof signals.burstCount10s === 'number' ? signals.burstCount10s : 1,
