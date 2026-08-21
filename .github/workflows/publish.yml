@@ -1,0 +1,46 @@
+name: Publish Alpha to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish Packages to npm (@alpha tag)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v22 LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Clean Dependencies (npm ci)
+        run: npm ci
+
+      - name: Install Playwright Browsers with OS Dependencies
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Run Full Quality Gate Verification
+        run: npm run verify
+
+      - name: Publish @ameva/sentinel-risk-core (@alpha)
+        run: npm publish --workspace @ameva/sentinel-risk-core --access public --tag alpha
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @ameva/sentinel-browser (@alpha)
+        run: npm publish --workspace @ameva/sentinel-browser --access public --tag alpha
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @ameva/sentinel (@alpha)
+        run: npm publish --workspace @ameva/sentinel --access public --tag alpha
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

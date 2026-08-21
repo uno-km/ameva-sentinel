@@ -1,0 +1,38 @@
+name: CI Release Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Verify & Cross-Browser E2E Gate (Ubuntu Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v22 LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Clean Dependencies (npm ci)
+        run: npm ci
+
+      - name: Install Playwright Browsers with OS Dependencies
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Run Full Quality Gate (Build + 19 Node Tests + 9 Cross-Browser E2E)
+        run: npm run verify
+
+      - name: Verify Monorepo Workspace Distribution Packages (npm pack --dry-run)
+        run: |
+          npm pack --dry-run --workspace @ameva/sentinel-risk-core
+          npm pack --dry-run --workspace @ameva/sentinel-browser
+          npm pack --dry-run --workspace @ameva/sentinel
