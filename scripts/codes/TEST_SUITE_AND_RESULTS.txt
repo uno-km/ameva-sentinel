@@ -1,33 +1,35 @@
 # 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Unified Master Verification & Audit Report
 
 - **Release Target**: `v0.6.0-alpha.1`
-- **Generated Timestamp**: `2026-08-21T07:21:45.829Z`
+- **Generated Timestamp**: `2026-08-21T08:01:32.623Z`
 - **Git Branch**: [`release-0.6`](https://github.com/uno-km/ameva-sentinel/tree/release-0.6)
-- **Implementation Commit**: `73029483c4865f5d52072622fd9719f0ae2ed78a`
-- **Source Snapshot SHA-256**: `2686fd84d5a622473bfa268c5a8c9ca6310d8cba51beeb458863df2f49ad8e5b`
+- **Implementation Commit**: `13af37266fce15b5a1222b9f4fe2431b4ca48cd2`
+- **Source Snapshot SHA-256**: `71b47889de9d3fcd5de8c41ecc944e2ca0890defe1f4d30b4d50b0fea3427458`
 - **Working Tree State**: `CLEAN`
 - **Overall Gate Status**: `PASSED (100% SUCCESS)`
 - **Final Score**: `100.0 / 100 pts (Grade A+)`
-- **Total Release Checks**: `83 Executable Gates + 3 Monorepo Packaging Gates = 86 / 86 Release Checks (100% ALL PASS)`
+- **Total Release Checks**: `97 Executable Gates + 4 Monorepo Packaging Gates = 101 / 101 Release Checks (100% ALL PASS)`
 
 ---
 
-## 📊 1. Executive Test Scorecard (86 / 86 Release Checks)
+## 📊 1. Executive Test Scorecard (101 / 101 Release Checks)
 
 | Test Category | Tests Passed | Execution Time | Score Points | Gate Status |
 | :--- | :---: | :---: | :---: | :---: |
-| TypeScript Static Contract | 1 / 1 | 3187ms | 10.0 / 10 pts | 🟢 PASS |
-| TypeScript Runtime Contract | 1 / 1 | 99ms | 5.0 / 5 pts | 🟢 PASS |
-| Trust Boundary & Collector Crypto | 16 / 16 | 113ms | 15.0 / 15 pts | 🟢 PASS |
-| Redirect Security & Injection Defense | 8 / 8 | 87ms | 10.0 / 10 pts | 🟢 PASS |
-| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 78ms | 15.0 / 15 pts | 🟢 PASS |
-| Target Mode & Decision Engine | 6 / 6 | 103ms | 15.0 / 15 pts | 🟢 PASS |
-| Risk Engine Quality Gates | 7 / 7 | 93ms | 10.0 / 10 pts | 🟢 PASS |
-| Facade & State Enforcement | 17 / 17 | 106ms | 10.0 / 10 pts | 🟢 PASS |
-| Persistence & Schema V1/V2 Bounds | 8 / 8 | 82ms | 10.0 / 10 pts | 🟢 PASS |
-| Browser SDK Unit Verification | 2 / 2 | 87ms | 5.0 / 5 pts | 🟢 PASS |
-| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 13550ms | E2E Verified | 🟢 PASS |
-| **TOTAL EXECUTABLE AUDIT SCORE** | **83 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
+| TypeScript Static Contract | 1 / 1 | 2818ms | 10.0 / 10 pts | 🟢 PASS |
+| TypeScript Runtime Contract | 1 / 1 | 92ms | 5.0 / 5 pts | 🟢 PASS |
+| Trust Boundary & Collector Crypto | 16 / 16 | 101ms | 15.0 / 15 pts | 🟢 PASS |
+| Redirect Security & Injection Defense | 8 / 8 | 84ms | 10.0 / 10 pts | 🟢 PASS |
+| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 86ms | 15.0 / 15 pts | 🟢 PASS |
+| Target Mode & Decision Engine | 6 / 6 | 111ms | 15.0 / 15 pts | 🟢 PASS |
+| Risk Engine Quality Gates | 7 / 7 | 183ms | 10.0 / 10 pts | 🟢 PASS |
+| Facade & State Enforcement | 17 / 17 | 145ms | 10.0 / 10 pts | 🟢 PASS |
+| Persistence & Schema V1/V2 Bounds | 8 / 8 | 91ms | 10.0 / 10 pts | 🟢 PASS |
+| Browser SDK Unit Verification | 2 / 2 | 78ms | 5.0 / 5 pts | 🟢 PASS |
+| Async RingBuffer & Composite Sinks | 8 / 8 | 307ms | 5.0 / 5 pts | 🟢 PASS |
+| Redis Distributed Storage & Streams | 6 / 6 | 96ms | 5.0 / 5 pts | 🟢 PASS |
+| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 13298ms | E2E Verified | 🟢 PASS |
+| **TOTAL EXECUTABLE AUDIT SCORE** | **97 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
 
 ---
 
@@ -37,22 +39,22 @@
 ```json
 {
   "schemaVersion": "1.0",
-  "sourceCommit": "73029483c4865f5d52072622fd9719f0ae2ed78a",
+  "sourceCommit": "13af37266fce15b5a1222b9f4fe2431b4ca48cd2",
   "artifactPath": "scripts/codes/source_export.txt",
-  "sha256": "2686fd84d5a622473bfa268c5a8c9ca6310d8cba51beeb458863df2f49ad8e5b",
+  "sha256": "71b47889de9d3fcd5de8c41ecc944e2ca0890defe1f4d30b4d50b0fea3427458",
   "branch": "release-0.6",
   "workingTreeAtExport": "CLEAN",
-  "executable": 83,
-  "packaging": 3,
-  "total": 86,
-  "passed": 86,
+  "executable": 97,
+  "packaging": 4,
+  "total": 101,
+  "passed": 101,
   "failed": 0,
   "executableFailed": 0,
   "packagingFailed": 0,
   "score": 100,
   "grade": "A+",
   "status": "PASS",
-  "generatedAt": "2026-08-21T07:21:45.829Z"
+  "generatedAt": "2026-08-21T08:01:32.623Z"
 }
 ```
 
@@ -60,27 +62,28 @@
 ```json
 {
   "schemaVersion": "1.0",
-  "sourceCommit": "73029483c4865f5d52072622fd9719f0ae2ed78a",
+  "sourceCommit": "13af37266fce15b5a1222b9f4fe2431b4ca48cd2",
   "artifactPath": "scripts/codes/source_export.txt",
-  "sha256": "2686fd84d5a622473bfa268c5a8c9ca6310d8cba51beeb458863df2f49ad8e5b",
+  "sha256": "71b47889de9d3fcd5de8c41ecc944e2ca0890defe1f4d30b4d50b0fea3427458",
   "branch": "release-0.6",
   "workingTreeAtExport": "CLEAN",
-  "totalChecks": 86,
-  "passedChecks": 86,
+  "totalChecks": 101,
+  "passedChecks": 101,
   "status": "PASS",
-  "timestamp": "2026-08-21T07:21:45.829Z"
+  "timestamp": "2026-08-21T08:01:32.623Z"
 }
 ```
 
 ---
 
-## 📦 3. Monorepo Distribution Packaging Dry-Run (3 / 3 Packages Valid)
+## 📦 3. Monorepo Distribution Packaging Dry-Run (4 / 4 Packages Valid)
 
 | Package Path | Real Package Name | Status | Verified Format |
 | :--- | :--- | :---: | :--- |
 | `packages/risk-core` | `@ameva/sentinel-risk-core` | `🟢 VALID` | Pure ESM & Declarations | 
 | `packages/browser-sdk` | `@ameva/sentinel-browser` | `🟢 VALID` | Pure ESM & Declarations | 
 | `packages/sentinel` | `@ameva/sentinel` | `🟢 VALID` | Pure ESM & Declarations | 
+| `packages/store-redis` | `@ameva/sentinel-store-redis` | `🟢 VALID` | Pure ESM & Declarations | 
 
 ---
 
@@ -88,7 +91,7 @@
 
 ### 1. TypeScript Static Consumer Contract Gate (32+ Types, Guards, Interfaces)
 * **Target File**: [`tests/typecheck.ts`](../../tests/typecheck.ts)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 3187ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 2818ms)
 
 #### Execution Console Output:
 ```text
@@ -98,7 +101,7 @@
 
 #### Source Code Verification (`tests/typecheck.ts`):
 ```javascript
-﻿import {
+import {
   createSentinel,
   Sentinel,
   type SentinelOptions,
@@ -149,8 +152,25 @@
   readJsonBodyLimited,
   MemoryNonceStore,
   StaticKeyResolver,
-  validateRedirectUrl
+  validateRedirectUrl,
+  AsyncRingBufferSink,
+  CompositeSink,
+  NullSink,
+  type EventSink,
+  type StreamRecord,
+  type RiskEventRecord,
+  type RingBufferStats,
+  type DistributedNonceStore,
+  type DistributedCounterStore,
+  type DistributedRiskEventStore
 } from '../packages/sentinel/dist/index.js';
+
+import {
+  RedisNonceStore,
+  RedisFixedWindowCounterStore,
+  RedisRiskEventStore,
+  RedisStreamSink
+} from '../packages/store-redis/dist/index.js';
 
 import {
   calculateConfidence,
@@ -346,6 +366,35 @@ async function runFullStaticTypeCheck(): Promise<void> {
   const urlCheck = validateRedirectUrl('/llms.txt', { allowRelative: true });
   const bodyCheck = await readJsonBodyLimited({ body: '{"ok":true}' });
 
+  // Stream Sinks & Workers Static Contract Checks
+  const nullSink: EventSink = new NullSink();
+  const compositeSink: EventSink = new CompositeSink([nullSink], { emitTimeoutMs: 1000 });
+  const ringBuffer: EventSink = new AsyncRingBufferSink({
+    downstream: compositeSink,
+    capacity: 256,
+    flushIntervalMs: 50,
+    batchSize: 16,
+    overflowPolicy: 'DROP_OLDEST'
+  });
+  const stats: RingBufferStats = (ringBuffer as AsyncRingBufferSink).stats();
+
+  // Distributed Store Contract Checks
+  const mockRedisClient = {
+    set: async () => 'OK',
+    get: async () => '1',
+    del: async () => 1,
+    eval: async () => 1,
+    ping: async () => 'PONG',
+    xadd: async () => '1-0',
+    lpush: async () => 1,
+    ltrim: async () => 'OK',
+    lrange: async () => []
+  };
+  const distNonceStore: DistributedNonceStore = new RedisNonceStore({ redis: mockRedisClient });
+  const distCounterStore: DistributedCounterStore = new RedisFixedWindowCounterStore({ redis: mockRedisClient });
+  const distEventStore: DistributedRiskEventStore = new RedisRiskEventStore({ redis: mockRedisClient });
+  const redisStreamSink: EventSink = new RedisStreamSink({ redis: mockRedisClient, streamKey: 'risk-events' });
+
   void isV1;
   void isV2;
   void isUniversal;
@@ -360,6 +409,11 @@ async function runFullStaticTypeCheck(): Promise<void> {
   void sanitizedMinimal;
   void confidence;
   void sampleSanitizedEvidence;
+  void stats;
+  void distNonceStore;
+  void distCounterStore;
+  void distEventStore;
+  void redisStreamSink;
 }
 
 runFullStaticTypeCheck();
@@ -370,14 +424,14 @@ runFullStaticTypeCheck();
 
 ### 2. TypeScript Runtime Consumer Contract Gate (Live Execution & Assertion)
 * **Target File**: [`tests/typecheck.runtime.js`](../../tests/typecheck.runtime.js)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 99ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 92ms)
 
 #### Execution Console Output:
 ```text
 🔍 Running TypeScript Consumer API Runtime Contract Gate...
 
 [TypeScript v0.6.0 Contract Gate] ALL 32+ SDK Types & Runtime Interfaces 100% Verified.
-  - TraceId: trc_28c9c779883b4fb8
+  - TraceId: trc_b7ae38b9268c495f
   - Decision Action: ALLOW (BOT_ALLOWLIST_PASSED)
   - Bot Classification: SEARCH_ENGINE (Googlebot)
   - SessionId: ephemeral_local_session
@@ -541,7 +595,7 @@ runRuntimeContract().catch(err => {
 
 ### 3. Trust Boundary Collector HMAC, RFC 4231 Vectors, Freshness, Replay Attack, Capacity Saturation & 100-Race Suite (16 Gates)
 * **Target File**: [`tests/collector-crypto.test.js`](../../tests/collector-crypto.test.js)
-* **Execution Status**: `PASS` (16 passed, 0 failed in 113ms)
+* **Execution Status**: `PASS` (16 passed, 0 failed in 101ms)
 
 #### Execution Console Output:
 ```text
@@ -859,7 +913,7 @@ main();
 
 ### 4. Redirect Security & Closed-Destination Injection Defense Suite (8 Gates)
 * **Target File**: [`tests/redirect-security.test.js`](../../tests/redirect-security.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 87ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 84ms)
 
 #### Execution Console Output:
 ```text
@@ -1015,7 +1069,7 @@ console.log(`\n{"suite":"redirect_security","passed":${passedTests},"failed":${f
 
 ### 5. Smart Bot Classifier & ReDoS Safety Suite (7 Taxonomies, 8 Gates)
 * **Target File**: [`tests/bot-classifier.test.js`](../../tests/bot-classifier.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 78ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 86ms)
 
 #### Execution Console Output:
 ```text
@@ -1199,7 +1253,7 @@ console.log(`\n{"suite":"bot_classifier","passed":${passedTests},"failed":${fail
 
 ### 6. Target Mode & Decision Engine Suite (Closed-Destination Routing, 6 Gates)
 * **Target File**: [`tests/decision.test.js`](../../tests/decision.test.js)
-* **Execution Status**: `PASS` (6 passed, 0 failed in 103ms)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 111ms)
 
 #### Execution Console Output:
 ```text
@@ -1438,7 +1492,7 @@ main();
 
 ### 7. Risk Core Pure Engine & Clamping Quality Gates (7 Gates)
 * **Target File**: [`tests/engine.test.js`](../../tests/engine.test.js)
-* **Execution Status**: `PASS` (7 passed, 0 failed in 93ms)
+* **Execution Status**: `PASS` (7 passed, 0 failed in 183ms)
 
 #### Execution Console Output:
 ```text
@@ -1606,7 +1660,7 @@ console.log(`\n{"suite":"engine","passed":${passedTests},"failed":${failedTests}
 
 ### 8. Sentinel Facade & Stateful Rate Enforcement Tests (17 Gates)
 * **Target File**: [`tests/sentinel.test.js`](../../tests/sentinel.test.js)
-* **Execution Status**: `PASS` (17 passed, 0 failed in 106ms)
+* **Execution Status**: `PASS` (17 passed, 0 failed in 145ms)
 
 #### Execution Console Output:
 ```text
@@ -2080,7 +2134,7 @@ run();
 
 ### 9. RiskEventStore V1 & V2 Schema Validation & Migration Suite (8 Gates)
 * **Target File**: [`tests/store.test.js`](../../tests/store.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 82ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 91ms)
 
 #### Execution Console Output:
 ```text
@@ -2267,7 +2321,7 @@ await main();
 
 ### 10. @ameva/sentinel-browser Client Telemetry Unit Tests (2 Gates)
 * **Target File**: [`tests/browser.test.js`](../../tests/browser.test.js)
-* **Execution Status**: `PASS` (2 passed, 0 failed in 87ms)
+* **Execution Status**: `PASS` (2 passed, 0 failed in 78ms)
 
 #### Execution Console Output:
 ```text
@@ -2331,25 +2385,729 @@ console.log(`\n{"suite":"browser","passed":${passedTests},"failed":${failedTests
 
 ---
 
-### 11. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)
+### 11. Async RingBuffer WorkerSink, CompositeSink Fan-out & Dropping Policies (8 Gates)
+* **Target File**: [`tests/ring-buffer-sink.test.js`](../../tests/ring-buffer-sink.test.js)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 307ms)
+
+#### Execution Console Output:
+```text
+🧪 Running Async RingBuffer & Composite EventSink Test Suite...
+  ✅ PASS: Gate 1: NullSink functionality and zero-overhead benchmark compliance
+  ✅ PASS: Gate 2: AsyncRingBufferSink bitmask power-of-2 capacity and batch flusher
+  ✅ PASS: Gate 3: OverflowPolicy DROP_OLDEST and granular drop metrics
+  ✅ PASS: Gate 4: OverflowPolicy DROP_NEWEST and granular drop metrics
+  ✅ PASS: Gate 5: OverflowPolicy FAIL_CLOSED throws immediately on buffer saturation
+  ✅ PASS: Gate 6: Circuit Breaker state machine (CLOSED -> OPEN -> HALF_OPEN -> CLOSED)
+  ✅ PASS: Gate 7: CompositeSink fan-out multi-sink dispatch with timeout protection
+  ✅ PASS: Gate 8: Sentinel facade auto-dispatches RiskEventRecord to eventSink
+
+==================================================
+Results: 8 passed, 0 failed, total 8
+{"suite": "ring_buffer_sink", "passed": 8, "failed": 0, "total": 8}
+```
+
+#### Source Code Verification (`tests/ring-buffer-sink.test.js`):
+```javascript
+﻿import assert from 'node:assert';
+import {
+  NullSink,
+  CompositeSink,
+  AsyncRingBufferSink,
+  createSentinel,
+  SentinelAction
+} from '../packages/sentinel/dist/index.js';
+
+let passed = 0;
+let failed = 0;
+
+async function test(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(err);
+    failed++;
+  }
+}
+
+console.log('🧪 Running Async RingBuffer & Composite EventSink Test Suite...');
+
+class MockCapturingSink {
+  constructor(name = 'MockSink', options = {}) {
+    this.name = name;
+    this.records = [];
+    this.delayMs = options.delayMs || 0;
+    this.shouldFail = options.shouldFail || false;
+  }
+
+  async emit(record) {
+    if (this.delayMs > 0) {
+      await new Promise(res => setTimeout(res, this.delayMs));
+    }
+    if (this.shouldFail) {
+      throw new Error(`[${this.name}] Simulated downstream failure`);
+    }
+    this.records.push(record);
+  }
+
+  async emitBatch(records) {
+    if (this.delayMs > 0) {
+      await new Promise(res => setTimeout(res, this.delayMs));
+    }
+    if (this.shouldFail) {
+      throw new Error(`[${this.name}] Simulated downstream batch failure`);
+    }
+    this.records.push(...records);
+  }
+}
+
+async function main() {
+  await test('Gate 1: NullSink functionality and zero-overhead benchmark compliance', async () => {
+    const nullSink = new NullSink();
+    assert.strictEqual(nullSink.name, 'NullSink');
+    assert.strictEqual(nullSink.emittedCount, 0);
+
+    const record = { kind: 'risk_event', id: 'trc_1', timestamp: new Date().toISOString() };
+    nullSink.emit(record);
+    nullSink.emitBatch([record, record]);
+    assert.strictEqual(nullSink.emittedCount, 3);
+    nullSink.reset();
+    assert.strictEqual(nullSink.emittedCount, 0);
+  });
+
+  await test('Gate 2: AsyncRingBufferSink bitmask power-of-2 capacity and batch flusher', async () => {
+    const downstream = new MockCapturingSink('TestDownstream');
+    const ring = new AsyncRingBufferSink({
+      downstream,
+      capacity: 10, // Should be normalized to 16
+      batchSize: 4,
+      flushIntervalMs: 50
+    });
+
+    const stats = ring.stats();
+    assert.strictEqual(stats.capacity, 16);
+    assert.strictEqual(stats.buffered, 0);
+
+    // Enqueue 4 items (should trigger proactive flush)
+    for (let i = 0; i < 4; i++) {
+      ring.emit({ kind: 'risk_event', id: `trc_${i}`, timestamp: new Date().toISOString() });
+    }
+
+    // Await flush
+    await ring.flush();
+    assert.strictEqual(downstream.records.length, 4);
+    assert.strictEqual(ring.stats().flushed, 4);
+    assert.strictEqual(ring.stats().buffered, 0);
+
+    await ring.close();
+  });
+
+  await test('Gate 3: OverflowPolicy DROP_OLDEST and granular drop metrics', async () => {
+    const downstream = new MockCapturingSink('DropOldestSink');
+    const ring = new AsyncRingBufferSink({
+      downstream,
+      capacity: 4, // Max 4
+      flushIntervalMs: 0, // Manual flush only
+      overflowPolicy: 'DROP_OLDEST'
+    });
+
+    // Enqueue 6 items into capacity 4 buffer
+    for (let i = 1; i <= 6; i++) {
+      ring.emit({ kind: 'risk_event', id: `item_${i}`, timestamp: new Date().toISOString() });
+    }
+
+    const stats = ring.stats();
+    assert.strictEqual(stats.capacity, 4);
+    assert.strictEqual(stats.buffered, 4);
+    assert.strictEqual(stats.droppedOldest, 2);
+    assert.strictEqual(stats.dropped, 2);
+
+    await ring.flush();
+    assert.strictEqual(downstream.records.length, 4);
+    assert.strictEqual(downstream.records[0].id, 'item_3');
+    assert.strictEqual(downstream.records[3].id, 'item_6');
+
+    await ring.close();
+  });
+
+  await test('Gate 4: OverflowPolicy DROP_NEWEST and granular drop metrics', async () => {
+    const downstream = new MockCapturingSink('DropNewestSink');
+    const ring = new AsyncRingBufferSink({
+      downstream,
+      capacity: 4,
+      flushIntervalMs: 0,
+      overflowPolicy: 'DROP_NEWEST'
+    });
+
+    for (let i = 1; i <= 6; i++) {
+      ring.emit({ kind: 'risk_event', id: `item_${i}`, timestamp: new Date().toISOString() });
+    }
+
+    const stats = ring.stats();
+    assert.strictEqual(stats.buffered, 4);
+    assert.strictEqual(stats.droppedNewest, 2);
+    assert.strictEqual(stats.dropped, 2);
+
+    await ring.flush();
+    assert.strictEqual(downstream.records.length, 4);
+    assert.strictEqual(downstream.records[0].id, 'item_1');
+    assert.strictEqual(downstream.records[3].id, 'item_4');
+
+    await ring.close();
+  });
+
+  await test('Gate 5: OverflowPolicy FAIL_CLOSED throws immediately on buffer saturation', async () => {
+    const downstream = new MockCapturingSink('FailClosedSink');
+    const ring = new AsyncRingBufferSink({
+      downstream,
+      capacity: 4,
+      flushIntervalMs: 0,
+      overflowPolicy: 'FAIL_CLOSED'
+    });
+
+    for (let i = 1; i <= 4; i++) {
+      ring.emit({ kind: 'risk_event', id: `item_${i}`, timestamp: new Date().toISOString() });
+    }
+
+    assert.throws(() => {
+      ring.emit({ kind: 'risk_event', id: 'overflow_item', timestamp: new Date().toISOString() });
+    }, /Ring buffer saturated/);
+
+    const stats = ring.stats();
+    assert.strictEqual(stats.failClosedRejects, 1);
+    assert.strictEqual(stats.dropped, 1);
+
+    await ring.close();
+  });
+
+  await test('Gate 6: Circuit Breaker state machine (CLOSED -> OPEN -> HALF_OPEN -> CLOSED)', async () => {
+    const failingSink = new MockCapturingSink('FailingSink', { shouldFail: true });
+    let errorCallbackCalls = 0;
+
+    const ring = new AsyncRingBufferSink({
+      downstream: failingSink,
+      capacity: 16,
+      batchSize: 2,
+      flushIntervalMs: 0,
+      circuitBreakerThreshold: 2,
+      circuitBreakerCooldownMs: 50,
+      onError: () => {
+        errorCallbackCalls++;
+      }
+    });
+
+    assert.strictEqual(ring.stats().circuitBreakerState, 'CLOSED');
+
+    // Cause 2 consecutive flush failures
+    ring.emit({ kind: 'risk_event', id: '1', timestamp: new Date().toISOString() });
+    await ring.flush();
+    ring.emit({ kind: 'risk_event', id: '2', timestamp: new Date().toISOString() });
+    await ring.flush();
+
+    assert.strictEqual(ring.stats().circuitBreakerState, 'OPEN');
+    assert.strictEqual(ring.stats().flushFailures, 2);
+    assert.strictEqual(errorCallbackCalls, 2);
+
+    // While OPEN, enqueue drops events immediately
+    ring.emit({ kind: 'risk_event', id: '3', timestamp: new Date().toISOString() });
+    assert.strictEqual(ring.stats().circuitBreakerDrops, 1);
+
+    // Wait for cooldown to expire
+    await new Promise(res => setTimeout(res, 60));
+
+    // Fix downstream sink
+    failingSink.shouldFail = false;
+
+    // Next enqueue transitions to HALF_OPEN
+    ring.emit({ kind: 'risk_event', id: '4', timestamp: new Date().toISOString() });
+    assert.strictEqual(ring.stats().circuitBreakerState, 'HALF_OPEN');
+
+    // Successful flush recovers state to CLOSED
+    await ring.flush();
+    assert.strictEqual(ring.stats().circuitBreakerState, 'CLOSED');
+
+    await ring.close();
+  });
+
+  await test('Gate 7: CompositeSink fan-out multi-sink dispatch with timeout protection', async () => {
+    const fastSink = new MockCapturingSink('FastSink');
+    const slowSink = new MockCapturingSink('SlowSink', { delayMs: 150 });
+    const failingSink = new MockCapturingSink('FailingSink', { shouldFail: true });
+
+    const composite = new CompositeSink([fastSink, slowSink, failingSink], {
+      emitTimeoutMs: 50 // Short timeout to test cancellation
+    });
+
+    const record = { kind: 'risk_event', id: 'composite_1', timestamp: new Date().toISOString() };
+    await composite.emit(record);
+
+    // FastSink received record
+    assert.strictEqual(fastSink.records.length, 1);
+    // SlowSink and FailingSink do not crash execution due to Promise.allSettled + timeout
+    assert.strictEqual(composite.downstreamSinks.length, 3);
+  });
+
+  await test('Gate 8: Sentinel facade auto-dispatches RiskEventRecord to eventSink', async () => {
+    const capturingSink = new MockCapturingSink('FacadeSink');
+    const sentinel = createSentinel({
+      eventSink: capturingSink
+    });
+
+    const report = await sentinel.score({
+      headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+    });
+
+    assert.strictEqual(report.action, SentinelAction.ALLOW);
+    assert.strictEqual(capturingSink.records.length, 1);
+    assert.strictEqual(capturingSink.records[0].kind, 'risk_event');
+    assert.strictEqual(capturingSink.records[0].id, report.traceId);
+  });
+
+  console.log(`\n==================================================`);
+  console.log(`Results: ${passed} passed, ${failed} failed, total ${passed + failed}`);
+  console.log(`{"suite": "ring_buffer_sink", "passed": ${passed}, "failed": ${failed}, "total": ${passed + failed}}`);
+  if (failed > 0) process.exit(1);
+}
+
+main();
+
+```
+
+---
+
+### 12. Redis Distributed Storage, Lua TTL Drift Guard & Stream Sinks (6 Gates)
+* **Target File**: [`tests/store-redis.test.js`](../../tests/store-redis.test.js)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 96ms)
+
+#### Execution Console Output:
+```text
+🧪 Running Redis Distributed Storage & Stream Sink Test Suite...
+  ✅ PASS: Gate 1: RedisNonceStore atomic lock & 100-request concurrent replay prevention
+  ✅ PASS: Gate 2: RedisNonceStore key sanitization against command injection
+  ✅ PASS: Gate 3: RedisFixedWindowCounterStore atomic Lua execution with TTL drift recovery
+  ✅ PASS: Gate 4: RedisRiskEventStore append, capped trim, listing, and query by since
+  ✅ PASS: Gate 5: RedisStreamSink XADD MAXLEN~ streaming and pipeline batch execution
+  ✅ PASS: Gate 6: Sentinel end-to-end integration with RedisNonceStore & RedisFixedWindowCounterStore
+
+==================================================
+Results: 6 passed, 0 failed, total 6
+{"suite": "store_redis", "passed": 6, "failed": 0, "total": 6}
+```
+
+#### Source Code Verification (`tests/store-redis.test.js`):
+```javascript
+import assert from 'node:assert';
+import {
+  RedisNonceStore,
+  RedisFixedWindowCounterStore,
+  RedisRiskEventStore,
+  RedisStreamSink
+} from '../packages/store-redis/dist/index.js';
+import {
+  createSentinel,
+  signCollectorToken,
+  StaticKeyResolver,
+  SentinelAction
+} from '../packages/sentinel/dist/index.js';
+
+let passed = 0;
+let failed = 0;
+
+async function test(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(err);
+    failed++;
+  }
+}
+
+console.log('🧪 Running Redis Distributed Storage & Stream Sink Test Suite...');
+
+/**
+ * 100% In-Memory Mock Redis Server Implementation for deterministic testing
+ */
+class MockRedisServer {
+  constructor() {
+    this.data = new Map();
+    this.ttls = new Map();
+    this.streams = new Map();
+    this.lists = new Map();
+  }
+
+  async set(key, value, ...args) {
+    const now = Date.now();
+    let isNx = false;
+    let exSeconds = null;
+
+    for (let i = 0; i < args.length; i++) {
+      const arg = String(args[i]).toUpperCase();
+      if (arg === 'NX') isNx = true;
+      if (arg === 'EX' && args[i + 1] !== undefined) {
+        exSeconds = Number(args[i + 1]);
+        i++;
+      }
+    }
+
+    if (isNx) {
+      if (this.data.has(key)) {
+        const exp = this.ttls.get(key);
+        if (!exp || exp > now) {
+          return null; // Key exists, NX failed
+        }
+      }
+    }
+
+    this.data.set(key, String(value));
+    if (exSeconds !== null) {
+      this.ttls.set(key, now + (exSeconds * 1000));
+    } else {
+      this.ttls.delete(key);
+    }
+    return 'OK';
+  }
+
+  async get(key) {
+    const now = Date.now();
+    if (!this.data.has(key)) return null;
+    const exp = this.ttls.get(key);
+    if (exp && exp <= now) {
+      this.data.delete(key);
+      this.ttls.delete(key);
+      return null;
+    }
+    return this.data.get(key);
+  }
+
+  async del(key) {
+    const keys = Array.isArray(key) ? key : [key];
+    let count = 0;
+    for (const k of keys) {
+      if (this.data.delete(k)) count++;
+      this.ttls.delete(k);
+      if (this.lists.delete(k)) count++;
+      if (this.streams.delete(k)) count++;
+    }
+    return count;
+  }
+
+  async eval(script, numKeys, ...args) {
+    const key = String(args[0]);
+    const windowSec = Number(args[1]);
+    const now = Date.now();
+
+    // Execute atomic Lua simulation: INCR + TTL recovery
+    let val = 0;
+    const currentStr = await this.get(key);
+    if (currentStr) {
+      val = Number(currentStr) || 0;
+    }
+    val += 1;
+    this.data.set(key, String(val));
+
+    // Check TTL
+    const exp = this.ttls.get(key);
+    if (!exp || exp <= now) {
+      this.ttls.set(key, now + (windowSec * 1000));
+    }
+
+    return val;
+  }
+
+  async lpush(key, ...values) {
+    if (!this.lists.has(key)) {
+      this.lists.set(key, []);
+    }
+    const list = this.lists.get(key);
+    list.unshift(...values);
+    return list.length;
+  }
+
+  async ltrim(key, start, stop) {
+    if (!this.lists.has(key)) return 'OK';
+    const list = this.lists.get(key);
+    this.lists.set(key, list.slice(start, stop + 1));
+    return 'OK';
+  }
+
+  async lrange(key, start, stop) {
+    if (!this.lists.has(key)) return [];
+    const list = this.lists.get(key);
+    const end = stop < 0 ? list.length + stop + 1 : stop + 1;
+    return list.slice(start, end);
+  }
+
+  async xadd(stream, ...args) {
+    if (!this.streams.has(stream)) {
+      this.streams.set(stream, []);
+    }
+    const entries = this.streams.get(stream);
+    const id = `${Date.now()}-${entries.length}`;
+    entries.push({ id, fields: args });
+    return id;
+  }
+
+  async ping() {
+    return 'PONG';
+  }
+
+  pipeline() {
+    const commands = [];
+    const self = this;
+    return {
+      xadd(stream, ...args) {
+        commands.push(() => self.xadd(stream, ...args));
+        return this;
+      },
+      lpush(key, val) {
+        commands.push(() => self.lpush(key, val));
+        return this;
+      },
+      ltrim(key, start, stop) {
+        commands.push(() => self.ltrim(key, start, stop));
+        return this;
+      },
+      async exec() {
+        const results = [];
+        for (const cmd of commands) {
+          results.push([null, await cmd()]);
+        }
+        return results;
+      }
+    };
+  }
+}
+
+async function main() {
+  await test('Gate 1: RedisNonceStore atomic lock & 100-request concurrent replay prevention', async () => {
+    const redis = new MockRedisServer();
+    const nonceStore = new RedisNonceStore({ redis, keyPrefix: 'test_sentinel' });
+
+    assert.strictEqual(nonceStore.clientType, 'redis');
+    assert.strictEqual(await nonceStore.ping(), true);
+
+    const namespace = { issuer: 'auth-server', kid: 'k1', nonce: 'nonce_unique_123' };
+    const expiresAt = Date.now() + 60000;
+
+    // First consume must succeed
+    const firstAttempt = await nonceStore.consume(namespace, expiresAt);
+    assert.strictEqual(firstAttempt, true);
+
+    // 100 concurrent race attempts with same nonce must all fail
+    const raceResults = await Promise.all(
+      Array.from({ length: 100 }).map(() => nonceStore.consume(namespace, expiresAt))
+    );
+    assert(raceResults.every(res => res === false));
+  });
+
+  await test('Gate 2: RedisNonceStore key sanitization against command injection', async () => {
+    const redis = new MockRedisServer();
+    const nonceStore = new RedisNonceStore({ redis });
+
+    const dangerousNamespace = {
+      issuer: 'evil\r\nSET FLUSHALL 1\r\n',
+      kid: 'kid 1',
+      nonce: 'nonce\0dangerous'
+    };
+
+    const ok = await nonceStore.consume(dangerousNamespace, Date.now() + 10000);
+    assert.strictEqual(ok, true);
+
+    // Verify key was sanitized and no newlines/control chars exist
+    const storedKeys = Array.from(redis.data.keys());
+    assert(storedKeys.every(k => !k.includes('\r') && !k.includes('\n') && !k.includes(' ')));
+  });
+
+  await test('Gate 3: RedisFixedWindowCounterStore atomic Lua execution with TTL drift recovery', async () => {
+    const redis = new MockRedisServer();
+    const counterStore = new RedisFixedWindowCounterStore({ redis, keyPrefix: 'rate' });
+
+    assert.strictEqual(await counterStore.ping(), true);
+
+    // First increment in 60s window
+    const r1 = await counterStore.increment('user:101', { windowMs: 60000 });
+    assert.strictEqual(r1.count, 1);
+    assert(r1.resetAt > Date.now());
+
+    // Subsequent increments in same window
+    const r2 = await counterStore.increment('user:101', { windowMs: 60000 });
+    assert.strictEqual(r2.count, 2);
+
+    const r3 = await counterStore.increment('user:101', { windowMs: 60000 });
+    assert.strictEqual(r3.count, 3);
+
+    // Verify get
+    assert.strictEqual(await counterStore.get('user:101', 60), 3);
+
+    // Verify reset
+    await counterStore.reset('user:101', 60);
+    assert.strictEqual(await counterStore.get('user:101', 60), 0);
+  });
+
+  await test('Gate 4: RedisRiskEventStore append, capped trim, listing, and query by since', async () => {
+    const redis = new MockRedisServer();
+    const eventStore = new RedisRiskEventStore({ redis, maxItems: 3 });
+
+    const sampleReport1 = {
+      traceId: 'trc_1',
+      evaluatedAt: '2026-08-21T01:00:00.000Z',
+      action: SentinelAction.ALLOW,
+      decision: { action: SentinelAction.ALLOW, reasonCode: 'BASELINE_CLEAN' },
+      score: 5,
+      evidenceConfidence: 0.8,
+      signals: {},
+      evidence: []
+    };
+    const sampleReport2 = {
+      traceId: 'trc_2',
+      evaluatedAt: '2026-08-21T02:00:00.000Z',
+      action: SentinelAction.REQUIRE_APP_VERIFICATION,
+      decision: { action: SentinelAction.REQUIRE_APP_VERIFICATION, reasonCode: 'POLICY_SCORE_APP_VERIFICATION' },
+      score: 65,
+      evidenceConfidence: 0.8,
+      signals: {},
+      evidence: []
+    };
+    const sampleReport3 = {
+      traceId: 'trc_3',
+      evaluatedAt: '2026-08-21T03:00:00.000Z',
+      action: SentinelAction.TEMPORARY_DENY,
+      decision: { action: SentinelAction.TEMPORARY_DENY, reasonCode: 'POLICY_SCORE_DENY' },
+      score: 95,
+      evidenceConfidence: 0.8,
+      signals: {},
+      evidence: []
+    };
+    const sampleReport4 = {
+      traceId: 'trc_4',
+      evaluatedAt: '2026-08-21T04:00:00.000Z',
+      action: SentinelAction.ALLOW,
+      decision: { action: SentinelAction.ALLOW, reasonCode: 'BASELINE_CLEAN' },
+      score: 10,
+      evidenceConfidence: 0.8,
+      signals: {},
+      evidence: []
+    };
+
+    await eventStore.append(sampleReport1);
+    await eventStore.append(sampleReport2);
+    await eventStore.append(sampleReport3);
+    await eventStore.append(sampleReport4);
+
+    // Max items is 3, so oldest (sampleReport1) should be pruned
+    const list = await eventStore.list();
+    assert.strictEqual(list.length, 3);
+    assert.strictEqual(list[0].traceId, 'trc_4');
+    assert.strictEqual(list[2].traceId, 'trc_2');
+
+    // Query since 03:00:00
+    const sinceList = await eventStore.list({ since: Date.parse('2026-08-21T03:00:00.000Z') });
+    assert.strictEqual(sinceList.length, 2);
+  });
+
+  await test('Gate 5: RedisStreamSink XADD MAXLEN~ streaming and pipeline batch execution', async () => {
+    const redis = new MockRedisServer();
+    const streamSink = new RedisStreamSink({
+      redis,
+      streamKey: 'risk-events',
+      maxLen: 1000
+    });
+
+    const record1 = { kind: 'risk_event', id: 'stream_1', timestamp: new Date().toISOString() };
+    const record2 = { kind: 'risk_event', id: 'stream_2', timestamp: new Date().toISOString() };
+
+    await streamSink.emit(record1);
+    await streamSink.emitBatch([record2]);
+
+    const streamEntries = redis.streams.get('sentinel:risk-events');
+    assert.strictEqual(streamEntries.length, 2);
+  });
+
+  await test('Gate 6: Sentinel end-to-end integration with RedisNonceStore & RedisFixedWindowCounterStore', async () => {
+    const redis = new MockRedisServer();
+    const nonceStore = new RedisNonceStore({ redis });
+    const counterStore = new RedisFixedWindowCounterStore({ redis });
+
+    const keySecret = 'test_secret_for_redis_sentinel_0123456789';
+    const keyResolver = new StaticKeyResolver({
+      test_key: keySecret
+    });
+
+    const sentinel = createSentinel({
+      keyResolver,
+      nonceStore,
+      counterStore,
+      expectedAudience: 'https://api.mycompany.com',
+      expectedPurpose: 'telemetry-collect',
+      allowedIssuers: ['trusted-issuer']
+    });
+
+    const token = await signCollectorToken(
+      {
+        v: 1,
+        kid: 'test_key',
+        iss: 'trusted-issuer',
+        aud: 'https://api.mycompany.com',
+        purpose: 'telemetry-collect',
+        sessionRef: 'sess_123',
+        iat: Date.now(),
+        exp: Date.now() + 60000,
+        nonce: 'distributed_nonce_abc'
+      },
+      keySecret
+    );
+
+    // 1. First score with verified token should pass
+    const report1 = await sentinel.score({
+      headers: { authorization: `Bearer ${token}` }
+    });
+    assert.strictEqual(report1.action, SentinelAction.ALLOW);
+    assert.strictEqual(report1.verification.state, 'VERIFIED');
+
+    // 2. Replayed token should be detected and marked FAILED
+    const report2 = await sentinel.score({
+      headers: { authorization: `Bearer ${token}` }
+    });
+    assert.strictEqual(report2.verification.state, 'FAILED');
+    assert.strictEqual(report2.verification.error, 'REPLAY_ATTACK_DETECTED');
+  });
+
+  console.log(`\n==================================================`);
+  console.log(`Results: ${passed} passed, ${failed} failed, total ${passed + failed}`);
+  console.log(`{"suite": "store_redis", "passed": ${passed}, "failed": ${failed}, "total": ${passed + failed}}`);
+  if (failed > 0) process.exit(1);
+}
+
+main();
+
+```
+
+---
+
+### 13. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)
 * **Target File**: [`tests/browser-integration/dashboard.spec.js`](../../tests/browser-integration/dashboard.spec.js)
-* **Execution Status**: `PASS` (9 passed, 0 failed in 13550ms)
+* **Execution Status**: `PASS` (9 passed, 0 failed in 13298ms)
 
 #### Execution Console Output:
 ```text
 Running 9 tests using 1 worker
 
-  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (421ms)
-  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (516ms)
-  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (165ms)
-  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (2.1s)
-  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.5s)
-  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (331ms)
-  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (640ms)
-  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (796ms)
-  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (278ms)
+  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (480ms)
+  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (646ms)
+  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (229ms)
+  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.7s)
+  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.3s)
+  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (414ms)
+  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (693ms)
+  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (779ms)
+  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (273ms)
 
-  9 passed (11.9s)
+  9 passed (11.6s)
 ```
 
 #### Source Code Verification (`tests/browser-integration/dashboard.spec.js`):

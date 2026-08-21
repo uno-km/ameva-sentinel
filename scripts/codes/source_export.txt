@@ -107,7 +107,7 @@
 Project: AMEVA-Sentinel
 Snapshot Date: 2026-08-21
 Branch: release-0.6
-Commit: 8d35a08fbdc5e1a1a6837a69550203d95f6644f9
+Commit: 13af37266fce15b5a1222b9f4fe2431b4ca48cd2
 Working Tree: CLEAN
 Snapshot State: HEAD snapshot (Git commit blob-bound)
 Operating System: win32
@@ -9459,7 +9459,7 @@ FILE_LANGUAGE: json
 FILE_CONTENT_BEGIN
 ================================================================================
 
-﻿{
+{
   "name": "@ameva/sentinel-store-redis",
   "version": "0.6.0-alpha.1",
   "description": "Enterprise Distributed Redis, Valkey, and Dragonfly Storage Adapters and Streams Pipeline for AMEVA Sentinel",
@@ -10407,7 +10407,7 @@ const packageOutputs = [];
 for (const pkg of packages) {
   const pkgDir = path.join(ROOT, pkg);
   const pkgJsonPath = path.join(pkgDir, 'package.json');
-  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8').replace(/^\uFEFF/, ''));
   try {
     const packOut = execSync('npm pack --dry-run', { cwd: pkgDir, encoding: 'utf8' });
     packageOutputs.push({
