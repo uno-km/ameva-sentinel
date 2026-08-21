@@ -9,7 +9,8 @@
   ],
   "scripts": {
     "test": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js",
-    "build": "npm run --workspaces build"
+    "build": "npm run --workspaces build",
+    "export": "py scripts/export_source_code.py"
   },
   "keywords": [
     "security",
