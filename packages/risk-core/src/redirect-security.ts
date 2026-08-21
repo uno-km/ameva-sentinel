@@ -8,11 +8,22 @@ const FORBIDDEN_PROTOCOLS = /^(javascript|data|file|vbscript|about):/i;
 const CONTROL_CHARACTERS = /[\u0000-\u001F\u007F\r\n]/;
 
 const HOSTNAME_LABEL_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-const IPV4_RE = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
+function isValidIpv4Octet(octet: string): boolean {
+  if (!/^[0-9]{1,3}$/.test(octet)) return false;
+  if (octet.length > 1 && octet.startsWith('0')) return false; // reject leading zeros (e.g. 01.02.03.04)
+  const num = Number(octet);
+  return num >= 0 && num <= 255;
+}
+
+function isIpv4Shaped(host: string): boolean {
+  const parts = host.split('.');
+  return parts.length === 4 && parts.every(p => /^[0-9]+$/.test(p));
+}
 
 /**
  * Normalizes and validates an allowed redirect hostname according to RFC 1123 and IPv4 specifications.
- * Strips whitespace, lowercases, removes trailing dot, and rejects malformed labels, protocols, ports, or injections.
+ * Strips whitespace, lowercases, removes trailing dot, and strictly validates IPv4 octets and RFC 1123 DNS labels.
  */
 export function normalizeAllowedHost(value: string): string {
   if (typeof value !== 'string') {
@@ -34,17 +45,32 @@ export function normalizeAllowedHost(value: string): string {
     throw new Error(`Invalid allowed host format: "${value}". Must be a valid hostname or IPv4 without protocol, port, path, or credentials.`);
   }
 
-  // IPv4 literal or localhost
-  if (host === 'localhost' || IPV4_RE.test(host)) {
+  // 1. localhost check
+  if (host === 'localhost') {
     return host;
   }
 
-  // RFC 1123 DNS Label Validation
+  // 2. Strict IPv4 shape and octet range validation (0..255, no leading zeroes)
+  if (isIpv4Shaped(host)) {
+    const parts = host.split('.');
+    if (!parts.every(isValidIpv4Octet)) {
+      throw new Error(`Invalid IPv4 address: "${value}". Each octet must be between 0 and 255 without leading zeros.`);
+    }
+    return host;
+  }
+
+  // 3. RFC 1123 DNS Label Validation
   const labels = host.split('.');
   for (const label of labels) {
     if (!label || !HOSTNAME_LABEL_RE.test(label)) {
       throw new Error(`Invalid allowed host label: "${label}" in "${value}". Labels must contain only alphanumeric characters or hyphens and cannot start or end with a hyphen.`);
     }
+  }
+
+  // Top-level domain label cannot be purely numeric in standard DNS
+  const tld = labels[labels.length - 1];
+  if (/^[0-9]+$/.test(tld)) {
+    throw new Error(`Invalid allowed host format: "${value}". Top-level domain cannot be purely numeric.`);
   }
 
   return host;

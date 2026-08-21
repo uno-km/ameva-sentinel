@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -265,6 +266,11 @@ try {
 } catch (e) {}
 
 const summaryData = {
+  schemaVersion: '1.0',
+  sourceCommit: gitCommit,
+  artifactPath: 'scripts/codes/source_export.txt',
+  branch: gitBranch,
+  workingTreeAtExport: isWorkingTreeClean ? 'CLEAN' : 'DIRTY',
   executable: totalPassed,
   packaging: packagingPassedCount,
   total: releaseTotal,
@@ -275,9 +281,6 @@ const summaryData = {
   score: finalScore,
   grade: grade,
   status: overallPassed ? 'PASS' : 'FAIL',
-  gitBranch,
-  gitCommit,
-  workingTree: isWorkingTreeClean ? 'CLEAN' : 'DIRTY',
   generatedAt: new Date().toISOString()
 };
 
@@ -365,6 +368,27 @@ for (const oldFile of oldReports) {
   } catch (e) {}
 }
 
+// Calculate SHA-256 of source_export.txt if it exists
+let exportSha256 = null;
+const exportPath = path.join(CODES_DIR, 'source_export.txt');
+if (fs.existsSync(exportPath)) {
+  const content = fs.readFileSync(exportPath);
+  exportSha256 = crypto.createHash('sha256').update(content).digest('hex');
+}
+
+const provenanceData = {
+  schemaVersion: '1.0',
+  sourceCommit: gitCommit,
+  artifactPath: 'scripts/codes/source_export.txt',
+  sha256: exportSha256,
+  branch: gitBranch,
+  workingTreeAtExport: isWorkingTreeClean ? 'CLEAN' : 'DIRTY',
+  totalChecks: releaseTotal,
+  passedChecks: releasePassed,
+  status: overallPassed ? 'PASS' : 'FAIL',
+  timestamp: summaryData.generatedAt
+};
+
 // Write unified canonical report files to scripts/codes and reports
 const CODES_TEXT_REPORT = path.join(CODES_DIR, 'TEST_SUITE_AND_RESULTS.txt');
 const REPORTS_TEXT_REPORT = path.join(REPORT_DIR, 'TEST_SUITE_AND_RESULTS.txt');
@@ -372,16 +396,19 @@ const REPORTS_TEXT_REPORT = path.join(REPORT_DIR, 'TEST_SUITE_AND_RESULTS.txt');
 fs.writeFileSync(CODES_REPORT_FILE, md, 'utf8');
 fs.writeFileSync(CODES_TEXT_REPORT, md, 'utf8');
 fs.writeFileSync(path.join(CODES_DIR, 'summary.json'), JSON.stringify(summaryData, null, 2), 'utf8');
+fs.writeFileSync(path.join(CODES_DIR, 'provenance.json'), JSON.stringify(provenanceData, null, 2), 'utf8');
 
 fs.writeFileSync(REPORT_FILE, md, 'utf8');
 fs.writeFileSync(REPORTS_TEXT_REPORT, md, 'utf8');
 fs.writeFileSync(path.join(REPORT_DIR, 'summary.json'), JSON.stringify(summaryData, null, 2), 'utf8');
+fs.writeFileSync(path.join(REPORT_DIR, 'provenance.json'), JSON.stringify(provenanceData, null, 2), 'utf8');
 
 console.log(`\n🎉 Comprehensive Unified Master Report successfully generated at:`);
 console.log(`   1. ${CODES_REPORT_FILE}`);
 console.log(`   2. ${CODES_TEXT_REPORT}`);
 console.log(`   3. ${REPORT_FILE}`);
 console.log(`   4. ${REPORTS_TEXT_REPORT}`);
+console.log(`   5. ${path.join(REPORT_DIR, 'provenance.json')}`);
 console.log(`   Status: ${overallStatus} (${releasePassed}/${releaseTotal} checks)\n`);
 
 if (!overallPassed) {

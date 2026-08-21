@@ -1,4 +1,9 @@
 {
+  "schemaVersion": "1.0",
+  "sourceCommit": "73ba8621d2226558dd092e2943c47001a4630401",
+  "artifactPath": "scripts/codes/source_export.txt",
+  "branch": "release-0.6",
+  "workingTreeAtExport": "DIRTY",
   "executable": 83,
   "packaging": 3,
   "total": 86,
@@ -9,8 +14,5 @@
   "score": 100,
   "grade": "A+",
   "status": "PASS",
-  "gitBranch": "release-0.6",
-  "gitCommit": "49f6376c1d31d8721db7b74ddee6e424e59c5f43",
-  "workingTree": "CLEAN",
-  "generatedAt": "2026-08-21T06:03:00.038Z"
+  "generatedAt": "2026-08-21T06:06:22.091Z"
 }

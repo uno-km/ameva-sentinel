@@ -22,6 +22,7 @@
     "test:all": "npm run build && npm run test:types && npm run test:unit && playwright test",
     "test:report": "node scripts/generate_test_report.js",
     "verify": "npm run build && npm run test:types && npm run test:unit && playwright test",
+    "verify:release": "py scripts/export_source_code.py && node scripts/generate_test_report.js && node scripts/verify_provenance.js",
     "export": "py scripts/export_source_code.py"
   },
   "devDependencies": {

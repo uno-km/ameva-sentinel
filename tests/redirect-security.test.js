@@ -94,6 +94,15 @@ runTest('normalizeAllowedHost normalizes casing/whitespace and strictly rejects 
   assert.strictEqual(normalizeAllowedHost('example.com.'), 'example.com');
   assert.strictEqual(normalizeAllowedHost('127.0.0.1'), '127.0.0.1');
   assert.strictEqual(normalizeAllowedHost('localhost'), 'localhost');
+  assert.strictEqual(normalizeAllowedHost('255.255.255.255'), '255.255.255.255');
+  assert.strictEqual(normalizeAllowedHost('0.0.0.0'), '0.0.0.0');
+
+  // Rejections for out-of-range IPv4, leading zeroes, and numeric TLD
+  assert.throws(() => normalizeAllowedHost('256.1.1.1'), /Invalid IPv4 address/);
+  assert.throws(() => normalizeAllowedHost('999.999.999.999'), /Invalid IPv4 address/);
+  assert.throws(() => normalizeAllowedHost('1.2.3.999'), /Invalid IPv4 address/);
+  assert.throws(() => normalizeAllowedHost('01.02.03.04'), /Invalid IPv4 address/);
+  assert.throws(() => normalizeAllowedHost('123.456'), /Top-level domain cannot be purely numeric/);
 
   // Rejections for invalid protocols, ports, paths, and malformed label syntax
   assert.throws(() => normalizeAllowedHost('https://example.com'), /Invalid allowed host format/);

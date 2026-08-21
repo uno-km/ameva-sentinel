@@ -44,13 +44,24 @@ jobs:
       - name: Execute Playwright cross-browser test suite
         run: npx playwright test
 
-      - name: Run Fail-Closed Release Verification Report Generator
-        run: node scripts/generate_test_report.js
+      - name: Run Fail-Closed Release Verification & Export Pipeline
+        run: |
+          python3 scripts/export_source_code.py || python scripts/export_source_code.py || py scripts/export_source_code.py
+          node scripts/generate_test_report.js
+          node scripts/verify_provenance.js
 
       - name: Upload Verification Artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sentinel-test-reports
+          name: sentinel-test-reports-${{ github.sha }}
           path: |
             reports/TEST_SUITE_AND_RESULTS.md
-            scripts/codes/*_test_report.txt
+            reports/TEST_SUITE_AND_RESULTS.txt
+            reports/summary.json
+            reports/provenance.json
+            scripts/codes/TEST_SUITE_AND_RESULTS.md
+            scripts/codes/TEST_SUITE_AND_RESULTS.txt
+            scripts/codes/summary.json
+            scripts/codes/provenance.json
+            scripts/codes/source_export.txt

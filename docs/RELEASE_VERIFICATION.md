@@ -30,5 +30,6 @@
   🏆 TOTAL AUDIT SCORE: 86 Passed / 0 Failed | 100.0 / 100.0 pts (Grade A+) | 100% ALL GATES PASS
 ====================================================================================================
 ```
-* Note: For micro-benchmark latencies and execution durations, consult the canonical generated report at [reports/TEST_SUITE_AND_RESULTS.md](file:///c:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/reports/TEST_SUITE_AND_RESULTS.md).
+
+* Note: For micro-benchmark latencies and execution durations, consult the canonical generated report at [reports/TEST_SUITE_AND_RESULTS.md](../reports/TEST_SUITE_AND_RESULTS.md).
 
