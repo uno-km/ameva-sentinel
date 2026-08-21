@@ -8,6 +8,8 @@ import {
 } from './types.js';
 import { calculateConfidence } from './confidence.js';
 import { SentinelPolicy, defaultPolicy } from './policy.js';
+import { classifyBot } from './bot-classifier.js';
+import { resolveDecision } from './decision.js';
 
 export interface EvaluateOptions {
   policy?: SentinelPolicy;
@@ -16,8 +18,8 @@ export interface EvaluateOptions {
 }
 
 /**
- * Pure risk evaluation engine.
- * Evaluates telemetry signals against the configured SentinelPolicy.
+ * Pure risk evaluation engine (4-Stage Pipeline).
+ * 1. Classification -> 2. Scoring -> 3. Decision -> 4. Report Resolution
  * Guaranteed input immutability and deterministic 0~100 score clamping.
  */
 export function evaluate(
@@ -44,6 +46,20 @@ export function evaluate(
   // Defensive copy to guarantee input immutability
   const safeSignals: TelemetrySignals = { ...signals };
 
+  // =========================================================================
+  // Stage 1: Heuristic Bot Classification
+  // =========================================================================
+  const classification = classifyBot(safeSignals.userAgent, safeSignals);
+  if (classification.isBotLikely && classification.category !== 'NONE') {
+    safeSignals.botCategory = classification.category;
+    if (classification.claimedName && !safeSignals.claimedBot) {
+      safeSignals.claimedBot = classification.claimedName;
+    }
+  }
+
+  // =========================================================================
+  // Stage 2: Pure Rule Scoring & 0~100 Clamping
+  // =========================================================================
   for (const rule of policy.rules) {
     const result = rule.evaluate(safeSignals);
     if (result.triggered) {
@@ -65,21 +81,42 @@ export function evaluate(
   const evidenceConfidence = calculateConfidence(safeSignals);
 
   // Determine Evaluated Recommendation based on Policy Thresholds
-  let recommendedAction = SentinelAction.ALLOW;
+  let recommendedScoreAction = SentinelAction.ALLOW;
   if (finalScore >= policy.thresholds.deny) {
-    recommendedAction = SentinelAction.TEMPORARY_DENY;
+    recommendedScoreAction = SentinelAction.TEMPORARY_DENY;
   } else if (finalScore >= policy.thresholds.appVerification) {
-    recommendedAction = SentinelAction.REQUIRE_APP_VERIFICATION;
+    recommendedScoreAction = SentinelAction.REQUIRE_APP_VERIFICATION;
   } else if (finalScore >= policy.thresholds.rateLimit) {
-    recommendedAction = SentinelAction.RATE_LIMIT;
+    recommendedScoreAction = SentinelAction.RATE_LIMIT;
   } else if (finalScore > 20) {
-    recommendedAction = SentinelAction.OBSERVE;
+    recommendedScoreAction = SentinelAction.OBSERVE;
   }
 
+  // =========================================================================
+  // Stage 3: Pure Decision Resolution (TargetMode & Policy Routing)
+  // =========================================================================
+  const decision = resolveDecision({
+    score: finalScore,
+    recommendedScoreAction,
+    classification,
+    signals: safeSignals,
+    botPolicy: policy.botPolicy,
+    enforcementMode
+  });
+
+  const recommendedAction = decision.action;
+
+  // =========================================================================
+  // Stage 4: Enforcement Mode Resolution
   // In Shadow Mode, never enforce blocking actions directly
+  // =========================================================================
   let action = recommendedAction;
   if (enforcementMode === 'SHADOW') {
-    action = recommendedAction === SentinelAction.ALLOW ? SentinelAction.ALLOW : SentinelAction.OBSERVE;
+    if (recommendedAction === SentinelAction.ALLOW) {
+      action = SentinelAction.ALLOW;
+    } else {
+      action = SentinelAction.OBSERVE;
+    }
   }
 
   return {
@@ -88,6 +125,10 @@ export function evaluate(
     evidenceConfidence,
     action,
     recommendedAction,
+    decision,
+    classification,
+    redirectTo: decision.redirect?.destinationId,
+    redirectStatusCode: decision.redirect?.statusCode,
     enforcementMode,
     policyVersion: policy.version,
     evidence,

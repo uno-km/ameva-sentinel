@@ -1,12 +1,12 @@
 # 🛡️ AMEVA Sentinel
 
 > **Privacy-first Security Observability Layer for Web Applications**  
-> *AMEVA Sentinel v0.5.0-alpha.1 — Deterministic 0-100 Risk Engine & Policy-as-Code*
+> *AMEVA Sentinel v0.6.0-alpha.1 — Target Discrimination, Smart Bot Classifier & Closed-Destination Routing*
 
 [![Official Documentation](https://img.shields.io/badge/docs-uno--km.vercel.app%2Fsentinel-004499?style=flat-square&logo=vercel)](https://uno-km.vercel.app/sentinel/)
 [![npm package](https://img.shields.io/npm/v/@ameva/sentinel/alpha?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/@ameva/sentinel)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)](LICENSE)
-[![Release Gates](https://img.shields.io/badge/release%20gates-29%2F29%20passing%20(28%20tests%20%2B%201%20type%20gate)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
+[![Release Gates](https://img.shields.io/badge/release%20checks-44%2F44%20passing%20(43%20tests%20%2B%203%20pkg%20dryruns)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
 [![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)](https://uno-km.vercel.app/sentinel/)
 [![Foundation](https://img.shields.io/badge/AOSF-Tier%201%20TLP-f59e0b?style=flat-square)](https://uno-km.vercel.app/docs/foundation/)
 

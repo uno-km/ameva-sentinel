@@ -1,4 +1,5 @@
 import { RuleDefinition, rules } from './rules.js';
+import { BotPolicyConfig } from './types.js';
 
 export interface SentinelThresholds {
   rateLimit: number;
@@ -10,17 +11,19 @@ export interface SentinelPolicy {
   version: string;
   thresholds: SentinelThresholds;
   rules: RuleDefinition[];
+  botPolicy?: BotPolicyConfig;
 }
 
 export interface CreatePolicyOptions {
   version?: string;
   thresholds?: Partial<SentinelThresholds>;
   rules?: RuleDefinition[];
+  botPolicy?: BotPolicyConfig;
 }
 
 export function createPolicy(options: CreatePolicyOptions = {}): SentinelPolicy {
   return {
-    version: options.version || '2026-08-21.1',
+    version: options.version || '2026-08-21.v0.6',
     thresholds: {
       rateLimit: options.thresholds?.rateLimit ?? 50,
       appVerification: options.thresholds?.appVerification ?? 70,
@@ -32,7 +35,8 @@ export function createPolicy(options: CreatePolicyOptions = {}): SentinelPolicy 
       rules.trustedInputAbsent({ weight: 20 }),
       rules.touchMismatch({ weight: 15 }),
       rules.suspiciousUA({ weight: 15 })
-    ]
+    ],
+    botPolicy: options.botPolicy
   };
 }
 

@@ -161,5 +161,31 @@ export const rules = {
         };
       }
     };
+  },
+
+  /**
+   * Evaluates Bot Category against Denylist and Automated Tool patterns
+   */
+  botClassification: (options: { weight?: number } = {}): RuleDefinition => {
+    const weight = options.weight ?? 30;
+    return {
+      id: 'bot.classification_denylist',
+      weight,
+      evaluate: (signals) => {
+        const isAutomatedTool = signals.botCategory === 'AUTOMATED_TOOL';
+        return {
+          triggered: isAutomatedTool,
+          score: isAutomatedTool ? weight : 0,
+          attributes: {
+            bot_category: signals.botCategory || 'NONE',
+            claimed_bot: signals.claimedBot || null,
+            is_automated_tool: isAutomatedTool
+          },
+          message: isAutomatedTool
+            ? `Automated tool/scraper category detected (${signals.claimedBot || 'scraper'})`
+            : 'Bot classification posture is standard'
+        };
+      }
+    };
   }
 };

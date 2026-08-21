@@ -1,9 +1,11 @@
-import {
+﻿import {
   SentinelAction,
   defaultPolicy,
   evaluate,
   createPolicy,
   rules,
+  classifyBot,
+  resolveDecision,
   MemoryFixedWindowCounterStore,
   MemoryCounterStore,
   MemoryRiskEventStore,
@@ -19,7 +21,17 @@ import type {
   SentinelPolicy,
   StoredRiskEventV1,
   CounterStore,
-  RiskEventStore
+  RiskEventStore,
+  TrafficTargetMode,
+  BotCategory,
+  BotIdentityState,
+  BotClassificationResult,
+  DecisionReasonCode,
+  RedirectDestinationId,
+  SentinelDecision,
+  BotRoutingRule,
+  BotPolicyConfig,
+  VerifiedCollectorContext
 } from '@ameva/sentinel-risk-core';
 
 export {
@@ -28,6 +40,8 @@ export {
   createPolicy,
   rules,
   evaluate,
+  classifyBot,
+  resolveDecision,
   MemoryFixedWindowCounterStore,
   MemoryCounterStore,
   MemoryRiskEventStore,
@@ -43,7 +57,17 @@ export type {
   SentinelPolicy,
   StoredRiskEventV1,
   CounterStore,
-  RiskEventStore
+  RiskEventStore,
+  TrafficTargetMode,
+  BotCategory,
+  BotIdentityState,
+  BotClassificationResult,
+  DecisionReasonCode,
+  RedirectDestinationId,
+  SentinelDecision,
+  BotRoutingRule,
+  BotPolicyConfig,
+  VerifiedCollectorContext
 };
 
 export interface SentinelOptions {
@@ -52,6 +76,7 @@ export interface SentinelOptions {
   counterStore?: CounterStore;
   eventStore?: RiskEventStore | null;
   rateKeyProvider?: (req: any) => string | null;
+  redirectRegistry?: Record<string, string | URL>;
 }
 
 export class Sentinel {
@@ -60,6 +85,7 @@ export class Sentinel {
   private counterStore: CounterStore;
   private eventStore: RiskEventStore | null;
   private rateKeyProvider?: (req: any) => string | null;
+  private redirectRegistry: Record<string, string | URL>;
 
   constructor(options: SentinelOptions = {}) {
     this.policy = options.policy || defaultPolicy;
@@ -67,6 +93,11 @@ export class Sentinel {
     this.counterStore = options.counterStore || new MemoryFixedWindowCounterStore();
     this.eventStore = options.eventStore || null;
     this.rateKeyProvider = options.rateKeyProvider;
+    this.redirectRegistry = options.redirectRegistry || {
+      AI_FEED: '/llms.txt',
+      BOT_GUIDANCE: '/bot-guidance',
+      DECOY_SERVICE: '/security/decoy'
+    };
   }
 
   async score(req: any): Promise<SentinelRiskReport> {
@@ -91,6 +122,12 @@ export class Sentinel {
       policy: this.policy,
       enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW'
     });
+
+    // Resolve Destination ID against closed server registry if available
+    if (report.redirectTo && this.redirectRegistry[report.redirectTo]) {
+      const resolved = this.redirectRegistry[report.redirectTo];
+      report.redirectTo = typeof resolved === 'string' ? resolved : resolved.toString();
+    }
 
     if (this.eventStore && typeof this.eventStore.append === 'function') {
       try {
@@ -134,6 +171,9 @@ export class Sentinel {
         isTrustedEventsCount: typeof s.trustedInputCount === 'number' ? s.trustedInputCount : (typeof s.isTrustedEventsCount === 'number' ? s.isTrustedEventsCount : 0),
         touchMismatch: !!s.touchMismatch,
         suspiciousUA: !!s.suspiciousUA,
+        userAgent: s.userAgent,
+        claimedBot: s.claimedBot,
+        verifiedBot: s.verifiedBot,
         tokenPresented: Boolean(s.token),
         tokenVerified: false,
         tokenFreshnessMs: typeof s.tokenFreshnessMs === 'number' ? s.tokenFreshnessMs : 100
@@ -168,6 +208,7 @@ export class Sentinel {
       isTrustedEventsCount: typeof body.trusted_events === 'number' ? body.trusted_events : 0,
       touchMismatch: isTouchMismatch,
       suspiciousUA: isSuspiciousUA,
+      userAgent: ua,
       claimedBot: body.claimed_bot || (ua.includes('Bot') ? 'claimed_bot' : undefined),
       tokenPresented: Boolean(body.token),
       tokenVerified: false,
