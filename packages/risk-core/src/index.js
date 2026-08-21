@@ -48,6 +48,18 @@ export class MemoryFixedWindowCounterStore {
 
 export const MemoryCounterStore = MemoryFixedWindowCounterStore;
 
+export function isStoredRiskEventV1(value) {
+  if (!value || typeof value !== 'object') return false;
+  return (
+    value.schemaVersion === '1.0' &&
+    typeof value.traceId === 'string' &&
+    typeof value.score === 'number' &&
+    Number.isFinite(value.score) &&
+    typeof value.evaluatedAt === 'string' &&
+    Array.isArray(value.evidence)
+  );
+}
+
 export function sanitizeSignals(signals = {}) {
   return {
     webdriverObserved: !!signals.webdriver || !!signals.webdriverObserved,
@@ -160,15 +172,14 @@ export class LocalStorageRiskEventStore {
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
       const now = Date.now();
-      let valid = parsed;
-      if (!options.includeExpired) {
-        valid = parsed.filter(item => {
-          if (!item || !item.evaluatedAt) return false;
-          const time = new Date(item.evaluatedAt).getTime();
-          return (now - time) <= this.maxAgeMs;
-        });
-      }
-      return valid.slice(0, options.limit ?? this.maxItems);
+      const valid = parsed.filter(isStoredRiskEventV1);
+      const unexpired = options.includeExpired
+        ? valid
+        : valid.filter(item => {
+            const time = new Date(item.evaluatedAt).getTime();
+            return (now - time) <= this.maxAgeMs;
+          });
+      return unexpired.slice(0, options.limit ?? this.maxItems);
     } catch (e) {
       try { localStorage.removeItem(this.key); } catch (err) {}
       return [];

@@ -36,6 +36,19 @@ export interface StoredRiskEventV1 {
   storedAt: string;
 }
 
+export function isStoredRiskEventV1(value: unknown): value is StoredRiskEventV1 {
+  if (!value || typeof value !== 'object') return false;
+  const event = value as Record<string, unknown>;
+  return (
+    event.schemaVersion === '1.0' &&
+    typeof event.traceId === 'string' &&
+    typeof event.score === 'number' &&
+    Number.isFinite(event.score) &&
+    typeof event.evaluatedAt === 'string' &&
+    Array.isArray(event.evidence)
+  );
+}
+
 export function sanitizeSignals(signals: any = {}): MinimalDerivedSignals {
   return {
     webdriverObserved: !!signals.webdriver || !!signals.webdriverObserved,
@@ -65,9 +78,6 @@ export function sanitizeEvidence(item: EvidenceItem): SanitizedEvidence {
   };
 }
 
-/**
- * Explicit conversion function to produce a secure, sanitized persistent representation
- */
 export function toStoredRiskEvent(report: SentinelRiskReport & { signals?: any }): StoredRiskEventV1 {
   const now = Date.now();
   return {
@@ -113,7 +123,6 @@ export class MemoryRiskEventStore implements RiskEventStore {
     const now = Date.now();
     const storedItem = toStoredRiskEvent(report);
 
-    // Idempotency: Deduplicate by traceId
     this.events = this.events.filter(e => e.traceId !== report.traceId);
     this.events.unshift(storedItem);
     this.prune(now);
@@ -161,7 +170,6 @@ export class LocalStorageRiskEventStore implements RiskEventStore {
     const current = await this.list({ limit: this.maxItems, includeExpired: false });
     const storedItem = toStoredRiskEvent(report);
 
-    // Idempotency: Deduplicate by traceId
     const filtered = current.filter(e => e.traceId !== report.traceId);
     const next = [storedItem, ...filtered].slice(0, this.maxItems);
 
@@ -190,17 +198,17 @@ export class LocalStorageRiskEventStore implements RiskEventStore {
       if (!Array.isArray(parsed)) return [];
 
       const now = Date.now();
-      let valid = parsed;
+      // Strict runtime schema validation
+      const valid = parsed.filter(isStoredRiskEventV1);
 
-      if (!options.includeExpired) {
-        valid = parsed.filter((item: any) => {
-          if (!item || !item.evaluatedAt) return false;
-          const time = new Date(item.evaluatedAt).getTime();
-          return (now - time) <= this.maxAgeMs;
-        });
-      }
+      const unexpired = options.includeExpired
+        ? valid
+        : valid.filter(item => {
+            const time = new Date(item.evaluatedAt).getTime();
+            return (now - time) <= this.maxAgeMs;
+          });
 
-      return valid.slice(0, options.limit ?? this.maxItems);
+      return unexpired.slice(0, options.limit ?? this.maxItems);
     } catch (e) {
       try { localStorage.removeItem(this.key); } catch (err) {}
       return [];
