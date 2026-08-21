@@ -1,14 +1,19 @@
-name: Publish Alpha to npm
+name: Publish to npm
 
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      dist_tag:
+        description: 'npm dist-tag (e.g. alpha, latest)'
+        required: true
+        default: 'alpha'
 
 jobs:
   publish:
-    name: Publish Packages to npm (@alpha tag)
+    name: Publish Packages to npm
     runs-on: ubuntu-latest
 
     steps:
@@ -30,17 +35,48 @@ jobs:
       - name: Run Full Quality Gate Verification
         run: npm run verify
 
-      - name: Publish @ameva/sentinel-risk-core (@alpha)
-        run: npm publish --workspace @ameva/sentinel-risk-core --access public --tag alpha
+      - name: Determine npm dist-tag
+        id: tag_info
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "DIST_TAG=${{ github.event.inputs.dist_tag }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref_name }}" == *"-alpha"* ]]; then
+            echo "DIST_TAG=alpha" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref_name }}" == *"-beta"* ]]; then
+            echo "DIST_TAG=beta" >> $GITHUB_OUTPUT
+          else
+            echo "DIST_TAG=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish @ameva/sentinel-risk-core
+        run: |
+          VERSION=$(node -p "require('./packages/risk-core/package.json').version")
+          if npm view @ameva/sentinel-risk-core@$VERSION version >/dev/null 2>&1; then
+            echo "Version $VERSION of @ameva/sentinel-risk-core is already published. Skipping."
+          else
+            npm publish --workspace @ameva/sentinel-risk-core --access public --tag ${{ steps.tag_info.outputs.DIST_TAG }}
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @ameva/sentinel-browser (@alpha)
-        run: npm publish --workspace @ameva/sentinel-browser --access public --tag alpha
+      - name: Publish @ameva/sentinel-browser
+        run: |
+          VERSION=$(node -p "require('./packages/browser-sdk/package.json').version")
+          if npm view @ameva/sentinel-browser@$VERSION version >/dev/null 2>&1; then
+            echo "Version $VERSION of @ameva/sentinel-browser is already published. Skipping."
+          else
+            npm publish --workspace @ameva/sentinel-browser --access public --tag ${{ steps.tag_info.outputs.DIST_TAG }}
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @ameva/sentinel (@alpha)
-        run: npm publish --workspace @ameva/sentinel --access public --tag alpha
+      - name: Publish @ameva/sentinel
+        run: |
+          VERSION=$(node -p "require('./packages/sentinel/package.json').version")
+          if npm view @ameva/sentinel@$VERSION version >/dev/null 2>&1; then
+            echo "Version $VERSION of @ameva/sentinel is already published. Skipping."
+          else
+            npm publish --workspace @ameva/sentinel --access public --tag ${{ steps.tag_info.outputs.DIST_TAG }}
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
