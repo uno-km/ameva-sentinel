@@ -265,10 +265,19 @@ try {
   isWorkingTreeClean = porcelain.length === 0;
 } catch (e) {}
 
+// Calculate SHA-256 of source_export.txt if it exists
+let exportSha256 = null;
+const exportPath = path.join(CODES_DIR, 'source_export.txt');
+if (fs.existsSync(exportPath)) {
+  const content = fs.readFileSync(exportPath);
+  exportSha256 = crypto.createHash('sha256').update(content).digest('hex');
+}
+
 const summaryData = {
   schemaVersion: '1.0',
   sourceCommit: gitCommit,
   artifactPath: 'scripts/codes/source_export.txt',
+  sha256: exportSha256,
   branch: gitBranch,
   workingTreeAtExport: isWorkingTreeClean ? 'CLEAN' : 'DIRTY',
   executable: totalPassed,
@@ -284,6 +293,19 @@ const summaryData = {
   generatedAt: new Date().toISOString()
 };
 
+const provenanceData = {
+  schemaVersion: '1.0',
+  sourceCommit: gitCommit,
+  artifactPath: 'scripts/codes/source_export.txt',
+  sha256: exportSha256,
+  branch: gitBranch,
+  workingTreeAtExport: isWorkingTreeClean ? 'CLEAN' : 'DIRTY',
+  totalChecks: releaseTotal,
+  passedChecks: releasePassed,
+  status: overallPassed ? 'PASS' : 'FAIL',
+  timestamp: summaryData.generatedAt
+};
+
 // Generate Unified All-in-One Markdown Master Report
 let md = `# 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Unified Master Verification & Audit Report
 
@@ -291,7 +313,8 @@ let md = `# 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Unified Master Verification & 
 > **Generated Timestamp**: \`${summaryData.generatedAt}\`  
 > **Git Branch**: [\`${gitBranch}\`](https://github.com/uno-km/ameva-sentinel/tree/${gitBranch})  
 > **Implementation Commit**: \`${gitCommit}\`  
-> **Working Tree State**: \`${summaryData.workingTree}\`  
+> **Source Snapshot SHA-256**: \`${exportSha256 || 'Calculated at Export'}\`  
+> **Working Tree State**: \`${summaryData.workingTreeAtExport}\`  
 > **Overall Gate Status**: \`${overallStatus}\`  
 > **Final Score**: \`${finalScore.toFixed(1)} / ${maxTotalScore} pts (Grade ${grade})\`  
 > **Total Release Checks**: \`${totalPassed} Executable Gates + ${packagingPassedCount} Monorepo Packaging Gates = ${releasePassed} / ${releaseTotal} Release Checks (100% ALL PASS)\`  
@@ -315,10 +338,16 @@ md += `| **TOTAL EXECUTABLE AUDIT SCORE** | **${totalPassed} Passed / ${totalFai
 
 ---
 
-## 🔒 2. Machine-Verifiable Verification Metadata & Provenance Certificate
+## 🔒 2. Single-File Verification Metadata & Provenance Certificate (All-in-One SSOT)
 
+### 2.1 Release Summary Metadata (\`summary.json\`):
 \`\`\`json
 ${JSON.stringify(summaryData, null, 2)}
+\`\`\`
+
+### 2.2 Independent Verification Provenance Certificate (\`provenance.json\`):
+\`\`\`json
+${JSON.stringify(provenanceData, null, 2)}
 \`\`\`
 
 ---
@@ -367,27 +396,6 @@ for (const oldFile of oldReports) {
     fs.unlinkSync(path.join(CODES_DIR, oldFile));
   } catch (e) {}
 }
-
-// Calculate SHA-256 of source_export.txt if it exists
-let exportSha256 = null;
-const exportPath = path.join(CODES_DIR, 'source_export.txt');
-if (fs.existsSync(exportPath)) {
-  const content = fs.readFileSync(exportPath);
-  exportSha256 = crypto.createHash('sha256').update(content).digest('hex');
-}
-
-const provenanceData = {
-  schemaVersion: '1.0',
-  sourceCommit: gitCommit,
-  artifactPath: 'scripts/codes/source_export.txt',
-  sha256: exportSha256,
-  branch: gitBranch,
-  workingTreeAtExport: isWorkingTreeClean ? 'CLEAN' : 'DIRTY',
-  totalChecks: releaseTotal,
-  passedChecks: releasePassed,
-  status: overallPassed ? 'PASS' : 'FAIL',
-  timestamp: summaryData.generatedAt
-};
 
 // Write unified canonical report files to scripts/codes and reports
 const CODES_TEXT_REPORT = path.join(CODES_DIR, 'TEST_SUITE_AND_RESULTS.txt');
