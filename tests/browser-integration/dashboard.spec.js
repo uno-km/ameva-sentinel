@@ -20,10 +20,11 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
     expect(firstTraceId).toBeTruthy();
 
     // Reload page
-    await page.reload();
+    await page.reload({ waitUntil: 'domcontentloaded' });
 
     // Verify same report traceId is restored and visible
     await expect(page.locator(`[data-trace-id="${firstTraceId}"]`)).toBeVisible();
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('risk event is synchronized in real-time across tabs', async ({ browser }) => {
