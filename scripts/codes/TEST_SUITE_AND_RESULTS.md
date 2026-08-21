@@ -1,6 +1,6 @@
 # 🛡️ AMEVA-Sentinel — Comprehensive Test Suite & Execution Results Report
 
-> **Generated At**: `2026-08-21T01:46:46.501Z`  
+> **Generated At**: `2026-08-21T01:49:59.393Z`  
 > **Repository**: [https://github.com/uno-km/ameva-sentinel.git](https://github.com/uno-km/ameva-sentinel.git)  
 > **Monorepo Version**: `0.5.0-alpha.1`  
 > **Execution Engine**: Node.js `v24.16.0` on `win32`
@@ -11,12 +11,12 @@
 
 | Test Category | Tests Passed | Execution Time | Score Points | Status |
 | :--- | :---: | :---: | :---: | :---: |
-| **Risk Engine Quality Gates** | `7 / 7` | `97ms` | **35.0 / 35 pts** | 🟢 PASS |
-| **Facade & State Enforcement** | `3 / 3` | `140ms` | **30.0 / 30 pts** | 🟢 PASS |
-| **Persistence & Deep Schema Bounds** | `7 / 7` | `139ms` | **21.0 / 21 pts** | 🟢 PASS |
-| **Browser SDK Unit Verification** | `2 / 2` | `103ms` | **14.0 / 14 pts** | 🟢 PASS |
-| **Playwright Cross-Browser E2E (9 Tests)** | `9 / 9` | `18091ms` | **E2E Verified** | 🟢 PASS |
-| **TOTAL AUDIT SCORE** | **28 Passed / 0 Failed** | **—** | **100.0 / 100 pts (Grade A+)** | 🏆 **100% PASS** |
+| **Risk Engine Quality Gates** | `7 / 7` | `102ms` | **35.0 / 35 pts** | 🟢 PASS |
+| **Facade & State Enforcement** | `3 / 3` | `97ms` | **30.0 / 30 pts** | 🟢 PASS |
+| **Persistence & Deep Schema Bounds** | `7 / 7` | `92ms` | **21.0 / 21 pts** | 🟢 PASS |
+| **Browser SDK Unit Verification** | `2 / 2` | `101ms` | **14.0 / 14 pts** | 🟢 PASS |
+| **Playwright Cross-Browser E2E (9 Tests)** | `9 / 9` | `15679ms` | **E2E Verified** | 🟢 PASS |
+| **TOTAL AUDIT SCORE** | **28 Passed / 0 Failed** | **—** | **100.0 / 100 pts (Grade A+)** | 🏆 100% PASS |
 
 ---
 
@@ -27,15 +27,16 @@
 - [3. RiskEventStore Persistence & Deep Schema Validation Tests](#store)
 - [4. @ameva/sentinel-browser Client Telemetry Unit Tests](#browser)
 - [5. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)](#playwright)
+- [6. Workspace Distribution & Packaging Verification (`npm pack --dry-run`)](#packaging)
 
 ---
 
 <a id="engine"></a>
 ## 1. Risk Core Engine & Boundary Quality Gate Tests
 
-- **Test File Path**: [`tests/engine.test.js`](file:///C:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/tests/engine.test.js)
+- **Test File Path**: [`tests/engine.test.js`](../tests/engine.test.js)
 - **Execution Command**: `node tests/engine.test.js`
-- **Execution Latency**: `97 ms`
+- **Execution Latency**: `102 ms`
 - **Results**: `7 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -237,9 +238,9 @@ Failed:                  0
 <a id="sentinel"></a>
 ## 2. Sentinel Facade & Stateful Rate Enforcement Tests
 
-- **Test File Path**: [`tests/sentinel.test.js`](file:///C:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/tests/sentinel.test.js)
+- **Test File Path**: [`tests/sentinel.test.js`](../tests/sentinel.test.js)
 - **Execution Command**: `node tests/sentinel.test.js`
-- **Execution Latency**: `140 ms`
+- **Execution Latency**: `97 ms`
 - **Results**: `3 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -402,9 +403,9 @@ Failed:             0
 <a id="store"></a>
 ## 3. RiskEventStore Persistence & Deep Schema Validation Tests
 
-- **Test File Path**: [`tests/store.test.js`](file:///C:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/tests/store.test.js)
+- **Test File Path**: [`tests/store.test.js`](../tests/store.test.js)
 - **Execution Command**: `node tests/store.test.js`
-- **Execution Latency**: `139 ms`
+- **Execution Latency**: `92 ms`
 - **Results**: `7 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -567,9 +568,9 @@ run();
 <a id="browser"></a>
 ## 4. @ameva/sentinel-browser Client Telemetry Unit Tests
 
-- **Test File Path**: [`tests/browser.test.js`](file:///C:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/tests/browser.test.js)
+- **Test File Path**: [`tests/browser.test.js`](../tests/browser.test.js)
 - **Execution Command**: `node tests/browser.test.js`
-- **Execution Latency**: `103 ms`
+- **Execution Latency**: `101 ms`
 - **Results**: `2 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -662,9 +663,9 @@ Failed:              0
 <a id="playwright"></a>
 ## 5. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)
 
-- **Test File Path**: [`tests/browser-integration/dashboard.spec.js`](file:///C:/Users/GAME/Desktop/uno-km/dev/ameva-sentinel/tests/browser-integration/dashboard.spec.js)
+- **Test File Path**: [`tests/browser-integration/dashboard.spec.js`](../tests/browser-integration/dashboard.spec.js)
 - **Execution Command**: `npx playwright test`
-- **Execution Latency**: `18091 ms`
+- **Execution Latency**: `15679 ms`
 - **Results**: `9 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -768,17 +769,30 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
 ```text
 Running 9 tests using 1 worker
 
-  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.4s)
-  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (810ms)
-  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (168ms)
-  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (3.4s)
-  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.1s)
-  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (392ms)
-  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (986ms)
-  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (988ms)
-  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (290ms)
+  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (760ms)
+  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (592ms)
+  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (157ms)
+  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (2.6s)
+  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.2s)
+  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (390ms)
+  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.4s)
+  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.1s)
+  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (322ms)
 
-  9 passed (16.0s)
+  9 passed (13.9s)
 ```
 
 ---
+
+<a id="packaging"></a>
+## 6. Workspace Distribution & Packaging Verification (`npm pack --dry-run`)
+
+```text
+ameva-sentinel-risk-core-0.5.0-alpha.1.tgz
+
+---
+ameva-sentinel-browser-0.5.0-alpha.1.tgz
+
+---
+ameva-sentinel-0.5.0-alpha.1.tgz
+```

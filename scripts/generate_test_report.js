@@ -71,7 +71,7 @@ const testSuites = [
 ];
 
 let totalScore = 0;
-let maxTotalScore = 100;
+const maxTotalScore = 100;
 let totalPassed = 0;
 let totalFailed = 0;
 const resultsData = [];
@@ -97,20 +97,24 @@ for (const suite of testSuites) {
     } catch (err) {
       outputLog = (err.stdout || '') + '\n' + (err.stderr || '') + '\n' + err.message;
       durationMs = Math.round(performance.now() - t0);
-      status = err.status === 0 ? 'PASS' : 'FAIL';
+      status = 'FAIL';
     }
 
     if (suite.id === 'playwright') {
-      const pwPassed = outputLog.match(/(\d+)\s+passed/);
-      passedCount = pwPassed ? parseInt(pwPassed[1], 10) : (outputLog.includes('passed') ? 9 : 0);
-      const pwFailed = outputLog.match(/(\d+)\s+failed/);
-      failedCount = pwFailed ? parseInt(pwFailed[1], 10) : 0;
-      if (failedCount > 0) status = 'FAIL';
+      const match = outputLog.match(/(\d+)\s+passed/);
+      passedCount = match ? Number(match[1]) : 0;
+      if (passedCount !== 9 || status === 'FAIL') {
+        status = 'FAIL';
+        failedCount = Math.max(1, 9 - passedCount);
+      }
     } else {
       const passMatches = outputLog.match(/✅ PASS/g) || [];
       const failMatches = outputLog.match(/❌ FAIL/g) || [];
       passedCount = passMatches.length;
       failedCount = failMatches.length;
+      if (failedCount > 0) {
+        status = 'FAIL';
+      }
       totalScore += (passedCount * suite.pointsPerTest);
     }
 
@@ -128,6 +132,23 @@ for (const suite of testSuites) {
     failedCount
   });
 }
+
+// 6. Verify npm pack --dry-run for all 3 workspaces
+console.log('📦 Verifying npm pack --dry-run across workspaces...');
+let packLog = '';
+try {
+  const packCore = execSync('npm pack --dry-run --workspace @ameva/sentinel-risk-core', { cwd: ROOT, encoding: 'utf8' });
+  const packBrowser = execSync('npm pack --dry-run --workspace @ameva/sentinel-browser', { cwd: ROOT, encoding: 'utf8' });
+  const packSentinel = execSync('npm pack --dry-run --workspace @ameva/sentinel', { cwd: ROOT, encoding: 'utf8' });
+  packLog = [packCore, packBrowser, packSentinel].join('\n---\n');
+} catch (e) {
+  packLog = e.message;
+}
+
+// Determine final dynamic audit verdict
+const allPassed = totalFailed === 0 && resultsData.every(r => r.status === 'PASS');
+const grade = allPassed ? 'Grade A+' : 'Grade F';
+const finalStatus = allPassed ? '🏆 100% PASS' : '🔴 QUALITY GATE FAILED';
 
 // Generate Markdown Document
 const now = new Date();
@@ -150,29 +171,32 @@ lines.push('| :--- | :---: | :---: | :---: | :---: |');
 
 for (const res of resultsData) {
   if (res.id === 'playwright') {
-    lines.push(`| **${res.category}** | \`${res.passedCount} / ${res.passedCount + res.failedCount}\` | \`${res.durationMs}ms\` | **E2E Verified** | ${res.status === 'PASS' ? '🟢 PASS' : '🔵 READY'} |`);
+    lines.push(`| **${res.category}** | \`${res.passedCount} / ${res.passedCount + res.failedCount}\` | \`${res.durationMs}ms\` | **E2E Verified** | ${res.status === 'PASS' ? '🟢 PASS' : '🔴 FAIL'} |`);
   } else {
     const pts = (res.passedCount * res.pointsPerTest).toFixed(1);
     lines.push(`| **${res.category}** | \`${res.passedCount} / ${res.passedCount + res.failedCount}\` | \`${res.durationMs}ms\` | **${pts} / ${res.maxPoints} pts** | ${res.status === 'PASS' ? '🟢 PASS' : '🔴 FAIL'} |`);
   }
 }
 
-lines.push(`| **TOTAL AUDIT SCORE** | **${totalPassed} Passed / 0 Failed** | **—** | **${Math.min(100, totalScore).toFixed(1)} / ${maxTotalScore} pts (Grade A+)** | 🏆 **100% PASS** |\n`);
+lines.push(`| **TOTAL AUDIT SCORE** | **${totalPassed} Passed / ${totalFailed} Failed** | **—** | **${Math.min(100, totalScore).toFixed(1)} / ${maxTotalScore} pts (${grade})** | ${finalStatus} |\n`);
 
 lines.push('---\n');
 lines.push('## 📑 Test Suites Index\n');
 for (const res of resultsData) {
   lines.push(`- [${res.title}](#${res.id})`);
 }
+lines.push('- [6. Workspace Distribution & Packaging Verification (`npm pack --dry-run`)](#packaging)');
 lines.push('\n---\n');
 
 for (const res of resultsData) {
   lines.push(`<a id="${res.id}"></a>`);
   lines.push(`## ${res.title}\n`);
-  lines.push(`- **Test File Path**: [\`${res.file}\`](file:///${path.join(ROOT, res.file).replace(/\\/g, '/')})`);
-  lines.push(`- **Execution Command**: \`${res.command}\``);
-  lines.push(`- **Execution Latency**: \`${res.durationMs} ms\``);
-  lines.push(`- **Results**: \`${res.passedCount} Passed, ${res.failedCount} Failed\``);
+  lines.push(`- **Test File Path**: [\`${res.file}\`](../${res.file})`);
+  if (res.command) {
+    lines.push(`- **Execution Command**: \`${res.command}\``);
+    lines.push(`- **Execution Latency**: \`${res.durationMs} ms\``);
+    lines.push(`- **Results**: \`${res.passedCount} Passed, ${res.failedCount} Failed\``);
+  }
   lines.push('\n### 📄 Test Source Code\n');
   lines.push('```javascript');
   lines.push(res.sourceCode);
@@ -184,6 +208,13 @@ for (const res of resultsData) {
   lines.push('```\n');
   lines.push('---\n');
 }
+
+// Section 6: Packaging dry run output
+lines.push('<a id="packaging"></a>');
+lines.push('## 6. Workspace Distribution & Packaging Verification (`npm pack --dry-run`)\n');
+lines.push('```text');
+lines.push(packLog.trim());
+lines.push('```\n');
 
 const content = lines.join('\n');
 
@@ -198,3 +229,8 @@ console.log(`\n🎉 Comprehensive Test Report successfully generated at:`);
 console.log(`   1. ${REPORT_FILE}`);
 console.log(`   2. ${CODES_REPORT_FILE}`);
 console.log(`   3. ${timestampedFile}\n`);
+
+if (!allPassed) {
+  console.error(`❌ Quality gate failed: ${totalFailed} test(s) failed.`);
+  process.exitCode = 1;
+}

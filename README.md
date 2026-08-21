@@ -3,7 +3,7 @@
 > **Privacy-first Security Observability Layer for Web Applications**  
 > *AMEVA Sentinel v0.5.0-alpha.1 — Browser-Local Shadow Mode Prototype*
 
-![Tests](https://img.shields.io/badge/internal%20tests-16%20passing-16a34a?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-28%20passing-16a34a?style=flat-square)
 ![Stage](https://img.shields.io/badge/stage-v0.5.0--alpha.1-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)
 ![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)
@@ -29,7 +29,7 @@
 [sentinel.score(request)] ──► Session-scoped fixed-window counter + Policy-as-Code evaluation
        │                      (Deterministic 0~100 clamp, crypto.randomUUID trace IDs with fallback)
        ▼
-[StoredRiskEventV1] ───────► Explicit schema conversion (zero raw cookies/auth/headers/PII)
+[StoredRiskEventV1] ───────► Strict schema validation (zero raw cookies/auth/headers/PII)
        │
        ▼
 [Shadow Mode Dashboard] ───► Single Risk Core engine import (DOM API & textContent rendering)
@@ -97,11 +97,21 @@ console.log(report);
 
 ---
 
+## ✅ Completed in v0.5.0-alpha.1
+
+- **TypeScript Single Source of Truth**: Mechanically compiled `dist/index.js` and `dist/*.d.ts` across all packages.
+- **28 Automated Quality Gate Tests**: 19 Node unit regression tests + 9 Playwright cross-browser tests (Chromium, Firefox, WebKit) 100% passing.
+- **Cross-Browser Verification**: Reload persistence recovery, real-time multi-tab synchronization, and listener disposal verification.
+- **Deep Schema Validation**: `isStoredRiskEventV1` runtime guards with negative boundary & primitive attribute attack prevention.
+- **Zero-Drift npm Packaging**: `npm pack --dry-run` verified with Apache-2.0 `LICENSE` and `README.md` across workspaces.
+
+---
+
 ## 🗺️ Next Roadmap
 
-1. **Automated Browser E2E Tests**: Playwright automated suite for multi-tab sync, reload recovery, and listener disposal across Chromium, Firefox, WebKit.
-2. **Server Collector API**: Central `/api/v1/sentinel/collect` endpoint with HMAC signed token verification and replay protection.
-3. **Distributed State Adapters**: `RedisCounterStore` and `PostgresRiskEventStore`.
+1. **Server Collector API**: Central `/api/v1/sentinel/collect` endpoint with HMAC signed token verification and replay protection.
+2. **Distributed State Adapters**: `RedisCounterStore` and `PostgresRiskEventStore`.
+3. **Linux CI Automation**: Clean-clone release gate integration.
 
 ---
 
