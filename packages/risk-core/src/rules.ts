@@ -15,7 +15,7 @@ export interface RuleDefinition {
 
 export const rules = {
   /**
-   * Evaluates navigator.webdriver flag
+   * Evaluates navigator.webdriver automation flag
    */
   webdriver: (options: { weight?: number } = {}): RuleDefinition => {
     const weight = options.weight ?? 25;
@@ -40,7 +40,7 @@ export const rules = {
   },
 
   /**
-   * Evaluates high frequency request burst within 10s window
+   * Evaluates high frequency request burst within sliding window
    */
   burst: (options: { weight?: number; threshold?: number; windowMs?: number } = {}): RuleDefinition => {
     const weight = options.weight ?? 30;
@@ -61,36 +61,54 @@ export const rules = {
             threshold
           },
           message: isTriggered
-            ? `High frequency request burst (${count} req / ${windowMs / 1000}s)`
-            : `Request rate is normal (${count} req / ${windowMs / 1000}s)`
+            ? `Request frequency exceeded the configured threshold (${count} req / ${windowMs / 1000}s)`
+            : `Request rate is within limits (${count} req / ${windowMs / 1000}s)`
         };
       }
     };
   },
 
   /**
-   * Evaluates absence of trusted human interaction under active burst
+   * Evaluates absence of trusted human interaction ONLY when telemetry was genuinely observed
+   * Guards against false positives when client telemetry is uninitialized or JS is disabled.
    */
-  noInteraction: (options: { weight?: number; minBurstTrigger?: number } = {}): RuleDefinition => {
+  trustedInputAbsent: (options: { weight?: number; minDurationMs?: number; minBurst?: number } = {}): RuleDefinition => {
     const weight = options.weight ?? 20;
-    const minBurst = options.minBurstTrigger ?? 5;
+    const minDuration = options.minDurationMs ?? 5000;
+    const minBurst = options.minBurst ?? 5;
+
     return {
-      id: 'interaction.no_physics',
+      id: 'interaction.trusted_input_absent',
       weight,
       evaluate: (signals) => {
-        const count = signals.burstCount10s ?? 1;
-        const isTrusted = signals.isTrustedEventsCount ?? 0;
-        const isTriggered = isTrusted === 0 && count >= minBurst;
+        // Crucial Guard: If telemetry was never observed, we lack evidence -> DO NOT TRIGGER
+        if (!signals.telemetryObserved) {
+          return {
+            triggered: false,
+            score: 0,
+            attributes: { telemetry_observed: false },
+            message: 'Client interaction telemetry not observed (insufficient evidence)'
+          };
+        }
+
+        const duration = signals.observationDurationMs ?? 0;
+        const trustedCount = signals.isTrustedEventsCount ?? 0;
+        const burstCount = signals.burstCount10s ?? 1;
+
+        const isTriggered = duration >= minDuration && trustedCount === 0 && burstCount >= minBurst;
+
         return {
           triggered: isTriggered,
           score: isTriggered ? weight : 0,
           attributes: {
-            is_trusted_count: isTrusted,
-            burst_count: count
+            telemetry_observed: true,
+            observation_duration_ms: duration,
+            is_trusted_count: trustedCount,
+            burst_count: burstCount
           },
           message: isTriggered
-            ? `Zero trusted user interaction physics observed under ${count} requests`
-            : `User interaction physics verified (${isTrusted} trusted events)`
+            ? 'No trusted interaction events were observed during the active sampling window'
+            : 'Interaction signals are consistent'
         };
       }
     };
@@ -121,7 +139,7 @@ export const rules = {
   },
 
   /**
-   * Evaluates known bot UA spoofing or suspicious headers
+   * Evaluates known automated bot signatures in User-Agent header
    */
   suspiciousUA: (options: { weight?: number } = {}): RuleDefinition => {
     const weight = options.weight ?? 15;
@@ -138,8 +156,8 @@ export const rules = {
             claimed_bot: signals.claimedBot || null
           },
           message: isTriggered
-            ? `Suspicious or spoofed User-Agent detected (${signals.claimedBot || 'headless'})`
-            : 'User-Agent format is standard'
+            ? `Suspicious or automated scraper signature detected (${signals.claimedBot || 'headless'})`
+            : 'User-Agent header format is standard'
         };
       }
     };

@@ -6,6 +6,8 @@ export enum SentinelAction {
   TEMPORARY_DENY = 'TEMPORARY_DENY'
 }
 
+export type EnforcementMode = 'SHADOW' | 'ENFORCE';
+
 export interface RuleAttributes {
   [key: string]: string | number | boolean | null | undefined;
 }
@@ -19,6 +21,8 @@ export interface EvidenceItem {
 
 export interface TelemetrySignals {
   webdriver?: boolean;
+  telemetryObserved?: boolean;
+  observationDurationMs?: number;
   isTrustedEventsCount?: number;
   mousePhysicsVariance?: number;
   burstCount10s?: number;
@@ -33,9 +37,11 @@ export interface TelemetrySignals {
 
 export interface SentinelRiskReport {
   traceId: string;
-  score: number;           // 0 ~ 100
-  confidence: number;      // 0.00 ~ 1.00
-  action: SentinelAction;
+  score: number;                       // 0 ~ 100 (Clamped)
+  evidenceConfidence: number;          // 0.00 ~ 1.00 (Signal & Rule Completeness Index)
+  action: SentinelAction;              // Actual action to take
+  recommendedAction: SentinelAction;   // Evaluated policy recommendation
+  enforcementMode: EnforcementMode;    // 'SHADOW' | 'ENFORCE'
   policyVersion: string;
   evidence: EvidenceItem[];
   evaluatedAt: string;

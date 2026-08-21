@@ -1,5 +1,44 @@
 // Pure ESM compiled JavaScript for risk-core
 
+export const SentinelAction = {
+  ALLOW: 'ALLOW',
+  OBSERVE: 'OBSERVE',
+  RATE_LIMIT: 'RATE_LIMIT',
+  REQUIRE_APP_VERIFICATION: 'REQUIRE_APP_VERIFICATION',
+  TEMPORARY_DENY: 'TEMPORARY_DENY'
+};
+
+export class MemoryCounterStore {
+  constructor() {
+    this.store = new Map();
+  }
+  async increment(key, options = {}) {
+    const now = Date.now();
+    const amount = options.amount ?? 1;
+    const windowMs = options.windowMs || 10000;
+    const existing = this.store.get(key);
+    if (!existing || existing.expiresAt <= now) {
+      const resetAt = now + windowMs;
+      this.store.set(key, { count: amount, expiresAt: resetAt });
+      return { count: amount, resetAt };
+    }
+    existing.count += amount;
+    return { count: existing.count, resetAt: existing.expiresAt };
+  }
+  async get(key) {
+    const now = Date.now();
+    const existing = this.store.get(key);
+    if (!existing || existing.expiresAt <= now) {
+      this.store.delete(key);
+      return 0;
+    }
+    return existing.count;
+  }
+  async reset(key) {
+    this.store.delete(key);
+  }
+}
+
 export class MemoryRiskEventStore {
   constructor(maxItems = 500) {
     this.events = [];
@@ -42,14 +81,6 @@ export class LocalStorageRiskEventStore {
     localStorage.removeItem(this.key);
   }
 }
-
-export const SentinelAction = {
-  ALLOW: 'ALLOW',
-  OBSERVE: 'OBSERVE',
-  RATE_LIMIT: 'RATE_LIMIT',
-  REQUIRE_APP_VERIFICATION: 'REQUIRE_APP_VERIFICATION',
-  TEMPORARY_DENY: 'TEMPORARY_DENY'
-};
 
 export function calculateConfidence(signals) {
   if (!signals || typeof signals !== 'object') return 0.10;
@@ -98,26 +129,41 @@ export const rules = {
           triggered: isTriggered,
           score: isTriggered ? weight : 0,
           attributes: { window: `${windowMs / 1000}s`, count, threshold },
-          message: isTriggered ? `High frequency request burst (${count} req / ${windowMs / 1000}s)` : `Request rate normal`
+          message: isTriggered ? `Request frequency exceeded the configured threshold (${count} req / ${windowMs / 1000}s)` : `Request rate normal`
         };
       }
     };
   },
-  noInteraction: (options = {}) => {
+  trustedInputAbsent: (options = {}) => {
     const weight = options.weight ?? 20;
-    const minBurst = options.minBurstTrigger ?? 5;
+    const minDuration = options.minDurationMs ?? 5000;
+    const minBurst = options.minBurst ?? 5;
     return {
-      id: 'interaction.no_physics',
+      id: 'interaction.trusted_input_absent',
       weight,
       evaluate: (signals) => {
-        const count = signals.burstCount10s ?? 1;
-        const isTrusted = signals.isTrustedEventsCount ?? 0;
-        const isTriggered = isTrusted === 0 && count >= minBurst;
+        if (!signals.telemetryObserved) {
+          return {
+            triggered: false,
+            score: 0,
+            attributes: { telemetry_observed: false },
+            message: 'Client interaction telemetry not observed (insufficient evidence)'
+          };
+        }
+        const duration = signals.observationDurationMs ?? 0;
+        const trustedCount = signals.isTrustedEventsCount ?? 0;
+        const burstCount = signals.burstCount10s ?? 1;
+        const isTriggered = duration >= minDuration && trustedCount === 0 && burstCount >= minBurst;
         return {
           triggered: isTriggered,
           score: isTriggered ? weight : 0,
-          attributes: { is_trusted_count: isTrusted, burst_count: count },
-          message: isTriggered ? `Zero trusted user interaction physics observed under ${count} requests` : 'Interaction verified'
+          attributes: {
+            telemetry_observed: true,
+            observation_duration_ms: duration,
+            is_trusted_count: trustedCount,
+            burst_count: burstCount
+          },
+          message: isTriggered ? 'No trusted interaction events were observed during the active sampling window' : 'Interaction signals consistent'
         };
       }
     };
@@ -133,7 +179,7 @@ export const rules = {
           triggered: isTriggered,
           score: isTriggered ? weight : 0,
           attributes: { touch_mismatch: isTriggered },
-          message: isTriggered ? 'Mobile platform and touch capability mismatch' : 'Platform consistent'
+          message: isTriggered ? 'Mobile platform and touch capability mismatch detected' : 'Platform consistent'
         };
       }
     };
@@ -149,7 +195,7 @@ export const rules = {
           triggered: isTriggered,
           score: isTriggered ? weight : 0,
           attributes: { suspicious_ua: isTriggered, claimed_bot: signals.claimedBot || null },
-          message: isTriggered ? 'Suspicious or spoofed User-Agent detected' : 'User-Agent standard'
+          message: isTriggered ? 'Suspicious or automated scraper signature detected' : 'User-Agent standard'
         };
       }
     };
@@ -167,7 +213,7 @@ export function createPolicy(options = {}) {
     rules: options.rules || [
       rules.webdriver({ weight: 25 }),
       rules.burst({ weight: 30, threshold: 30 }),
-      rules.noInteraction({ weight: 20 }),
+      rules.trustedInputAbsent({ weight: 20 }),
       rules.touchMismatch({ weight: 15 }),
       rules.suspiciousUA({ weight: 15 })
     ]
@@ -176,43 +222,66 @@ export function createPolicy(options = {}) {
 
 export const defaultPolicy = createPolicy();
 
-export function evaluate(signals = {}, policy = defaultPolicy, traceId) {
+export function evaluate(signals = {}, optionsOrPolicy = defaultPolicy) {
+  let policy = defaultPolicy;
+  let traceId = undefined;
+  let enforcementMode = 'SHADOW';
+
+  if (optionsOrPolicy && 'rules' in optionsOrPolicy && Array.isArray(optionsOrPolicy.rules)) {
+    policy = optionsOrPolicy;
+  } else if (optionsOrPolicy) {
+    if (optionsOrPolicy.policy) policy = optionsOrPolicy.policy;
+    if (optionsOrPolicy.traceId) traceId = optionsOrPolicy.traceId;
+    if (optionsOrPolicy.enforcementMode) enforcementMode = optionsOrPolicy.enforcementMode;
+  }
+
   const currentTraceId = traceId || 'trc_' + Math.random().toString(36).substring(2, 14);
   const evidence = [];
   let calculatedScore = 0;
+  const safeSignals = { ...signals };
 
   for (const rule of policy.rules) {
-    const result = rule.evaluate(signals);
+    const result = rule.evaluate(safeSignals);
     if (result.triggered) {
       calculatedScore += result.score;
       evidence.push({
         rule: rule.id,
         score: result.score,
-        attributes: result.attributes,
+        attributes: { ...result.attributes },
         message: result.message
       });
     }
   }
 
-  const finalScore = Math.min(100, Math.max(0, calculatedScore));
-  const confidence = calculateConfidence(signals);
+  const finalScore = Number.isFinite(calculatedScore)
+    ? Math.min(100, Math.max(0, calculatedScore))
+    : 0;
 
-  let action = SentinelAction.ALLOW;
+  const evidenceConfidence = calculateConfidence(safeSignals);
+
+  let recommendedAction = SentinelAction.ALLOW;
   if (finalScore >= policy.thresholds.deny) {
-    action = SentinelAction.TEMPORARY_DENY;
+    recommendedAction = SentinelAction.TEMPORARY_DENY;
   } else if (finalScore >= policy.thresholds.appVerification) {
-    action = SentinelAction.REQUIRE_APP_VERIFICATION;
+    recommendedAction = SentinelAction.REQUIRE_APP_VERIFICATION;
   } else if (finalScore >= policy.thresholds.rateLimit) {
-    action = SentinelAction.RATE_LIMIT;
+    recommendedAction = SentinelAction.RATE_LIMIT;
   } else if (finalScore > 20) {
-    action = SentinelAction.OBSERVE;
+    recommendedAction = SentinelAction.OBSERVE;
+  }
+
+  let action = recommendedAction;
+  if (enforcementMode === 'SHADOW') {
+    action = recommendedAction === SentinelAction.ALLOW ? SentinelAction.ALLOW : SentinelAction.OBSERVE;
   }
 
   return {
     traceId: currentTraceId,
     score: finalScore,
-    confidence,
+    evidenceConfidence,
     action,
+    recommendedAction,
+    enforcementMode,
     policyVersion: policy.version,
     evidence,
     evaluatedAt: new Date().toISOString()

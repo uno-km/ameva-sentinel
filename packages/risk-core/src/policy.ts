@@ -29,7 +29,7 @@ export function createPolicy(options: CreatePolicyOptions = {}): SentinelPolicy 
     rules: options.rules || [
       rules.webdriver({ weight: 25 }),
       rules.burst({ weight: 30, threshold: 30 }),
-      rules.noInteraction({ weight: 20 }),
+      rules.trustedInputAbsent({ weight: 20 }),
       rules.touchMismatch({ weight: 15 }),
       rules.suspiciousUA({ weight: 15 })
     ]
