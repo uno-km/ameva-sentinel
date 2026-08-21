@@ -1,13 +1,13 @@
-# AMEVA-Sentinel Full Technical Specification (v0.5.0-alpha.1)
+﻿# AMEVA-Sentinel Full Technical Specification (v0.5.0-alpha.1)
 Official Documentation & Deep Architecture Reference for Autonomous AI Agents.
 
 ## 1. System Overview
-Privacy-first Security Observability and Deterministic Threat Scoring Layer for Web Applications
+Privacy-first Security Observability and Deterministic Threat Scoring Layer for Web Applications.
 AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging.
 
 ## 2. Package & Installation
-- PyPI: 
-- Command: npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha
+- npm packages: `@ameva/sentinel`, `@ameva/sentinel-browser`, `@ameva/sentinel-risk-core`
+- Installation Command: `npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha`
 - Repository: https://github.com/uno-km/ameva-sentinel
 
 ## 3. Core Capabilities
@@ -17,7 +17,7 @@ AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coo
 - **Cross-Browser Verified Zero-Drift SDK**: E2E automated verification across Chromium, Firefox, and WebKit ensuring identical behavior on all platforms.
 
 ## 4. Canonical Implementation
-```python
+```javascript
 import { createBrowserTelemetry } from '@ameva/sentinel-browser';
 import { createSentinel, MemoryFixedWindowCounterStore, LocalStorageRiskEventStore } from '@ameva/sentinel';
 
@@ -35,5 +35,4 @@ const sentinel = createSentinel({
 // 3. Evaluate and inspect transparent risk report
 const report = await sentinel.score({ signals });
 console.log(`Trace ID: ${report.traceId}, Score: ${report.score}, Action: ${report.action}`);
-
 ```

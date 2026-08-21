@@ -6,7 +6,7 @@
 [![Official Documentation](https://img.shields.io/badge/docs-uno--km.vercel.app%2Fsentinel-004499?style=flat-square&logo=vercel)](https://uno-km.vercel.app/sentinel/)
 [![npm package](https://img.shields.io/npm/v/@ameva/sentinel/alpha?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/@ameva/sentinel)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-100%25%20PASS%20(28%20passing)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
+[![Release Gates](https://img.shields.io/badge/release%20gates-29%2F29%20passing%20(28%20tests%20%2B%201%20type%20gate)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
 [![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)](https://uno-km.vercel.app/sentinel/)
 [![Foundation](https://img.shields.io/badge/AOSF-Tier%201%20TLP-f59e0b?style=flat-square)](https://uno-km.vercel.app/docs/foundation/)
 
@@ -111,7 +111,7 @@ console.log(report);
 ## ✅ Completed in v0.5.0-alpha.1
 
 - **TypeScript Single Source of Truth**: Mechanically compiled `dist/index.js` and `dist/*.d.ts` across all packages.
-- **28 Automated Quality Gate Tests**: 19 Node unit regression tests + 9 Playwright cross-browser tests (Chromium, Firefox, WebKit) 100% passing.
+- **29 Automated Release Quality Gates (100% PASS)**: 28 automated behavioral tests (19 Node unit + 9 Playwright cross-browser) + 1 comprehensive TypeScript Consumer API Contract gate.
 - **Linux CI Release Gate**: Ubuntu, Node.js 22 LTS, Playwright cross-browser verification, and workspace package dry-run validation.
 - **Cross-Browser Verification**: Reload persistence recovery, real-time multi-tab synchronization, and listener disposal verification.
 - **Deep Schema Validation**: `isStoredRiskEventV1` runtime guards with negative boundary & primitive attribute attack prevention.

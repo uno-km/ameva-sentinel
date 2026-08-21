@@ -24,44 +24,53 @@ execSync('npm run build', { cwd: ROOT, stdio: 'inherit' });
 
 const testSuites = [
   {
+    id: 'types',
+    title: '1. TypeScript Consumer API Contract Gate',
+    file: 'tests/typecheck.ts',
+    category: 'TypeScript Consumer API Contract',
+    command: 'npm run test:types',
+    pointsPerTest: 15,
+    maxPoints: 15
+  },
+  {
     id: 'engine',
-    title: '1. Risk Core Engine & Boundary Quality Gate Tests',
+    title: '2. Risk Core Engine & Boundary Quality Gate Tests',
     file: 'tests/engine.test.js',
     category: 'Risk Engine Quality Gates',
     command: 'node tests/engine.test.js',
-    pointsPerTest: 5,
-    maxPoints: 35
-  },
-  {
-    id: 'sentinel',
-    title: '2. Sentinel Facade & Stateful Rate Enforcement Tests',
-    file: 'tests/sentinel.test.js',
-    category: 'Facade & State Enforcement',
-    command: 'node tests/sentinel.test.js',
-    pointsPerTest: 10,
+    pointsPerTest: 30 / 7,
     maxPoints: 30
   },
   {
+    id: 'sentinel',
+    title: '3. Sentinel Facade & Stateful Rate Enforcement Tests',
+    file: 'tests/sentinel.test.js',
+    category: 'Facade & State Enforcement',
+    command: 'node tests/sentinel.test.js',
+    pointsPerTest: 25 / 3,
+    maxPoints: 25
+  },
+  {
     id: 'store',
-    title: '3. RiskEventStore Persistence & Deep Schema Validation Tests',
+    title: '4. RiskEventStore Persistence & Deep Schema Validation Tests',
     file: 'tests/store.test.js',
     category: 'Persistence & Deep Schema Bounds',
     command: 'node tests/store.test.js',
-    pointsPerTest: 3,
-    maxPoints: 21
+    pointsPerTest: 15 / 7,
+    maxPoints: 15
   },
   {
     id: 'browser',
-    title: '4. @ameva/sentinel-browser Client Telemetry Unit Tests',
+    title: '5. @ameva/sentinel-browser Client Telemetry Unit Tests',
     file: 'tests/browser.test.js',
     category: 'Browser SDK Unit Verification',
     command: 'node tests/browser.test.js',
-    pointsPerTest: 7,
-    maxPoints: 14
+    pointsPerTest: 15 / 2,
+    maxPoints: 15
   },
   {
     id: 'playwright',
-    title: '5. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)',
+    title: '6. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)',
     file: 'tests/browser-integration/dashboard.spec.js',
     category: 'Playwright Cross-Browser E2E (9 Tests)',
     command: 'npx playwright test',
@@ -100,7 +109,14 @@ for (const suite of testSuites) {
       status = 'FAIL';
     }
 
-    if (suite.id === 'playwright') {
+    if (suite.id === 'types') {
+      passedCount = status === 'PASS' ? 1 : 0;
+      failedCount = status === 'PASS' ? 0 : 1;
+      totalScore += (passedCount * suite.maxPoints);
+      if (!outputLog.trim()) {
+        outputLog = '✅ PASS: TypeScript Consumer API Contract & Type Resolution (tsc --noEmit)';
+      }
+    } else if (suite.id === 'playwright') {
       const match = outputLog.match(/(\d+)\s+passed/);
       passedCount = match ? Number(match[1]) : 0;
       if (passedCount !== 9 || status === 'FAIL') {

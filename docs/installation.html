@@ -67,15 +67,15 @@
 
     <main class="content">
       <h2>Installation & Setup Guide</h2>
-      <p class="subtitle">Hardware acceleration, Termux setup, and dependency management</p>
+      <p class="subtitle">Node.js ESM, Browser Module, and Zero-Drift Package Setup</p>
       <div class="alert alert-tip">
            <span class="alert-title">Prerequisites</span>
-           <p>Ensure Python 3.9+ or Node.js 18+ is installed on your Linux / Android / Desktop environment.</p>
+           <p>Node.js &gt;= 20.0.0 (LTS recommended) or any modern browser (Chromium, Firefox, WebKit).</p>
          </div>
-         <h3>Package Managers</h3>
+         <h3>Package Installation (npm)</h3>
          <pre><code>npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha</code></pre>
-         <h3>Verification Check</h3>
-         <pre><code>python -c "import ; print('Installation OK')"</code></pre>
+         <h3>Verification Check (Node.js ESM)</h3>
+         <pre><code>node --input-type=module -e "import { createSentinel } from '@ameva/sentinel'; const s = createSentinel(); console.log('✅ AMEVA Sentinel Initialized OK');"</code></pre>
     </main>
   </div>
 

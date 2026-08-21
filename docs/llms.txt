@@ -1,4 +1,4 @@
-# AMEVA-Sentinel (v0.5.0-alpha.1)
+﻿# AMEVA-Sentinel (v0.5.0-alpha.1)
 > Privacy-first Security Observability and Deterministic Threat Scoring Layer for Web Applications
 
 ## Quick Specification for AI Coding Agents
@@ -7,7 +7,7 @@
 - Architecture: AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging.
 
 ## Canonical Code Pattern
-```python
+```javascript
 import { createBrowserTelemetry } from '@ameva/sentinel-browser';
 import { createSentinel, MemoryFixedWindowCounterStore, LocalStorageRiskEventStore } from '@ameva/sentinel';
 
@@ -25,9 +25,8 @@ const sentinel = createSentinel({
 // 3. Evaluate and inspect transparent risk report
 const report = await sentinel.score({ signals });
 console.log(`Trace ID: ${report.traceId}, Score: ${report.score}, Action: ${report.action}`);
-
 ```
 
 ## Key Constraints
 - Pure non-blocking architecture, zero memory leaks.
-- Strictly adhere to closed-form precision and WebGPU/Bionic ARM64 native targets.
+- Strictly adhere to deterministic 0~100 clamping, privacy-by-design (zero raw coordinates), and input immutability.

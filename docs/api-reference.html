@@ -67,15 +67,39 @@
 
     <main class="content">
       <h2>Complete API Reference</h2>
-      <p class="subtitle">100% Full Class, Struct, and Method Documentation</p>
-      <h3>Engine Subsystem</h3>
-         <table class="data-table">
-           <thead><tr><th>Method / Struct</th><th>Signature</th><th>Description</th></tr></thead>
-           <tbody>
-             <tr><td><code>Engine.__init__</code></td><td><code>(device='auto', precision='fp16')</code></td><td>Initializes hardware backend accelerator</td></tr>
-             <tr><td><code>Engine.compute</code></td><td><code>(inputs: Tensor) -&gt; Tensor</code></td><td>Executes closed-form calculation with memory protection</td></tr>
-           </tbody>
-         </table>
+      <p class="subtitle">100% Full Class, Interface, and Method Documentation</p>
+
+      <h3>1. Sentinel Facade (<code>@ameva/sentinel</code>)</h3>
+      <table class="data-table">
+        <thead><tr><th>Function / Class</th><th>Signature</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>createSentinel</code></td><td><code>(options?: SentinelOptions): Sentinel</code></td><td>Factory function to instantiate configured Sentinel runtime</td></tr>
+          <tr><td><code>sentinel.score</code></td><td><code>(req: any): Promise&lt;SentinelRiskReport&gt;</code></td><td>Scores telemetry signals and executes policy evaluation</td></tr>
+          <tr><td><code>MemoryFixedWindowCounterStore</code></td><td><code>new MemoryFixedWindowCounterStore()</code></td><td>In-memory sliding window rate counter adapter</td></tr>
+          <tr><td><code>LocalStorageRiskEventStore</code></td><td><code>new LocalStorageRiskEventStore(options?)</code></td><td>Browser-local FIFO deduplicated risk event store</td></tr>
+        </tbody>
+      </table>
+
+      <h3>2. Risk Core Engine (<code>@ameva/sentinel-risk-core</code>)</h3>
+      <table class="data-table">
+        <thead><tr><th>Export</th><th>Signature</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>evaluate</code></td><td><code>(signals, options?): SentinelRiskReport</code></td><td>Pure deterministic scoring engine with 0~100 clamp</td></tr>
+          <tr><td><code>calculateConfidence</code></td><td><code>(signals): number</code></td><td>Computes evidence completeness index (0.00 ~ 1.00)</td></tr>
+          <tr><td><code>sanitizeSignals</code></td><td><code>(signals): MinimalDerivedSignals</code></td><td>Extracts privacy-safe telemetry attributes</td></tr>
+          <tr><td><code>createPolicy</code></td><td><code>(config): SentinelPolicy</code></td><td>Compiles declarative weighted rule definitions</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3. Browser Telemetry SDK (<code>@ameva/sentinel-browser</code>)</h3>
+      <table class="data-table">
+        <thead><tr><th>Export</th><th>Signature</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>createBrowserTelemetry</code></td><td><code>(options?): BrowserTelemetryCollector</code></td><td>Initializes 100ms throttled user interaction observer</td></tr>
+          <tr><td><code>telemetry.snapshot</code></td><td><code>(): BrowserTelemetrySnapshot</code></td><td>Extracts current privacy-safe interaction counters</td></tr>
+          <tr><td><code>telemetry.destroy</code></td><td><code>(): void</code></td><td>Cleans up DOM event listeners via AbortController</td></tr>
+        </tbody>
+      </table>
     </main>
   </div>
 

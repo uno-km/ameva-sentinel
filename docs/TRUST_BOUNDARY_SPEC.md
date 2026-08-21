@@ -1,8 +1,8 @@
 ﻿# 🛡️ AMEVA Sentinel v0.6 Architecture Specification
 # Data Trust Boundaries & Security Model (Canonical Spec)
 
-> **Document Version**: `1.0.0-RFC`  
-> **Status**: `Draft / Target Milestone: v0.6.0`  
+> **Document Version**: `1.1.0-RFC`  
+> **Status**: `Approved RFC / SSOT for v0.6.0 Development`  
 > **Classification**: Security Architecture & Trust Boundary Model  
 > **Author**: AMEVA Core Security Engineering Team
 
@@ -13,29 +13,34 @@
 > **"Browser telemetry represents software-observed signals, not unforgeable hardware proofs."**  
 > *(A client running inside user-controlled memory can forge JavaScript variables, but cannot forge server-held cryptographic proofs or replay expired nonces against synchronized server clocks.)*
 
-In the AMEVA Sentinel ecosystem, zero trust is placed on raw client-supplied claims. Security observability is achieved by separating **observation**, **cryptographic token exchange**, and **server-side verification**.
+In the AMEVA Sentinel ecosystem, zero trust is placed on raw client-supplied claims. Security observability is achieved by strictly isolating **untrusted client inputs**, **short-lived cryptographic token envelopes**, and **server-side verification**.
 
 ```text
 ┌─────────────────────────── UNTRUSTED ZONE ───────────────────────────┐
 │  Browser Client Runtime                                              │
-│  - Raw DOM Events, Pointer Moves, Touch Signals                       │
-│  - Ephemeral Collector Token (Short-lived HMAC envelope)             │
+│  - Raw DOM Events, Pointer Moves, Touch Signals (Software Observed)   │
+│  - Ephemeral Collector Token (sv1.<payload>.<hmac> Envelope)         │
 └───────────────────────────────────┬───────────────────────────────────┘
                                     │ HTTPS POST /api/v1/sentinel/collect
                                     ▼
 ┌──────────────────────────── TRUSTED ZONE ────────────────────────────┐
 │  Server-Side Collector Endpoint                                      │
-│  ├── 1. Cryptographic Signature Validation (Constant-time HMAC)     │
-│  ├── 2. Timestamp Freshness Window Check (|Δt| <= 30s)               │
-│  ├── 3. Atomic Nonce Consumption (Replay Attack Defense)             │
-│  ├── 4. Server-Side Context Enrichment (TCP Remote IP, TLS Cipher)  │
-│  └── 5. Deterministic Risk Core Engine Evaluation                    │
+│  ├── 1. Request Sanitation & Size Limits (Body <= 64KB, Token <= 2KB)│
+│  ├── 2. Key Ring Lookup (kid) & Length-Safe HMAC Verification        │
+│  │      (crypto.timingSafeEqual after length pre-check)              │
+│  ├── 3. Freshness & Timestamp Window Validation (|Δt| <= 30s)        │
+│  ├── 4. Atomic Nonce Consumption (Replay Defense via Redis SET NX)   │
+│  │      ├── If Nonce Already Exists: REJECT (409) -> Security Audit  │
+│  │      └── If Nonce Fresh & Consumed: PROCEED                       │
+│  ├── 5. Server Context Extraction (Trusted Proxy Whitelisted Peer IP)│
+│  └── 6. Deterministic Risk Core Engine Evaluation                    │
 └───────────────────────────────────┬───────────────────────────────────┘
                                     ▼
 ┌────────────────────── PERSISTENT STATE STORAGE ──────────────────────┐
 │  Distributed Adapters                                                │
-│  ├── Sliding-Window Counter: Redis / Distributed Cache               │
-│  └── Auditable Event Ledger: PostgreSQL / Write-Ahead Store          │
+│  ├── Sliding-Window Counter: Redis / Distributed Key-Value Store     │
+│  ├── Auditable Event Ledger: PostgreSQL / Write-Ahead Store          │
+│  └── Security Incident Ledger: Dedicated Audit Log (Replay/Tampering)│
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -45,31 +50,69 @@ In the AMEVA Sentinel ecosystem, zero trust is placed on raw client-supplied cla
 
 Every field and signal processed by Sentinel must belong to exactly one of the six trust tiers:
 
-| Trust Tier | Source | Cryptographic Status | Mutability | Examples |
+| Trust Tier | Source | Cryptographic Status | Mutability & Replayability | Examples |
 | :--- | :--- | :--- | :--- | :--- |
-| **`Untrusted`** | Client Body / HTTP Headers | None | High (Attacker Controlled) | `User-Agent`, `Referer`, raw body JSON, claimed identity |
+| **`Untrusted`** | Client HTTP Headers & Body | None | High (Attacker Controlled) | `User-Agent`, `Referer`, raw body JSON, claimed identity |
 | **`Observed`** | Browser Telemetry SDK | Software Instrumentation | Moderate (Spoofable in sandbox) | `isTrustedEventsCount`, `pointerEventCount`, `webdriver` flag |
-| **`Signed`** | Issued by App Server | HMAC-SHA256 Signed Envelope | Immutable without Secret | `collectorToken` (`header.payload.signature`) |
-| **`Verified`** | Evaluated by Collector | Cryptographically Proven | Immutable | `tokenVerified: true`, `nonceConsumed: true`, `freshnessMs <= 30000` |
-| **`Trusted`** | Collector Server Origin | Machine-Local / Infrastructure | Sovereign | Server System Time, Socket Peer IP, Master Secret, Server Config |
+| **`Signed`** | Issued by Application Server | HMAC-SHA256 Signed Envelope | Payload integrity protected; Replayable unless nonce consumed | `sv1.<base64url(payload)>.<base64url(hmac)>` |
+| **`Verified`** | Evaluated by Collector | Cryptographically Proven | Sovereign (Immutable) | Signature valid + recognized `kid` + valid `aud`/`purpose` + fresh timestamp + atomically consumed nonce |
+| **`Trusted`** | Collector Server Origin | Machine-Local / Infrastructure | Sovereign (Source of Truth) | Server System Time, Socket Peer IP (Whitelisted Proxy), Master Secret |
 | **`Derived`** | Risk Engine Core | Deterministic Algorithmic Output | Read-Only | Risk Score `0~100`, `SentinelAction`, Evidence List, `traceId` |
 
 ---
 
 ## 3. 🔐 Cryptographic Token & Replay Defense Specification
 
-### 3.1 Ephemeral Collection Token
-Application servers issue short-lived collection tokens to authenticated or guest sessions prior to telemetry ingestion:
+### 3.1 Versioned Envelope Token Format (`sv1`)
+Collection tokens must follow the deterministic format:
+```text
+sv1.<base64url_canonical_payload>.<base64url_hmac_sha256>
+```
 
-$$\text{TokenPayload} = \{\text{sessionId}, \text{timestamp}, \text{nonce}, \text{clientIpPrefix}\}$$
+### 3.2 Token Payload Schema
+```json
+{
+  "v": 1,
+  "kid": "collector-2026-08-a",
+  "iss": "ameva-app-auth",
+  "aud": "ameva-sentinel-collector",
+  "purpose": "telemetry-collect",
+  "iat": 1787277600,
+  "exp": 1787277660,
+  "nonce": "c4b8d1e2f3a4567890abcdef",
+  "sessionRef": "sess_89a7fbc2",
+  "clientIpPrefix": "203.0.113."
+}
+```
 
-$$\text{Signature} = \text{HMAC-SHA256}(\text{Canonical}(\text{TokenPayload}), \text{ServerSecretKey})$$
+### 3.3 Canonical JSON Serialization (RFC 8785 Compatible)
+1. Keys must be sorted lexicographically by Unicode code points.
+2. Zero extraneous whitespace between tokens (`{"aud":"...","exp":123}`).
+3. Strings encoded in UTF-8 without BOM.
+4. Floats/Integers formatted without trailing zeroes.
 
-### 3.2 Verification Invariants
-When the Collector receives a telemetry report:
-1. **Signature Integrity**: Must verify using constant-time string comparison (`crypto.timingSafeEqual`).
-2. **Freshness Window**: $|t_{\text{server}} - t_{\text{token}}| \le 30\,\text{seconds}$.
-3. **Atomic Nonce Check**: The `nonce` must be recorded atomically in an idempotent cache (e.g., Redis `SET nonce:<id> 1 EX 60 NX`). If the key already exists, the request is flagged as `REPLAY_ATTACK_DETECTED` and immediately classified as high-risk.
+### 3.4 Verification & Replay Protection Invariants
+When the Collector receives a token:
+1. **Size Limit Check**: Raw token string $\le 2048$ bytes.
+2. **Key Ring Resolution**: Extract `kid`. If unknown or retired, reject with HTTP `401 Unauthorized`.
+3. **Length Pre-Checked Constant-Time Verification**:
+   ```typescript
+   if (actualSignatureBuffer.length !== expectedSignatureBuffer.length) {
+     return { valid: false, error: 'SIGNATURE_LENGTH_MISMATCH' };
+   }
+   const isValid = crypto.timingSafeEqual(actualSignatureBuffer, expectedSignatureBuffer);
+   ```
+4. **Domain & Purpose Isolation**: Verify `aud === "ameva-sentinel-collector"` and `purpose === "telemetry-collect"`.
+5. **Freshness Window Check**:
+   $$|t_{\text{server}} - t_{\text{iat}}| \le 30\,\text{seconds} \quad \text{and} \quad t_{\text{server}} \le t_{\text{exp}}$$
+6. **Atomic Nonce Consumption**:
+   - Nonce key: `sentinel:nonce:<kid>:<nonce>`
+   - Atomic execution: `SET sentinel:nonce:<kid>:<nonce> 1 EX 60 NX`
+   - **If key already existed (Replay Attack)**:
+     - Terminate pipeline immediately.
+     - Return **HTTP `409 Conflict` (or `401 Unauthorized`)**.
+     - Emit separate `SecurityAuditEvent` (`REPLAY_ATTACK_DETECTED`) to the security audit ledger.
+     - **DO NOT** feed replayed payload into standard Risk Event store.
 
 ---
 
@@ -79,11 +122,12 @@ When the Collector receives a telemetry report:
 * **Method**: `POST`
 * **Path**: `/api/v1/sentinel/collect`
 * **Content-Type**: `application/json; charset=utf-8`
+* **Max Payload Body Size**: `64 KB`
 
 ### 4.2 Request Body Schema
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token": "sv1.eyJhdWQiOiJhbWV2YS1zZW50aW5lbC1jb2xsZWN0b3IiLCJleHAiOjE3ODcyNzc2NjAsImlhdCI6MTc4NzI3NzYwMCwia2lkIjoiY29sbGVjdG9yLTIwMjYtMDgtYSIsImlzcyI6ImFldmEtYXBwLWF1dGgiLCJub25jZSI6ImM0YjhkMWUyZjNhNDU2Nzg5MGFiY2RlZiIsInB1cnBvc2UiOiJ0ZWxlbWV0cnktY29sbGVjdCIsInNlc3Npb25SZWYiOiJzZXNzXzg5YTdmYmMyIiwidiI6MX0.aW50ZWdyaXR5X3NpZ25hdHVyZQ",
   "signals": {
     "telemetryObserved": true,
     "sampleComplete": true,
@@ -94,13 +138,13 @@ When the Collector receives a telemetry report:
     "suspiciousUA": false
   },
   "clientMetadata": {
-    "sdkVersion": "0.6.0",
+    "sdkVersion": "0.6.0-alpha.1",
     "sessionId": "sess_89a7fbc2"
   }
 }
 ```
 
-### 4.3 Response Schema
+### 4.3 Success Response Schema (HTTP 200 OK)
 ```json
 {
   "traceId": "trc_9a7d3f82e1c045b1",
@@ -117,11 +161,30 @@ When the Collector receives a telemetry report:
 }
 ```
 
+### 4.4 Security Rejection Schema (HTTP 401 / 409)
+```json
+{
+  "error": "REPLAY_ATTACK_DETECTED",
+  "message": "Collector token nonce has already been consumed within the active freshness window",
+  "traceId": "trc_sec_9948a7b1c3e0",
+  "rejectedAt": "2026-08-21T12:00:01.000Z"
+}
+```
+
 ---
 
-## 5. 🗄️ Distributed Storage Adapter Interface
+## 5. 🌐 Trusted Proxy & Client IP Extraction
 
-### 5.1 Distributed Counter Store (`DistributedCounterStore`)
+Collector endpoints running behind reverse proxies (Cloudflare, AWS ALB, NGINX) must enforce:
+1. `trustedProxies` CIDR whitelist (e.g. `10.0.0.0/8`, `172.16.0.0/12`, Cloudflare IP ranges).
+2. If remote peer IP is in whitelist: parse leftmost untrusted entry in `X-Forwarded-For` or `CF-Connecting-IP`.
+3. If remote peer IP is NOT in whitelist: discard headers and use direct socket `remoteAddress` as sovereign trusted IP.
+
+---
+
+## 6. 🗄️ Distributed Storage Adapter Interface
+
+### 6.1 Distributed Counter Store (`DistributedCounterStore`)
 ```typescript
 export interface DistributedCounterStore {
   increment(key: string, options: { windowMs: number }): Promise<{ count: number; expiresAt: number }>;
@@ -130,7 +193,7 @@ export interface DistributedCounterStore {
 }
 ```
 
-### 5.2 Persistent Risk Event Store (`PersistentRiskEventStore`)
+### 6.2 Persistent Risk Event Store (`PersistentRiskEventStore`)
 ```typescript
 export interface PersistentRiskEventStore {
   append(event: StoredRiskEventV2): Promise<void>;
@@ -139,14 +202,18 @@ export interface PersistentRiskEventStore {
 }
 ```
 
----
+### 6.3 Security Audit Event Store (`SecurityAuditEventStore`)
+```typescript
+export interface SecurityAuditEvent {
+  incidentId: string;
+  type: 'REPLAY_ATTACK_DETECTED' | 'INVALID_SIGNATURE' | 'EXPIRED_TOKEN' | 'KEY_ROTATION_MISSING';
+  kid?: string;
+  nonce?: string;
+  sourceIp: string;
+  occurredAt: string;
+}
 
-## 6. 🗺️ Implementation Roadmap to v0.6
-
-| Phase | Milestone Task | Focus Area |
-| :---: | :--- | :--- |
-| **Phase 1** | Threat Model & Trust Boundary Formalization | Security & Cryptographic Contract (This Document) |
-| **Phase 2** | Collector Server Engine (`@ameva/sentinel-collector`) | Express / Fastify / Node HTTP Middleware & HMAC Verifier |
-| **Phase 3** | Nonce Replay & Atomic Sliding-Window Store | Redis Adapter & Memory Fallback with atomic locks |
-| **Phase 4** | PostgreSQL Audit Ledger Adapter | High-throughput batch writer for compliance auditing |
-| **Phase 5** | End-to-End Distributed Verification Suite | Integration tests verifying replay injection & signature tampering |
+export interface SecurityAuditEventStore {
+  logIncident(event: SecurityAuditEvent): Promise<void>;
+}
+```

@@ -87,8 +87,20 @@ const sentinel = createSentinel({
 const report = await sentinel.score({ signals });
 console.log(`Trace ID: ${report.traceId}, Score: ${report.score}, Action: ${report.action}`);
 </code></pre>
-         <h3>Production Asynchronous Batching</h3>
-         <p>Utilize weakref pooling and zero-copy streaming buffers for continuous pipelines.</p>
+         <h3>Recipe 2: Custom Policy-as-Code with Weighted Rules</h3>
+         <pre><code>import { createSentinel, createPolicy, rules } from '@ameva/sentinel';
+
+const strictPolicy = createPolicy({
+  rules: [
+    rules.webdriver({ weight: 35 }),
+    rules.burst({ weight: 40, threshold: 15 }),
+    rules.trustedInputAbsent({ weight: 25, minDurationMs: 3000 })
+  ],
+  thresholds: { deny: 70, appVerification: 45, rateLimit: 25 }
+});
+
+const sentinel = createSentinel({ policy: strictPolicy, mode: 'shadow' });
+const report = await sentinel.score({ signals });</code></pre>
     </main>
   </div>
 

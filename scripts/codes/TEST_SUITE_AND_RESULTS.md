@@ -1,6 +1,6 @@
 # 🛡️ AMEVA-Sentinel — Comprehensive Test Suite & Execution Results Report
 
-> **Generated At**: `2026-08-21T01:49:59.393Z`  
+> **Generated At**: `2026-08-21T03:06:25.963Z`  
 > **Repository**: [https://github.com/uno-km/ameva-sentinel.git](https://github.com/uno-km/ameva-sentinel.git)  
 > **Monorepo Version**: `0.5.0-alpha.1`  
 > **Execution Engine**: Node.js `v24.16.0` on `win32`
@@ -11,32 +11,235 @@
 
 | Test Category | Tests Passed | Execution Time | Score Points | Status |
 | :--- | :---: | :---: | :---: | :---: |
-| **Risk Engine Quality Gates** | `7 / 7` | `102ms` | **35.0 / 35 pts** | 🟢 PASS |
-| **Facade & State Enforcement** | `3 / 3` | `97ms` | **30.0 / 30 pts** | 🟢 PASS |
-| **Persistence & Deep Schema Bounds** | `7 / 7` | `92ms` | **21.0 / 21 pts** | 🟢 PASS |
-| **Browser SDK Unit Verification** | `2 / 2` | `101ms` | **14.0 / 14 pts** | 🟢 PASS |
-| **Playwright Cross-Browser E2E (9 Tests)** | `9 / 9` | `15679ms` | **E2E Verified** | 🟢 PASS |
-| **TOTAL AUDIT SCORE** | **28 Passed / 0 Failed** | **—** | **100.0 / 100 pts (Grade A+)** | 🏆 100% PASS |
+| **TypeScript Consumer API Contract** | `1 / 1` | `1456ms` | **15.0 / 15 pts** | 🟢 PASS |
+| **Risk Engine Quality Gates** | `7 / 7` | `82ms` | **30.0 / 30 pts** | 🟢 PASS |
+| **Facade & State Enforcement** | `3 / 3` | `87ms` | **25.0 / 25 pts** | 🟢 PASS |
+| **Persistence & Deep Schema Bounds** | `7 / 7` | `77ms` | **15.0 / 15 pts** | 🟢 PASS |
+| **Browser SDK Unit Verification** | `2 / 2` | `75ms` | **15.0 / 15 pts** | 🟢 PASS |
+| **Playwright Cross-Browser E2E (9 Tests)** | `9 / 9` | `12598ms` | **E2E Verified** | 🟢 PASS |
+| **TOTAL AUDIT SCORE** | **29 Passed / 0 Failed** | **—** | **100.0 / 100 pts (Grade A+)** | 🏆 100% PASS |
 
 ---
 
 ## 📑 Test Suites Index
 
-- [1. Risk Core Engine & Boundary Quality Gate Tests](#engine)
-- [2. Sentinel Facade & Stateful Rate Enforcement Tests](#sentinel)
-- [3. RiskEventStore Persistence & Deep Schema Validation Tests](#store)
-- [4. @ameva/sentinel-browser Client Telemetry Unit Tests](#browser)
-- [5. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)](#playwright)
+- [1. TypeScript Consumer API Contract Gate](#types)
+- [2. Risk Core Engine & Boundary Quality Gate Tests](#engine)
+- [3. Sentinel Facade & Stateful Rate Enforcement Tests](#sentinel)
+- [4. RiskEventStore Persistence & Deep Schema Validation Tests](#store)
+- [5. @ameva/sentinel-browser Client Telemetry Unit Tests](#browser)
+- [6. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)](#playwright)
 - [6. Workspace Distribution & Packaging Verification (`npm pack --dry-run`)](#packaging)
 
 ---
 
+<a id="types"></a>
+## 1. TypeScript Consumer API Contract Gate
+
+- **Test File Path**: [`tests/typecheck.ts`](../tests/typecheck.ts)
+- **Execution Command**: `npm run test:types`
+- **Execution Latency**: `1456 ms`
+- **Results**: `1 Passed, 0 Failed`
+
+### 📄 Test Source Code
+
+```javascript
+﻿import {
+  createSentinel,
+  Sentinel,
+  type SentinelOptions,
+  MemoryFixedWindowCounterStore,
+  MemoryCounterStore,
+  MemoryRiskEventStore,
+  LocalStorageRiskEventStore,
+  type SentinelRiskReport,
+  type StoredRiskEventV1,
+  type CounterStore,
+  type RiskEventStore,
+  type SentinelPolicy,
+  type TelemetrySignals,
+  SentinelAction,
+  defaultPolicy,
+  createPolicy,
+  rules,
+  evaluate,
+  createTraceId,
+  toStoredRiskEvent,
+  sanitizeSignals
+} from '../packages/sentinel/dist/index.js';
+
+import {
+  calculateConfidence,
+  isStoredRiskEventV1,
+  type RuleAttributes,
+  type EvidenceItem,
+  type EnforcementMode,
+  type EvaluateOptions,
+  type RiskEventStoreOptions,
+  type MinimalDerivedSignals,
+  type SanitizedEvidence
+} from '../packages/risk-core/dist/index.js';
+
+import {
+  createBrowserTelemetry,
+  browserTelemetry,
+  BrowserTelemetryCollector,
+  type BrowserTelemetryOptions,
+  type BrowserTelemetrySnapshot,
+  getLocalSessionId
+} from '../packages/browser-sdk/dist/index.js';
+
+// 1. Browser SDK & Telemetry Collector Type Contract
+const browserOptions: BrowserTelemetryOptions = {
+  autoStart: false,
+  maxEventsCap: 300,
+  pointerSampleIntervalMs: 100,
+  samplingWindowMs: 5000
+};
+const telemetryCollector: BrowserTelemetryCollector = createBrowserTelemetry(browserOptions);
+const rawSnapshot: BrowserTelemetrySnapshot = telemetryCollector.snapshot();
+const sessionId: string = getLocalSessionId();
+const defaultBrowserCollector: BrowserTelemetryCollector = browserTelemetry;
+
+// 2. Telemetry Signal Sanitization & Confidence Contract
+const signals: TelemetrySignals = {
+  telemetryObserved: rawSnapshot.telemetryObserved,
+  sampleComplete: rawSnapshot.sampleComplete,
+  observationDurationMs: rawSnapshot.observationDurationMs,
+  webdriver: rawSnapshot.webdriverObserved,
+  isTrustedEventsCount: rawSnapshot.trustedInputCount,
+  touchMismatch: rawSnapshot.touchMismatch,
+  suspiciousUA: rawSnapshot.suspiciousUA,
+  burstCount10s: 3,
+  tokenPresented: true,
+  tokenVerified: false,
+  tokenFreshnessMs: 50
+};
+
+const sanitizedMinimal: MinimalDerivedSignals = sanitizeSignals(signals);
+const confidence: number = calculateConfidence(signals);
+
+// 3. Evidence and Attributes Structural Contract
+const sampleAttrs: RuleAttributes = {
+  observed: true,
+  count: 3,
+  note: 'contract-test'
+};
+
+const sampleEvidence: EvidenceItem = {
+  rule: 'contract.test_rule',
+  score: 25,
+  attributes: sampleAttrs,
+  message: 'Contract verification item'
+};
+
+const sampleSanitizedEvidence: SanitizedEvidence = {
+  rule: sampleEvidence.rule,
+  score: sampleEvidence.score,
+  attributes: {
+    observed: true,
+    count: 3,
+    note: 'contract-test'
+  },
+  message: sampleEvidence.message
+};
+
+// 4. Custom Policy & Rules Contract
+const customPolicy: SentinelPolicy = createPolicy({
+  rules: [
+    rules.webdriver({ weight: 30 }),
+    rules.burst({ weight: 35, threshold: 20 }),
+    rules.trustedInputAbsent({ weight: 20 }),
+    rules.touchMismatch({ weight: 15 }),
+    rules.suspiciousUA({ weight: 15 })
+  ],
+  version: '2026-08-21.typecheck-v1'
+});
+
+// 5. Store Adapters Type Contract
+const storeOptions: RiskEventStoreOptions = { maxItems: 50, maxAgeMs: 86400000 };
+const counterStore: CounterStore = new MemoryFixedWindowCounterStore();
+const altCounterStore: CounterStore = new MemoryCounterStore();
+const memoryEventStore: RiskEventStore = new MemoryRiskEventStore(storeOptions);
+const localEventStore: RiskEventStore = new LocalStorageRiskEventStore(storeOptions);
+
+// 6. Facade Options & Instance Contract
+const sentinelOptions: SentinelOptions = {
+  mode: 'shadow',
+  policy: customPolicy,
+  counterStore,
+  eventStore: memoryEventStore,
+  rateKeyProvider: (req: any) => (req?.customUserId ? `user_${req.customUserId}` : null)
+};
+
+const sentinel: Sentinel = createSentinel(sentinelOptions);
+
+// 7. Execution & Schema Validation Contract
+async function runFullTypeCheck(): Promise<void> {
+  const reqMock = { signals, customUserId: 'dev-type-verifier' };
+  const report: SentinelRiskReport = await sentinel.score(reqMock);
+
+  const evalOptions: EvaluateOptions = {
+    policy: defaultPolicy,
+    enforcementMode: 'SHADOW' as EnforcementMode
+  };
+  const directEngineReport: SentinelRiskReport = evaluate(signals, evalOptions);
+
+  const storedEvent: StoredRiskEventV1 = toStoredRiskEvent(report);
+  const isValidSchema: boolean = isStoredRiskEventV1(storedEvent);
+
+  if (!isValidSchema) {
+    throw new Error('Type validation failed: StoredRiskEventV1 runtime guard returned false');
+  }
+
+  const generatedTraceId: string = createTraceId();
+  if (!generatedTraceId.startsWith('trc_')) {
+    throw new Error('TraceId format unexpected');
+  }
+
+  // Active method invocations on stores and collectors
+  await altCounterStore.increment('contract_test_key', { windowMs: 10000 });
+  await memoryEventStore.append(report);
+  const listedEvents = await memoryEventStore.list({ limit: 10 });
+  if (listedEvents.length === 0) {
+    throw new Error('MemoryRiskEventStore append/list contract violation');
+  }
+
+  if (sampleSanitizedEvidence.score !== 25 || sampleEvidence.score !== 25) {
+    throw new Error('Evidence structure contract violation');
+  }
+
+  void localEventStore;
+  void defaultBrowserCollector;
+  void sanitizedMinimal;
+
+  console.log(`[TypeScript Contract Gate] ALL SDK Types & Interfaces 100% Verified.`);
+  console.log(`  - TraceId: ${report.traceId}`);
+  console.log(`  - Confidence: ${confidence}`);
+  console.log(`  - Action: ${report.action} (Recommended: ${report.recommendedAction})`);
+  console.log(`  - SessionId: ${sessionId}`);
+  console.log(`  - Direct Score: ${directEngineReport.score}`);
+}
+
+runFullTypeCheck();
+
+```
+
+### 🖥️ Actual Execution Output & Assertion Logs
+
+```text
+> ameva-sentinel-monorepo@0.5.0-alpha.1 test:types
+> tsc --noEmit tests/typecheck.ts --target es2022 --module NodeNext --moduleResolution NodeNext
+```
+
+---
+
 <a id="engine"></a>
-## 1. Risk Core Engine & Boundary Quality Gate Tests
+## 2. Risk Core Engine & Boundary Quality Gate Tests
 
 - **Test File Path**: [`tests/engine.test.js`](../tests/engine.test.js)
 - **Execution Command**: `node tests/engine.test.js`
-- **Execution Latency**: `102 ms`
+- **Execution Latency**: `82 ms`
 - **Results**: `7 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -236,11 +439,11 @@ Failed:                  0
 ---
 
 <a id="sentinel"></a>
-## 2. Sentinel Facade & Stateful Rate Enforcement Tests
+## 3. Sentinel Facade & Stateful Rate Enforcement Tests
 
 - **Test File Path**: [`tests/sentinel.test.js`](../tests/sentinel.test.js)
 - **Execution Command**: `node tests/sentinel.test.js`
-- **Execution Latency**: `97 ms`
+- **Execution Latency**: `87 ms`
 - **Results**: `3 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -401,11 +604,11 @@ Failed:             0
 ---
 
 <a id="store"></a>
-## 3. RiskEventStore Persistence & Deep Schema Validation Tests
+## 4. RiskEventStore Persistence & Deep Schema Validation Tests
 
 - **Test File Path**: [`tests/store.test.js`](../tests/store.test.js)
 - **Execution Command**: `node tests/store.test.js`
-- **Execution Latency**: `92 ms`
+- **Execution Latency**: `77 ms`
 - **Results**: `7 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -566,11 +769,11 @@ run();
 ---
 
 <a id="browser"></a>
-## 4. @ameva/sentinel-browser Client Telemetry Unit Tests
+## 5. @ameva/sentinel-browser Client Telemetry Unit Tests
 
 - **Test File Path**: [`tests/browser.test.js`](../tests/browser.test.js)
 - **Execution Command**: `node tests/browser.test.js`
-- **Execution Latency**: `101 ms`
+- **Execution Latency**: `75 ms`
 - **Results**: `2 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -661,11 +864,11 @@ Failed:              0
 ---
 
 <a id="playwright"></a>
-## 5. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)
+## 6. Playwright Real-Browser Cross-Browser Integration (Chromium, Firefox, WebKit)
 
 - **Test File Path**: [`tests/browser-integration/dashboard.spec.js`](../tests/browser-integration/dashboard.spec.js)
 - **Execution Command**: `npx playwright test`
-- **Execution Latency**: `15679 ms`
+- **Execution Latency**: `12598 ms`
 - **Results**: `9 Passed, 0 Failed`
 
 ### 📄 Test Source Code
@@ -769,17 +972,17 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
 ```text
 Running 9 tests using 1 worker
 
-  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (760ms)
-  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (592ms)
-  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (157ms)
-  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (2.6s)
-  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.2s)
-  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (390ms)
-  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.4s)
-  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.1s)
-  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (322ms)
+  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (567ms)
+  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (499ms)
+  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (159ms)
+  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.6s)
+  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.1s)
+  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (337ms)
+  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (750ms)
+  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:29:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (775ms)
+  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:52:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (290ms)
 
-  9 passed (13.9s)
+  9 passed (11.1s)
 ```
 
 ---

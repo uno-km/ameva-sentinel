@@ -67,9 +67,30 @@
 
     <main class="content">
       <h2>Advanced Parameters & Tuning</h2>
-      <p class="subtitle">Kernel-level tuning, buffer pool sizing, and thread configuration</p>
-      <h3>Memory Buffer Pool Configuration</h3>
-         <p>Adjust max memory threshold and swap behaviors for ultra-constrained edge nodes.</p>
+      <p class="subtitle">Threshold Boundaries, Rule Weights, and Store Retention Configuration</p>
+
+      <h3>1. Policy Action Thresholds</h3>
+      <table class="data-table">
+        <thead><tr><th>Threshold Parameter</th><th>Default Value</th><th>Enforcement Action Triggered</th></tr></thead>
+        <tbody>
+          <tr><td><code>thresholds.deny</code></td><td><code>75</code></td><td><code>TEMPORARY_DENY</code> (Deny high-risk burst or confirmed bot)</td></tr>
+          <tr><td><code>thresholds.appVerification</code></td><td><code>50</code></td><td><code>REQUIRE_APP_VERIFICATION</code> (Request challenge / step-up)</td></tr>
+          <tr><td><code>thresholds.rateLimit</code></td><td><code>30</code></td><td><code>RATE_LIMIT</code> (Throttle rapid request frequency)</td></tr>
+          <tr><td><code>thresholds.observe</code></td><td><code>20</code></td><td><code>OBSERVE</code> (Log transparent evidence telemetry)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>2. Built-in Rule Weight Configuration</h3>
+      <table class="data-table">
+        <thead><tr><th>Rule ID</th><th>Default Weight</th><th>Default Options</th></tr></thead>
+        <tbody>
+          <tr><td><code>automation.webdriver</code></td><td><code>25</code></td><td><code>{ weight: 25 }</code></td></tr>
+          <tr><td><code>rate.burst_request</code></td><td><code>30</code></td><td><code>{ weight: 30, threshold: 30, windowMs: 10000 }</code></td></tr>
+          <tr><td><code>interaction.trusted_input_absent</code></td><td><code>20</code></td><td><code>{ weight: 20, minDurationMs: 5000, minBurst: 5 }</code></td></tr>
+          <tr><td><code>environment.touch_mismatch</code></td><td><code>15</code></td><td><code>{ weight: 15 }</code></td></tr>
+          <tr><td><code>header.suspicious_ua</code></td><td><code>15</code></td><td><code>{ weight: 15 }</code></td></tr>
+        </tbody>
+      </table>
     </main>
   </div>
 

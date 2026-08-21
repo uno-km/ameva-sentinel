@@ -53,6 +53,7 @@ const browserOptions: BrowserTelemetryOptions = {
 const telemetryCollector: BrowserTelemetryCollector = createBrowserTelemetry(browserOptions);
 const rawSnapshot: BrowserTelemetrySnapshot = telemetryCollector.snapshot();
 const sessionId: string = getLocalSessionId();
+const defaultBrowserCollector: BrowserTelemetryCollector = browserTelemetry;
 
 // 2. Telemetry Signal Sanitization & Confidence Contract
 const signals: TelemetrySignals = {
@@ -72,7 +73,32 @@ const signals: TelemetrySignals = {
 const sanitizedMinimal: MinimalDerivedSignals = sanitizeSignals(signals);
 const confidence: number = calculateConfidence(signals);
 
-// 3. Custom Policy & Rules Contract
+// 3. Evidence and Attributes Structural Contract
+const sampleAttrs: RuleAttributes = {
+  observed: true,
+  count: 3,
+  note: 'contract-test'
+};
+
+const sampleEvidence: EvidenceItem = {
+  rule: 'contract.test_rule',
+  score: 25,
+  attributes: sampleAttrs,
+  message: 'Contract verification item'
+};
+
+const sampleSanitizedEvidence: SanitizedEvidence = {
+  rule: sampleEvidence.rule,
+  score: sampleEvidence.score,
+  attributes: {
+    observed: true,
+    count: 3,
+    note: 'contract-test'
+  },
+  message: sampleEvidence.message
+};
+
+// 4. Custom Policy & Rules Contract
 const customPolicy: SentinelPolicy = createPolicy({
   rules: [
     rules.webdriver({ weight: 30 }),
@@ -84,13 +110,14 @@ const customPolicy: SentinelPolicy = createPolicy({
   version: '2026-08-21.typecheck-v1'
 });
 
-// 4. Store Adapters Type Contract
+// 5. Store Adapters Type Contract
 const storeOptions: RiskEventStoreOptions = { maxItems: 50, maxAgeMs: 86400000 };
 const counterStore: CounterStore = new MemoryFixedWindowCounterStore();
+const altCounterStore: CounterStore = new MemoryCounterStore();
 const memoryEventStore: RiskEventStore = new MemoryRiskEventStore(storeOptions);
 const localEventStore: RiskEventStore = new LocalStorageRiskEventStore(storeOptions);
 
-// 5. Facade Options & Instance Contract
+// 6. Facade Options & Instance Contract
 const sentinelOptions: SentinelOptions = {
   mode: 'shadow',
   policy: customPolicy,
@@ -101,7 +128,7 @@ const sentinelOptions: SentinelOptions = {
 
 const sentinel: Sentinel = createSentinel(sentinelOptions);
 
-// 6. Execution & Schema Validation Contract
+// 7. Execution & Schema Validation Contract
 async function runFullTypeCheck(): Promise<void> {
   const reqMock = { signals, customUserId: 'dev-type-verifier' };
   const report: SentinelRiskReport = await sentinel.score(reqMock);
@@ -123,6 +150,22 @@ async function runFullTypeCheck(): Promise<void> {
   if (!generatedTraceId.startsWith('trc_')) {
     throw new Error('TraceId format unexpected');
   }
+
+  // Active method invocations on stores and collectors
+  await altCounterStore.increment('contract_test_key', { windowMs: 10000 });
+  await memoryEventStore.append(report);
+  const listedEvents = await memoryEventStore.list({ limit: 10 });
+  if (listedEvents.length === 0) {
+    throw new Error('MemoryRiskEventStore append/list contract violation');
+  }
+
+  if (sampleSanitizedEvidence.score !== 25 || sampleEvidence.score !== 25) {
+    throw new Error('Evidence structure contract violation');
+  }
+
+  void localEventStore;
+  void defaultBrowserCollector;
+  void sanitizedMinimal;
 
   console.log(`[TypeScript Contract Gate] ALL SDK Types & Interfaces 100% Verified.`);
   console.log(`  - TraceId: ${report.traceId}`);
