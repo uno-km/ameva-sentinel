@@ -252,6 +252,54 @@ async function run() {
     assert.strictEqual(report.decision.reasonCode, 'TARGET_MODE_PARTNERS_UNVERIFIED');
   });
 
+  // 10. [P0-1 Regression] Signals boolean values remain authoritative when body fields are absent
+  await it('signals boolean values remain authoritative when body fields are absent', async () => {
+    const s = createSentinel({ mode: 'shadow' });
+    const report = await s.score({
+      headers: {
+        'user-agent': 'Mozilla/5.0'
+      },
+      signals: {
+        telemetryObserved: true,
+        sampleComplete: true,
+        observationDurationMs: 7000,
+        trustedInputCount: 3
+      }
+    });
+    assert.strictEqual(report.signals?.telemetryObserved, true);
+    assert.strictEqual(report.signals?.sampleComplete, true);
+    assert.strictEqual(report.signals?.isTrustedEventsCount, 3);
+  });
+
+  // 11. [P0-3 Regression] Sentinel.score rejects oversized request regardless of stateFailureMode
+  await it('Sentinel.score rejects oversized request regardless of stateFailureMode', async () => {
+    const s = createSentinel({
+      mode: 'shadow',
+      stateFailureMode: 'OBSERVE_ONLY'
+    });
+    const hugeBody = JSON.stringify({
+      data: '한'.repeat(25000)
+    });
+    await assert.rejects(
+      () => s.score({ body: hugeBody }),
+      {
+        name: 'CollectorVerificationError',
+        httpStatus: 413
+      }
+    );
+  });
+
+  // 12. [P1-3 Regression] Untrusted verifiedBot cannot elevate classification identityState or verification
+  await it('untrusted verifiedBot cannot elevate classification identityState or verification state', () => {
+    const report = evaluate({
+      verifiedBot: true,
+      userAgent: 'Googlebot/2.1'
+    });
+    assert.notStrictEqual(report.classification?.identityState, 'VERIFIED');
+    assert.strictEqual(report.classification?.identityState, 'CLAIMED');
+    assert.strictEqual(report.verification.state, 'NONE');
+  });
+
   if (failedTests > 0) {
     process.exit(1);
   }

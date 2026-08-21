@@ -111,17 +111,15 @@ export function classifyBot(uaString?: string, signals?: TelemetrySignals): BotC
         evidenceCodes.push('SIGNAL_WEBDRIVER_ACTIVE');
       }
 
-      const isVerified = signals?.verifiedBot === true;
-      const identityState: BotIdentityState = isVerified
-        ? 'VERIFIED'
-        : (entry.category === 'AUTOMATED_TOOL' ? 'SUSPECTED' : 'CLAIMED');
+      const identityState: BotIdentityState =
+        entry.category === 'AUTOMATED_TOOL' ? 'SUSPECTED' : 'CLAIMED';
 
       return {
         isBotLikely: true,
         category: entry.category,
         claimedName: entry.name,
         identityState,
-        heuristicConfidence: isVerified ? 1.00 : (entry.category === 'AUTOMATED_TOOL' ? 0.90 : 0.80),
+        heuristicConfidence: entry.category === 'AUTOMATED_TOOL' ? 0.90 : 0.80,
         evidenceCodes
       };
     }

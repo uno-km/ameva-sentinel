@@ -1,4 +1,4 @@
-﻿import {
+import {
   SentinelAction,
   defaultPolicy,
   evaluate,
@@ -310,13 +310,13 @@ export class Sentinel {
       token = signalInput.token.trim();
     }
 
-    // Safe 64KB bounded body reader
+    // Safe 64KB bounded body reader - validation errors throw unconditionally
     let body: any = {};
     try {
       body = await readJsonBodyLimited(req, 65536);
     } catch (err: any) {
       this.handleOperationalError(err, 'readJsonBodyLimited');
-      if (this.stateFailureMode === 'FAIL_CLOSED') throw err;
+      throw err;
     }
 
     if (!token && typeof body?.token === 'string' && body.token.trim()) {
@@ -355,16 +355,18 @@ export class Sentinel {
             : 0;
 
     const telemetryObserved =
-      signalInput.telemetryObserved === true ||
-      body?.telemetry_observed !== undefined
-        ? !!body.telemetry_observed
-        : (body?.trusted_events !== undefined);
+      typeof signalInput.telemetryObserved === 'boolean'
+        ? signalInput.telemetryObserved
+        : typeof body?.telemetry_observed === 'boolean'
+          ? body.telemetry_observed
+          : (body?.trusted_events !== undefined);
 
     const sampleComplete =
-      signalInput.sampleComplete === true ||
-      body?.sample_complete !== undefined
-        ? !!body.sample_complete
-        : false;
+      typeof signalInput.sampleComplete === 'boolean'
+        ? signalInput.sampleComplete
+        : typeof body?.sample_complete === 'boolean'
+          ? body.sample_complete
+          : false;
 
     const userAgent =
       typeof signalInput.userAgent === 'string'

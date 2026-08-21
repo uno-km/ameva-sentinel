@@ -6,7 +6,7 @@
 [![Official Documentation](https://img.shields.io/badge/docs-uno--km.vercel.app%2Fsentinel-004499?style=flat-square&logo=vercel)](https://uno-km.vercel.app/sentinel/)
 [![npm package](https://img.shields.io/npm/v/@ameva/sentinel/alpha?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/@ameva/sentinel)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)](LICENSE)
-[![Release Gates](https://img.shields.io/badge/release%20checks-66%2F66%20passing%20(63%20tests%20%2B%203%20pkg%20dryruns)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
+[![Release Gates](https://img.shields.io/badge/release%20checks-78%2F78%20passing%20(75%20tests%20%2B%203%20pkg%20dryruns)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
 [![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)](https://uno-km.vercel.app/sentinel/)
 [![Foundation](https://img.shields.io/badge/AOSF-Tier%201%20TLP-f59e0b?style=flat-square)](https://uno-km.vercel.app/docs/foundation/)
 
@@ -33,7 +33,7 @@
        │                      (Throttled 100ms pointermove, discrete click/touch unthrottled)
        ▼
 [sentinel.score(request)] ──► End-to-End Token Verification (KeyResolver, NonceStore, Audience/Purpose)
-       │                      + Session Rate Tracking + 4-Stage Pipeline Evaluation
+       │                      + Fixed-Window Session Rate Tracking + 4-Stage Pipeline Evaluation
        ▼
 [Pure 4-Stage Engine] ─────► 1. Classify -> 2. Score -> 3. Target Mode Decision -> 4. Report Resolution
        │
@@ -77,6 +77,7 @@ const sentinel = createSentinel({
   nonceStore: new MemoryNonceStore(),
   expectedAudience: 'sentinel-api-prod',
   expectedPurpose: 'telemetry-collect',
+  allowedIssuers: ['partner-corp'],
   counterStore: new MemoryFixedWindowCounterStore(),
   eventStore: new LocalStorageRiskEventStore()
 });
@@ -94,11 +95,11 @@ console.log(report);
 
 ---
 
-## 🧪 Comprehensive Test Suite & Results (66 / 66 Release Checks)
+## 🧪 Comprehensive Test Suite & Results (78 / 78 Release Checks)
 
 Execute the full fail-closed verification pipeline:
 ```bash
-npm run build && npm run test:types && npm run test:unit && playwright test
+npm run build && npm run test:types && npm run test:unit && npx playwright test
 node scripts/generate_test_report.js
 ```
 

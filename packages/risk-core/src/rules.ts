@@ -40,7 +40,7 @@ export const rules = {
   },
 
   /**
-   * Evaluates high frequency request burst within sliding window
+   * Evaluates high frequency request burst within fixed window
    */
   burst: (options: { weight?: number; threshold?: number; windowMs?: number } = {}): RuleDefinition => {
     const weight = options.weight ?? 30;

@@ -95,12 +95,12 @@ const testSuites = [
   },
   {
     id: 'sentinel',
-    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (9 Gates)',
+    title: '8. Sentinel Facade & Stateful Rate Enforcement Tests (12 Gates)',
     file: 'tests/sentinel.test.js',
     category: 'Facade & State Enforcement',
     command: 'node tests/sentinel.test.js',
-    expectedPasses: 9,
-    pointsPerTest: 10 / 9,
+    expectedPasses: 12,
+    pointsPerTest: 10 / 12,
     maxPoints: 10
   },
   {
@@ -135,17 +135,19 @@ const testSuites = [
   }
 ];
 
+// Execute test suites
+console.log('🧪 Executing all 11 test suites and collecting execution logs...\n');
+const resultsData = [];
 let totalScore = 0;
 const maxTotalScore = 100;
 let totalPassed = 0;
 let totalFailed = 0;
-const resultsData = [];
-
-console.log('\n🧪 Executing all 11 test suites and collecting execution logs...\n');
 
 for (const suite of testSuites) {
-  const filePath = path.join(ROOT, suite.file);
-  const sourceCode = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '// File not found';
+  let sourceCode = '';
+  if (suite.file && fs.existsSync(path.join(ROOT, suite.file))) {
+    sourceCode = fs.readFileSync(path.join(ROOT, suite.file), 'utf8');
+  }
 
   let outputLog = '';
   let durationMs = 0;
@@ -243,11 +245,13 @@ for (const pkg of packages) {
 }
 
 // Fail-closed verification criteria
-const packagingPassed = packageOutputs.length === packages.length && packageOutputs.every(r => r.status === 'VALID');
+const packagingPassedCount = packageOutputs.filter(r => r.status === 'VALID').length;
+const packagingPassed = packageOutputs.length === packages.length && packagingPassedCount === packages.length;
 const executablePassed = totalFailed === 0 && resultsData.every(r => r.status === 'PASS');
 const overallPassed = executablePassed && packagingPassed && finalScore === 100;
 const overallStatus = overallPassed ? 'PASSED (100% SUCCESS)' : 'FAILED';
-const totalReleaseChecks = totalPassed + packageOutputs.length;
+const releasePassed = totalPassed + packagingPassedCount;
+const releaseTotal = testSuites.reduce((sum, suite) => sum + suite.expectedPasses, 0) + packages.length;
 
 // Generate Canonical Markdown Report
 let md = `# 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Comprehensive Test Suite & Verification Results
@@ -256,11 +260,11 @@ let md = `# 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Comprehensive Test Suite & Ver
 > **Target Mode, Smart Bot Classifier & Trust Boundary Engine**: 100% Verified  
 > **Overall Gate Status**: \`${overallStatus}\`  
 > **Final Score**: \`${finalScore.toFixed(1)} / ${maxTotalScore} pts (Grade ${grade})\`  
-> **Total Checks**: \`${totalPassed} Executable Checks + ${packageOutputs.length} Packaging Checks = ${totalReleaseChecks} / ${totalReleaseChecks} Release Checks\`  
+> **Total Checks**: \`${totalPassed} Executable Checks + ${packagingPassedCount} Packaging Checks = ${releasePassed} / ${releaseTotal} Release Checks\`  
 
 ---
 
-## 📊 1. Executive Test Scorecard (${totalReleaseChecks} Release Checks: ${totalPassed} Executable Gates + ${packageOutputs.length} Package Dry-Runs)
+## 📊 1. Executive Test Scorecard (${releasePassed} / ${releaseTotal} Release Checks: ${totalPassed} Executable Gates + ${packagingPassedCount} Package Dry-Runs)
 
 | Test Category | Tests Passed | Execution Time | Score Points | Gate Status |
 | :--- | :---: | :---: | :---: | :---: |
@@ -325,7 +329,7 @@ console.log(`\n🎉 Comprehensive Test Report successfully generated at:`);
 console.log(`   1. ${REPORT_FILE}`);
 console.log(`   2. ${CODES_REPORT_FILE}`);
 console.log(`   3. ${textReportFile}`);
-console.log(`   Status: ${overallStatus} (${totalReleaseChecks}/${totalReleaseChecks} checks)\n`);
+console.log(`   Status: ${overallStatus} (${releasePassed}/${releaseTotal} checks)\n`);
 
 if (!overallPassed) {
   process.exitCode = 1;

@@ -1,4 +1,4 @@
-﻿# 🛡️ AMEVA Sentinel v0.6 Architecture Specification
+# 🛡️ AMEVA Sentinel v0.6 Architecture Specification
 # Data Trust Boundaries & Security Model (Canonical Spec)
 
 > **Document Version**: `1.1.0-RFC`  
@@ -25,7 +25,7 @@ In the AMEVA Sentinel ecosystem, zero trust is placed on raw client-supplied cla
                                     ▼
 ┌──────────────────────────── TRUSTED ZONE ────────────────────────────┐
 │  Server-Side Collector Endpoint                                      │
-│  ├── 1. Request Sanitation & Size Limits (Body <= 64KB, Token <= 2KB)│
+│  ├── 1. Request Sanitation & Size Limits (Body <= 64KB, Token <= 4096)│
 │  ├── 2. Key Ring Lookup (kid) & Length-Safe HMAC Verification        │
 │  │      (crypto.timingSafeEqual after length pre-check)              │
 │  ├── 3. Freshness & Timestamp Window Validation (|Δt| <= 30s)        │
@@ -38,7 +38,7 @@ In the AMEVA Sentinel ecosystem, zero trust is placed on raw client-supplied cla
                                     ▼
 ┌────────────────────── PERSISTENT STATE STORAGE ──────────────────────┐
 │  Distributed Adapters                                                │
-│  ├── Sliding-Window Counter: Redis / Distributed Key-Value Store     │
+│  ├── Fixed-Window Counter: Redis / Distributed Key-Value Store       │
 │  ├── Auditable Event Ledger: PostgreSQL / Write-Ahead Store          │
 │  └── Security Incident Ledger: Dedicated Audit Log (Replay/Tampering)│
 └───────────────────────────────────────────────────────────────────────┘
@@ -85,15 +85,16 @@ sv1.<base64url_canonical_payload>.<base64url_hmac_sha256>
 }
 ```
 
-### 3.3 Canonical JSON Serialization (RFC 8785 Compatible)
-1. Keys must be sorted lexicographically by Unicode code points.
+### 3.3 AMEVA Deterministic Canonical JSON Subset
+> *AMEVA deterministic canonical JSON subset. This is not a complete RFC 8785 implementation.*
+1. Keys must be sorted lexicographically by UTF-16 code units (`Object.keys().sort()`).
 2. Zero extraneous whitespace between tokens (`{"aud":"...","exp":123}`).
 3. Strings encoded in UTF-8 without BOM.
-4. Floats/Integers formatted without trailing zeroes.
+4. Non-finite numbers (NaN, Infinity) and circular references are strictly forbidden and throw.
 
 ### 3.4 Verification & Replay Protection Invariants
 When the Collector receives a token:
-1. **Size Limit Check**: Raw token string $\le 2048$ bytes.
+1. **Size Limit Check**: Raw token string $\le 4096$ characters.
 2. **Key Ring Resolution**: Extract `kid`. If unknown or retired, reject with HTTP `401 Unauthorized`.
 3. **Length Pre-Checked Constant-Time Verification**:
    ```typescript
