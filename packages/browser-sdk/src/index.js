@@ -1,11 +1,18 @@
-// Pure ESM for @ameva/sentinel-browser
+// Pure ESM Module for @ameva/sentinel-browser
 
-export class SentinelBrowserCollector {
+export class BrowserTelemetryCollector {
   constructor(options = {}) {
     this.startTime = Date.now();
-    this.trustedEvents = 0;
     this.isListening = false;
-    if (options.autoTrack !== false) {
+    this.maxEventsCap = options.maxEventsCap ?? 5000;
+    this.abortController = null;
+
+    this.trustedEvents = 0;
+    this.pointerEvents = 0;
+    this.touchEvents = 0;
+    this.keyboardEvents = 0;
+
+    if (options.autoStart !== false) {
       this.start();
     }
   }
@@ -13,30 +20,50 @@ export class SentinelBrowserCollector {
   start() {
     if (this.isListening || typeof window === 'undefined') return;
     this.isListening = true;
+    this.abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const signal = this.abortController ? this.abortController.signal : undefined;
 
-    const onUserInteraction = (event) => {
-      if (event.isTrusted === true) {
+    const onPointer = (e) => {
+      if (this.pointerEvents < this.maxEventsCap) this.pointerEvents++;
+      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
         this.trustedEvents++;
       }
     };
 
-    window.addEventListener('pointermove', onUserInteraction, { passive: true });
-    window.addEventListener('click', onUserInteraction, { passive: true });
-    window.addEventListener('keydown', onUserInteraction, { passive: true });
-    window.addEventListener('touchstart', onUserInteraction, { passive: true });
+    const onTouch = (e) => {
+      if (this.touchEvents < this.maxEventsCap) this.touchEvents++;
+      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
+        this.trustedEvents++;
+      }
+    };
+
+    const onKey = (e) => {
+      if (this.keyboardEvents < this.maxEventsCap) this.keyboardEvents++;
+      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
+        this.trustedEvents++;
+      }
+    };
+
+    window.addEventListener('pointermove', onPointer, { passive: true, signal });
+    window.addEventListener('click', onPointer, { passive: true, signal });
+    window.addEventListener('touchstart', onTouch, { passive: true, signal });
+    window.addEventListener('keydown', onKey, { passive: true, signal });
   }
 
-  collectSignals() {
+  snapshot() {
     const isBrowser = typeof window !== 'undefined' && typeof navigator !== 'undefined';
     if (!isBrowser) {
       return {
-        webdriver: false,
         telemetryObserved: false,
         observationDurationMs: 0,
-        isTrustedEventsCount: 0,
+        webdriverObserved: false,
+        trustedInputCount: 0,
+        pointerEventCount: 0,
+        touchEventCount: 0,
+        keyboardEventCount: 0,
         touchMismatch: false,
         suspiciousUA: false,
-        timestamp: Date.now()
+        collectedAt: new Date().toISOString()
       };
     }
 
@@ -48,20 +75,38 @@ export class SentinelBrowserCollector {
     const isSuspiciousUA = !nav.userAgent || /HeadlessChrome|PhantomJS|Selenium|Playwright|curl|wget|python-requests/i.test(nav.userAgent);
 
     return {
-      webdriver: isWebdriver,
       telemetryObserved: true,
-      observationDurationMs: Date.now() - this.startTime,
-      isTrustedEventsCount: this.trustedEvents,
+      observationDurationMs: Math.max(0, Date.now() - this.startTime),
+      webdriverObserved: isWebdriver,
+      trustedInputCount: this.trustedEvents,
+      pointerEventCount: this.pointerEvents,
+      touchEventCount: this.touchEvents,
+      keyboardEventCount: this.keyboardEvents,
       touchMismatch: isTouchMismatch,
       suspiciousUA: isSuspiciousUA,
-      timestamp: Date.now()
+      collectedAt: new Date().toISOString()
     };
   }
 
   reset() {
     this.startTime = Date.now();
     this.trustedEvents = 0;
+    this.pointerEvents = 0;
+    this.touchEvents = 0;
+    this.keyboardEvents = 0;
+  }
+
+  destroy() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+    this.isListening = false;
   }
 }
 
-export const sentinelBrowser = new SentinelBrowserCollector();
+export function createBrowserTelemetry(options) {
+  return new BrowserTelemetryCollector(options);
+}
+
+export const browserTelemetry = new BrowserTelemetryCollector();

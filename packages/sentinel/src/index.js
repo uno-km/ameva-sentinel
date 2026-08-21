@@ -21,9 +21,14 @@ export {
 };
 
 export class Sentinel {
+  /**
+   * @param options.mode - 'shadow' | 'enforce' (default: 'shadow')
+   * @param options.counterStore - Sliding window counter (MemoryCounterStore is local-only; for distributed environments, use Redis/Durable Objects)
+   * @param options.eventStore - Risk event persistence store
+   */
   constructor(options = {}) {
     this.policy = options.policy || defaultPolicy;
-    this.mode = options.mode || 'shadow'; // 'shadow' | 'enforce'
+    this.mode = options.mode || 'shadow';
     this.counterStore = options.counterStore || new MemoryCounterStore();
     this.eventStore = options.eventStore || null;
   }
@@ -35,46 +40,80 @@ export class Sentinel {
   async score(req) {
     const rawSignals = await this.collect(req);
 
-    // Track stateful sliding window request burst rate per network key
-    const networkKey = this.deriveNetworkKey(req);
-    const rate = await this.counterStore.increment(networkKey, { windowMs: 10000 });
+    // v0.5 Local Prototype: Use explicit session or test client identifier
+    const rateKey = this.deriveRateKey(req);
+    const rate = await this.counterStore.increment(rateKey, { windowMs: 10000 });
     
-    // Combine collected signals with server-side sliding window counter
+    // Combine collected signals with sliding window counter
     const enrichedSignals = {
       ...rawSignals,
       burstCount10s: rate.count
     };
 
     const verified = await this.verify(enrichedSignals);
-    const report = evaluate(verified, {
+    const evaluated = evaluate(verified, {
       policy: this.policy,
       enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW'
     });
 
+    // Sanitized Report for Storage (Strictly allowlisted minimal derived signals, zero PII / zero raw headers)
+    const sanitizedReport = {
+      ...evaluated,
+      signals: this.sanitizeDerivedSignals(verified)
+    };
+
     if (this.eventStore && typeof this.eventStore.append === 'function') {
       try {
-        await this.eventStore.append(report);
+        await this.eventStore.append(sanitizedReport);
       } catch (e) {}
     }
 
-    return report;
+    return sanitizedReport;
   }
 
-  deriveNetworkKey(req) {
-    if (!req) return 'anon_client';
-    const headers = req.headers || {};
-    const getHeader = (name) => {
-      if (typeof headers.get === 'function') return headers.get(name) || '';
-      return headers[name.toLowerCase()] || headers[name] || '';
-    };
+  /**
+   * Derives rate limiting key for v0.5 local evaluation.
+   * In a distributed server architecture, this will be replaced by a server-side subnet HMAC hash.
+   */
+  deriveRateKey(req) {
+    if (!req) return 'anonymous-local-client';
+    if (req.sessionId) return `sess_${req.sessionId}`;
+    if (req.testClientId) return `test_${req.testClientId}`;
+    return 'anonymous-local-client';
+  }
 
-    const ip = getHeader('x-forwarded-for') || getHeader('cf-connecting-ip') || '127.0.0.1';
-    const ua = getHeader('user-agent');
-    return `${ip.split(',')[0].trim()}_${ua.slice(0, 30)}`;
+  /**
+   * Strict privacy filter: Allowlist only minimal derived numerical & boolean signals.
+   * Strips all raw headers, tokens, cookies, and coordinates.
+   */
+  sanitizeDerivedSignals(signals = {}) {
+    return {
+      webdriver: !!signals.webdriver,
+      telemetryObserved: !!signals.telemetryObserved,
+      observationDurationMs: typeof signals.observationDurationMs === 'number' ? signals.observationDurationMs : 0,
+      isTrustedEventsCount: typeof signals.isTrustedEventsCount === 'number' ? signals.isTrustedEventsCount : 0,
+      burstCount10s: typeof signals.burstCount10s === 'number' ? signals.burstCount10s : 1,
+      touchMismatch: !!signals.touchMismatch,
+      suspiciousUA: !!signals.suspiciousUA
+    };
   }
 
   async collect(req) {
     if (!req) return {};
+
+    // Support direct signals bag
+    if (req.signals && typeof req.signals === 'object') {
+      return {
+        webdriver: !!req.signals.webdriverObserved || !!req.signals.webdriver,
+        telemetryObserved: !!req.signals.telemetryObserved,
+        observationDurationMs: typeof req.signals.observationDurationMs === 'number' ? req.signals.observationDurationMs : 6000,
+        isTrustedEventsCount: typeof req.signals.trustedInputCount === 'number' ? req.signals.trustedInputCount : (typeof req.signals.isTrustedEventsCount === 'number' ? req.signals.isTrustedEventsCount : 0),
+        touchMismatch: !!req.signals.touchMismatch,
+        suspiciousUA: !!req.signals.suspiciousUA,
+        hasSignedToken: !!req.signals.hasSignedToken,
+        tokenFreshnessMs: typeof req.signals.tokenFreshnessMs === 'number' ? req.signals.tokenFreshnessMs : 100
+      };
+    }
 
     const headers = req.headers || {};
     const getHeader = (name) => {

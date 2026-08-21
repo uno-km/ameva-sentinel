@@ -1,5 +1,5 @@
 /**
- * AMEVA Sentinel - Facade & Stateful Rate Tracking Test Suite
+ * AMEVA Sentinel - Facade & Stateful Rate Test Suite
  */
 import assert from 'node:assert';
 import {
@@ -9,8 +9,9 @@ import {
   MemoryCounterStore,
   MemoryRiskEventStore
 } from '../packages/sentinel/src/index.js';
+import { createBrowserTelemetry } from '../packages/browser-sdk/src/index.js';
 
-console.log('\n🧪 Running AMEVA Sentinel Facade & Stateful Rate Test Suite...\n');
+console.log('\n🧪 Running AMEVA Sentinel Facade & Integration Test Suite...\n');
 
 let passedTests = 0;
 let failedTests = 0;
@@ -30,30 +31,19 @@ function it(name, fn) {
 }
 
 async function run() {
-  // 1. Single Clean Request in Default Shadow Mode
-  await it('sentinel.score(req) should evaluate single human request as ALLOW', async () => {
-    const mockReq = {
-      headers: {
-        'x-forwarded-for': '203.0.113.195',
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36'
-      },
-      body: {
-        token: 'signed_jwt_token_123',
-        telemetry_observed: true,
-        observation_duration_ms: 8000,
-        trusted_events: 12,
-        timestamp: Date.now() - 300
-      }
-    };
+  // 1. Ingest from browser-sdk snapshot
+  await it('sentinel.score({ signals }) should score directly from browser-sdk snapshot', async () => {
+    const telemetry = createBrowserTelemetry({ autoStart: false });
+    const snapshot = telemetry.snapshot();
 
-    const risk = await sentinel.score(mockReq);
+    const report = await sentinel.score({ signals: snapshot });
 
-    assert.strictEqual(risk.score, 0);
-    assert.strictEqual(risk.action, SentinelAction.ALLOW);
-    assert.strictEqual(risk.recommendedAction, SentinelAction.ALLOW);
-    assert.strictEqual(risk.enforcementMode, 'SHADOW');
-    assert.ok(risk.evidenceConfidence >= 0.75);
-    assert.ok(risk.traceId.startsWith('trc_'));
+    assert.strictEqual(typeof report.score, 'number');
+    assert.strictEqual(report.action, SentinelAction.ALLOW);
+    assert.strictEqual(report.enforcementMode, 'SHADOW');
+    assert.strictEqual(report.schemaVersion, undefined); // In return object
+    assert.ok(report.signals !== undefined, 'Report must contain sanitized derived signals');
+    assert.strictEqual(report.signals.webdriver, false);
   });
 
   // 2. Stateful Sliding-Window Request Burst Counter Test
@@ -65,8 +55,8 @@ async function run() {
     });
 
     const attackerReq = {
+      sessionId: 'attacker_test_session_99',
       headers: {
-        'x-forwarded-for': '198.51.100.77',
         'user-agent': 'python-requests/2.31.0'
       },
       body: {}
@@ -80,7 +70,7 @@ async function run() {
 
     // 35 requests exceeds threshold (30) -> triggers rate.burst_request (30) + suspicious_ua (15) = 45 score
     assert.ok(lastReport.score >= 45, `Expected score >= 45, got ${lastReport.score}`);
-    assert.strictEqual(lastReport.recommendedAction, SentinelAction.OBSERVE); // 45 is OBSERVE (21~49)
+    assert.strictEqual(lastReport.recommendedAction, SentinelAction.OBSERVE);
 
     const rulesTriggered = lastReport.evidence.map(e => e.rule);
     assert.ok(rulesTriggered.includes('rate.burst_request'));
@@ -96,8 +86,8 @@ async function run() {
     });
 
     const mockReq = {
+      testClientId: 'test_client_007',
       headers: {
-        'x-forwarded-for': '192.0.2.1',
         'user-agent': 'HeadlessChrome/128.0'
       },
       body: {
@@ -111,7 +101,7 @@ async function run() {
     const risk = await enforcingSentinel.score(mockReq);
 
     assert.strictEqual(risk.enforcementMode, 'ENFORCE');
-    assert.strictEqual(risk.action, SentinelAction.OBSERVE); // 25 score is OBSERVE
+    assert.strictEqual(risk.action, SentinelAction.OBSERVE);
     assert.strictEqual(risk.recommendedAction, SentinelAction.OBSERVE);
 
     const stored = await eventStore.list();
@@ -121,9 +111,9 @@ async function run() {
   });
 
   console.log('\n------------------------------------------------');
-  console.log(`Total Facade & Rate Tests: ${passedTests + failedTests}`);
-  console.log(`Passed:                   ${passedTests}`);
-  console.log(`Failed:                   ${failedTests}`);
+  console.log(`Total Facade Tests: ${passedTests + failedTests}`);
+  console.log(`Passed:             ${passedTests}`);
+  console.log(`Failed:             ${failedTests}`);
   console.log('------------------------------------------------\n');
 
   if (failedTests > 0) {

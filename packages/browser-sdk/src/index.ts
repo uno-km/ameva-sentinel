@@ -1,63 +1,106 @@
 /**
  * @ameva/sentinel-browser
- * Lightweight, privacy-first client telemetry collector
- * Zero external dependencies. Zero PII collection. Zero mouse coordinates.
+ * Privacy-first browser environment & user interaction telemetry collector
+ * 
+ * Guarantees:
+ * - ZERO raw mouse coordinates collected
+ * - ZERO keystroke contents or form values collected
+ * - ZERO persistent PII or long-term tracking identifiers
+ * - Clean lifecycle management with start() and destroy()
  */
 
-export interface BrowserSignals {
-  webdriver: boolean;
+export interface BrowserTelemetryOptions {
+  samplingWindowMs?: number;
+  maxEventsCap?: number;
+  autoStart?: boolean;
+}
+
+export interface BrowserTelemetrySnapshot {
   telemetryObserved: boolean;
   observationDurationMs: number;
-  isTrustedEventsCount: number;
+  webdriverObserved: boolean;
+  trustedInputCount: number;
+  pointerEventCount: number;
+  touchEventCount: number;
+  keyboardEventCount: number;
   touchMismatch: boolean;
   suspiciousUA: boolean;
-  timestamp: number;
+  collectedAt: string;
 }
 
-export interface SentinelBrowserOptions {
-  autoTrack?: boolean;
-}
-
-export class SentinelBrowserCollector {
+export class BrowserTelemetryCollector {
   private startTime = Date.now();
-  private trustedEvents = 0;
   private isListening = false;
+  private maxEventsCap: number;
+  private abortController: AbortController | null = null;
 
-  constructor(options: SentinelBrowserOptions = {}) {
-    if (options.autoTrack !== false) {
+  // Granular interaction counters
+  private trustedEvents = 0;
+  private pointerEvents = 0;
+  private touchEvents = 0;
+  private keyboardEvents = 0;
+
+  constructor(options: BrowserTelemetryOptions = {}) {
+    this.maxEventsCap = options.maxEventsCap ?? 5000;
+    if (options.autoStart !== false) {
       this.start();
     }
   }
 
+  /**
+   * Starts collecting interaction signals with passive event listeners.
+   * Safe against duplicate invocations.
+   */
   start(): void {
     if (this.isListening || typeof window === 'undefined') return;
     this.isListening = true;
+    this.abortController = new AbortController();
+    const { signal } = this.abortController;
 
-    const onUserInteraction = (event: Event) => {
-      // Security Guard: Only count genuinely trusted hardware events
-      if (event.isTrusted === true) {
+    const onPointer = (e: Event) => {
+      if (this.pointerEvents < this.maxEventsCap) this.pointerEvents++;
+      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
         this.trustedEvents++;
       }
     };
 
-    // Passive interaction listeners without tracking coordinates or keystroke content
-    window.addEventListener('pointermove', onUserInteraction, { passive: true });
-    window.addEventListener('click', onUserInteraction, { passive: true });
-    window.addEventListener('keydown', onUserInteraction, { passive: true });
-    window.addEventListener('touchstart', onUserInteraction, { passive: true });
+    const onTouch = (e: Event) => {
+      if (this.touchEvents < this.maxEventsCap) this.touchEvents++;
+      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
+        this.trustedEvents++;
+      }
+    };
+
+    const onKey = (e: Event) => {
+      if (this.keyboardEvents < this.maxEventsCap) this.keyboardEvents++;
+      if (e.isTrusted === true && this.trustedEvents < this.maxEventsCap) {
+        this.trustedEvents++;
+      }
+    };
+
+    window.addEventListener('pointermove', onPointer, { passive: true, signal });
+    window.addEventListener('click', onPointer, { passive: true, signal });
+    window.addEventListener('touchstart', onTouch, { passive: true, signal });
+    window.addEventListener('keydown', onKey, { passive: true, signal });
   }
 
-  collectSignals(): BrowserSignals {
+  /**
+   * Captures an immutable snapshot of current software-observed browser signals.
+   */
+  snapshot(): BrowserTelemetrySnapshot {
     const isBrowser = typeof window !== 'undefined' && typeof navigator !== 'undefined';
     if (!isBrowser) {
       return {
-        webdriver: false,
         telemetryObserved: false,
         observationDurationMs: 0,
-        isTrustedEventsCount: 0,
+        webdriverObserved: false,
+        trustedInputCount: 0,
+        pointerEventCount: 0,
+        touchEventCount: 0,
+        keyboardEventCount: 0,
         touchMismatch: false,
         suspiciousUA: false,
-        timestamp: Date.now()
+        collectedAt: new Date().toISOString()
       };
     }
 
@@ -69,20 +112,44 @@ export class SentinelBrowserCollector {
     const isSuspiciousUA = !nav.userAgent || /HeadlessChrome|PhantomJS|Selenium|Playwright|curl|wget|python-requests/i.test(nav.userAgent);
 
     return {
-      webdriver: isWebdriver,
       telemetryObserved: true,
-      observationDurationMs: Date.now() - this.startTime,
-      isTrustedEventsCount: this.trustedEvents,
+      observationDurationMs: Math.max(0, Date.now() - this.startTime),
+      webdriverObserved: isWebdriver,
+      trustedInputCount: this.trustedEvents,
+      pointerEventCount: this.pointerEvents,
+      touchEventCount: this.touchEvents,
+      keyboardEventCount: this.keyboardEvents,
       touchMismatch: isTouchMismatch,
       suspiciousUA: isSuspiciousUA,
-      timestamp: Date.now()
+      collectedAt: new Date().toISOString()
     };
   }
 
+  /**
+   * Resets counter state.
+   */
   reset(): void {
     this.startTime = Date.now();
     this.trustedEvents = 0;
+    this.pointerEvents = 0;
+    this.touchEvents = 0;
+    this.keyboardEvents = 0;
+  }
+
+  /**
+   * Cleans up all DOM listeners and aborts active controller.
+   */
+  destroy(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+    this.isListening = false;
   }
 }
 
-export const sentinelBrowser = new SentinelBrowserCollector();
+export function createBrowserTelemetry(options?: BrowserTelemetryOptions): BrowserTelemetryCollector {
+  return new BrowserTelemetryCollector(options);
+}
+
+export const browserTelemetry = new BrowserTelemetryCollector();
