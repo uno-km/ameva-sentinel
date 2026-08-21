@@ -3,317 +3,462 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMEVA Sentinel - Security Observability Dashboard (Shadow Mode)</title>
+    <title>AMEVA-Sentinel Status &amp; Observability Manager (Shadow Mode)</title>
     <link rel="icon" type="image/svg+xml" href="https://uno-km.vercel.app/shared/brand/favicon.svg">
     <style>
+        /* ── Classic Apache / Tomcat Server Status Theme ─────────────────────────── */
         :root {
-            --bg-base: #0b0f17;
-            --bg-card: #121824;
-            --bg-card-hover: #182234;
-            --bg-input: #1a2332;
-            --border: #202b3d;
-            --border-highlight: #3b82f6;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --text-dim: #6b7280;
-            --accent-blue: #3b82f6;
-            --accent-green: #10b981;
-            --accent-amber: #f59e0b;
-            --accent-red: #ef4444;
-            --accent-purple: #8b5cf6;
-            --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --primary-color: #004499;
+            --primary-dark: #002b66;
+            --primary-light: #e8f0fe;
+            --border-color: #cbd5e1;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --font-mono: "JetBrains Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background-color: var(--bg-base);
+            background-color: #f8fafc;
             color: var(--text-main);
-            font-family: var(--font-sans);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             font-size: 13px;
             line-height: 1.5;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
         }
 
-        header.top-bar {
-            background-color: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            padding: 12px 24px;
+        header {
+            background-color: #ffffff;
+            border-bottom: 2px solid var(--primary-color);
+            padding: 0 24px;
+            height: 58px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             position: sticky;
             top: 0;
             z-index: 100;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
-        .brand-group { display: flex; align-items: center; gap: 12px; }
-        .brand-title { font-size: 1.15em; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; text-decoration: none; }
-        .badge-mode { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.75em; font-weight: 600; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .badge-demo { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.75em; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
-        .header-actions { display: flex; align-items: center; gap: 10px; }
-        .btn { background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); padding: 6px 12px; border-radius: 4px; font-size: 0.85em; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; transition: all 0.15s ease; }
-        .btn:hover { background: var(--bg-card-hover); border-color: var(--border-highlight); }
-        .btn-primary { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
-        .btn-primary:hover { background: #2563eb; }
-        .btn-success { background: rgba(16,185,129,0.2); border-color: var(--accent-green); color: var(--accent-green); }
-        .btn-danger { background: rgba(239,68,68,0.2); border-color: var(--accent-red); color: var(--accent-red); }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .header-brand img { width: 26px; height: 26px; }
+        .header-brand h1 { margin: 0; color: var(--primary-color); font-size: 1.2em; font-weight: 700; }
+        .header-controls { display: flex; align-items: center; gap: 8px; }
+        .header-btn {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 5px 10px;
+            font-size: 0.85em;
+            font-weight: 600;
+            border-radius: 3px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .header-btn:hover { background: #f1f5f9; color: var(--primary-color); border-color: var(--primary-color); }
+        .header-btn.primary { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+        .header-btn.primary:hover { background: var(--primary-dark); }
 
-        .demo-banner { background: #111a28; border-bottom: 1px solid #1e2e46; padding: 8px 24px; font-size: 0.82em; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-        .demo-status-pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); }
-        .demo-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green); display: inline-block; }
+        .tomcat-container {
+            max-width: 1380px;
+            margin: 20px auto 40px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
 
-        .dashboard-container { max-width: 1480px; width: 100%; margin: 0 auto; padding: 16px 24px 32px 24px; display: flex; flex-direction: column; gap: 18px; }
-        .simulator-bar { background: var(--bg-card); border: 1px solid var(--border-highlight); border-radius: 6px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-        .sim-title { font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
-        .sim-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .status-header-box {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--primary-color);
+            padding: 12px 18px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
-        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; }
-        .stat-label { font-size: 0.82em; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
-        .stat-value { font-size: 1.7em; font-weight: 800; color: #fff; margin: 6px 0 2px 0; font-family: var(--font-mono); }
-        .stat-desc { font-size: 0.78em; color: var(--text-dim); }
+        .status-title {
+            font-size: 1.15em;
+            font-weight: 800;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-        .split-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
-        @media (max-width: 1024px) { .split-grid { grid-template-columns: 1fr; } }
+        .tomcat-badge {
+            display: inline-block;
+            font-size: 0.75em;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            font-family: monospace;
+        }
+        .badge-shadow { background: #e8f0fe; color: var(--primary-color); border: 1px solid #bfdbfe; }
+        .badge-demo { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
 
-        .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
-        .panel-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-        .panel-title { font-size: 1em; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .control-panel {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
 
-        .dist-bar-container { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: #1e293b; margin: 6px 0; }
-        .dist-seg { height: 100%; transition: width 0.3s ease; }
-        .dist-seg.low { background: var(--accent-green); }
-        .dist-seg.med { background: var(--accent-amber); }
-        .dist-seg.high { background: var(--accent-red); }
+        .btn-tomcat {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            border-radius: 3px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.1s ease;
+        }
+        .btn-tomcat:hover { background: #f1f5f9; border-color: var(--primary-color); color: var(--primary-color); }
+        .btn-tomcat.danger { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+        .btn-tomcat.danger:hover { background: #fecaca; }
 
-        .dist-legend { display: flex; justify-content: space-between; font-size: 0.78em; color: var(--text-muted); flex-wrap: wrap; gap: 6px; }
-        .dist-legend-item { display: flex; align-items: center; gap: 5px; }
-        .dist-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .tomcat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
 
-        .table-responsive { overflow-x: auto; max-height: 380px; }
-        table.data-table { width: 100%; border-collapse: collapse; font-size: 0.85em; text-align: left; }
-        table.data-table th { background: var(--bg-input); color: var(--text-muted); padding: 8px 12px; font-weight: 600; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
-        table.data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text-main); }
-        table.data-table tr:hover td { background: var(--bg-card-hover); cursor: pointer; }
-        .badge-action { padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 700; font-family: var(--font-mono); display: inline-block; }
-        .badge-action.RATE_LIMIT { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid rgba(239,68,68,0.4); }
-        .badge-action.OBSERVE { background: rgba(245, 158, 11, 0.2); color: var(--accent-amber); border: 1px solid rgba(245,158,11,0.4); }
-        .badge-action.ALLOW { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.4); }
-        .badge-action.REQUIRE_APP_VERIFICATION { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); border: 1px solid rgba(139,92,246,0.4); }
-        .badge-action.TEMPORARY_DENY { background: rgba(239, 68, 68, 0.3); color: #fca5a5; border: 1px solid var(--accent-red); }
+        .tomcat-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .card-label { font-size: 0.8em; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-value { font-size: 1.6em; font-weight: 800; color: var(--primary-color); font-family: var(--font-mono); margin: 4px 0; }
+        .card-sub { font-size: 0.8em; color: #64748b; }
 
-        .score-pill { font-weight: 800; font-family: var(--font-mono); padding: 2px 6px; border-radius: 3px; }
-        .score-high { color: var(--accent-red); background: rgba(239,68,68,0.15); }
-        .score-med { color: var(--accent-amber); background: rgba(245,158,11,0.15); }
-        .score-low { color: var(--accent-green); background: rgba(16,185,129,0.15); }
+        .management-split {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 1024px) { .management-split { grid-template-columns: 1fr; } }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); display: none; justify-content: center; align-items: center; z-index: 200; backdrop-filter: blur(4px); }
-        .modal-card { background: var(--bg-card); border: 1px solid var(--border-highlight); border-radius: 8px; width: 90%; max-width: 680px; max-height: 85vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .evidence-row { background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px; padding: 10px; margin-bottom: 6px; }
-        .evidence-head { display: flex; justify-content: space-between; font-weight: 700; font-family: var(--font-mono); margin-bottom: 4px; }
-        .evidence-attr { font-size: 0.8em; color: var(--text-muted); font-family: var(--font-mono); background: #0d131d; padding: 6px; border-radius: 3px; margin-top: 4px; }
+        .tomcat-section {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-        .slider-group { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
-        .slider-item { display: flex; flex-direction: column; gap: 2px; }
-        .slider-label-row { display: flex; justify-content: space-between; font-size: 0.82em; font-weight: 600; }
-        input[type="range"] { accent-color: var(--accent-blue); cursor: pointer; }
-        .sim-result-box { background: var(--bg-input); border: 1px dashed var(--accent-blue); border-radius: 6px; padding: 12px; margin-top: 8px; }
+        .section-header {
+            font-size: 1em;
+            font-weight: 800;
+            color: var(--primary-color);
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        table.tomcat-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88em;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+        table.tomcat-table th {
+            background: #f1f5f9;
+            color: var(--primary-color);
+            font-weight: 700;
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            font-size: 0.85em;
+        }
+        table.tomcat-table td {
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+        table.tomcat-table tr:nth-child(even) td { background: #f8fafc; }
+        table.tomcat-table tr:hover td { background: #e8f0fe; cursor: pointer; }
+
+        .pill-action {
+            font-size: 0.75em;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: var(--font-mono);
+            display: inline-block;
+        }
+        .pill-allow { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .pill-observe { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .pill-verify { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+        .pill-deny { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+        .score-box { font-weight: 800; font-family: var(--font-mono); padding: 2px 6px; border-radius: 3px; display: inline-block; }
+        .score-low { background: #dcfce7; color: #15803d; }
+        .score-med { background: #fef3c7; color: #b45309; }
+        .score-high { background: #fee2e2; color: #b91c1c; }
+
+        .dist-bar {
+            height: 14px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            overflow: hidden;
+            display: flex;
+            border: 1px solid var(--border-color);
+        }
+        .dist-low { background: #16a34a; }
+        .dist-med { background: #f59e0b; }
+        .dist-high { background: #dc2626; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .modal-box {
+            background: #ffffff;
+            border: 2px solid var(--primary-color);
+            border-radius: 4px;
+            width: 90%;
+            max-width: 680px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .evidence-item {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
-    <header class="top-bar">
-        <div class="brand-group">
-            <div class="brand-title">
-                <span>🛡️ AMEVA Sentinel</span>
-                <span class="badge-mode">Shadow Mode</span>
-                <span class="badge-demo">Demo Mode (LocalStorage)</span>
-            </div>
+    <header>
+        <div class="header-brand">
+            <img src="https://uno-km.vercel.app/shared/brand/favicon.svg" alt="Logo">
+            <h1>AMEVA-Sentinel</h1>
         </div>
-        <div class="header-actions">
-            <span style="color: var(--text-dim); font-size: 0.82em;">Policy: <strong>v2026-08-21.1</strong></span>
-            <a href="https://github.com/uno-km/AMEVA-Sentinel" target="_blank" class="btn btn-primary">🐙 GitHub OSS</a>
+        <div class="header-controls">
+            <span class="tomcat-badge badge-shadow">v1.0.0</span>
+            <a href="https://github.com/uno-km/AMEVA-Sentinel" target="_blank" class="header-btn primary">🐙 GitHub</a>
         </div>
     </header>
 
-    <div class="demo-banner">
-        <div class="demo-status-pill">
-            <span class="demo-dot"></span>
-            <span>Data Source: <strong>LocalStorage (Browser-Bound)</strong></span>
-            <span>&bull;</span>
-            <span id="banner-events-count">Events: 0</span>
-            <span>&bull;</span>
-            <span id="banner-last-event">Last event: None</span>
-        </div>
-        <div style="font-family: var(--font-mono); color: var(--text-dim);">
-            SDK Engine: <span style="color:var(--accent-green);">Live Eval</span> &bull; 
-            Enforcement: <span style="color:var(--accent-amber);">SHADOW ONLY</span>
-        </div>
-    </div>
-
-    <div class="dashboard-container">
-        
-        <div class="simulator-bar">
-            <div class="sim-title">
-                <span>⚡ SDK Vertical Plumbing Simulator:</span>
-                <span style="font-size:0.85em; font-weight:normal; color:var(--text-muted);">실제 <code>sentinel.score(req)</code> 엔진을 브라우저에서 실행하고 대시보드에 즉시 적재합니다.</span>
-            </div>
-            <div class="sim-buttons">
-                <button class="btn btn-success" onclick="simulateEvent('clean')">👤 Simulate Clean User</button>
-                <button class="btn btn-danger" onclick="simulateEvent('webdriver')">🤖 Simulate Headless Bot</button>
-                <button class="btn btn-danger" onclick="simulateEvent('burst')">💥 Simulate Burst Attack</button>
-                <button class="btn" onclick="clearEventStore()">🗑️ Clear Store</button>
-            </div>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Observed Sessions <span>📡</span></div>
-                <div class="stat-value" id="stat-total">0</div>
-                <div class="stat-desc">Stored in LocalStorage</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">High Risk Sessions <span>🚨</span></div>
-                <div class="stat-value" id="stat-high" style="color: var(--accent-red);">0</div>
-                <div class="stat-desc" id="stat-high-pct">0% of observed traffic</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Avg Risk Score <span>📊</span></div>
-                <div class="stat-value" id="stat-avg-score">0 / 100</div>
-                <div class="stat-desc">Dynamically aggregated</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Avg Confidence <span>🎯</span></div>
-                <div class="stat-value" id="stat-avg-conf" style="color: var(--accent-green);">0.00</div>
-                <div class="stat-desc">Calculated via Q*C*F*S</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Enforcement Mode <span>🛡️</span></div>
-                <div class="stat-value" style="font-size:1.3em; color:var(--accent-amber); margin-top:8px;">SHADOW</div>
-                <div class="stat-desc">Non-blocking evaluation</div>
-            </div>
-        </div>
-
-        <div class="split-grid">
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">📈 Observed Risk Distribution</div>
-                    <span id="dist-count-label" style="color: var(--text-dim); font-size:0.8em;">0 events</span>
+    <div class="tomcat-container">
+        <div class="status-header-box">
+            <div>
+                <div class="status-title">
+                    <span>🛡️ Security Observability Manager</span>
+                    <span class="tomcat-badge badge-shadow">Shadow Mode</span>
+                    <span class="tomcat-badge badge-demo">LocalStorage (Browser)</span>
                 </div>
-                <div class="dist-bar-container">
-                    <div class="dist-seg low" id="dist-bar-low" style="width: 100%;"></div>
-                    <div class="dist-seg med" id="dist-bar-med" style="width: 0%;"></div>
-                    <div class="dist-seg high" id="dist-bar-high" style="width: 0%;"></div>
+                <div style="font-size: 0.85em; color: var(--text-muted); margin-top: 4px;">
+                    Policy: <strong>v2026-08-21.1</strong> &bull; 
+                    Storage: <span id="banner-events-count"><strong>0 Events</strong></span> &bull; 
+                    Last Evaluation: <span id="banner-last-event">None</span>
                 </div>
-                <div class="dist-legend">
-                    <div class="dist-legend-item"><span class="dist-dot" style="background:var(--accent-green);"></span> 0~29 Low Risk: <strong id="legend-low-pct">0% (0)</strong></div>
-                    <div class="dist-legend-item"><span class="dist-dot" style="background:var(--accent-amber);"></span> 30~69 Suspicious: <strong id="legend-med-pct">0% (0)</strong></div>
-                    <div class="dist-legend-item"><span class="dist-dot" style="background:var(--accent-red);"></span> 70+ High Risk: <strong id="legend-high-pct">0% (0)</strong></div>
+            </div>
+            <div>
+                <button class="btn-tomcat" onclick="renderDashboard()">🔄 Refresh Status</button>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div style="font-weight: 700; color: var(--primary-color);">
+                ⚡ Live Event Generator:
+                <span style="font-size:0.85em; font-weight:normal; color:#64748b;">클릭 시 실제 <code>sentinel.score()</code>를 실행하여 브라우저 로컬 저장소에 즉시 기록합니다.</span>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn-tomcat" style="color:#15803d; border-color:#86efac;" onclick="simulateEvent('clean')">👤 Simulate Clean User</button>
+                <button class="btn-tomcat" style="color:#b91c1c; border-color:#fca5a5;" onclick="simulateEvent('webdriver')">🤖 Simulate Headless Bot</button>
+                <button class="btn-tomcat" style="color:#b91c1c; border-color:#fca5a5;" onclick="simulateEvent('burst')">💥 Simulate Burst Attack</button>
+                <button class="btn-tomcat danger" onclick="clearEventStore()">🗑️ Clear Store</button>
+            </div>
+        </div>
+
+        <div class="tomcat-grid">
+            <div class="tomcat-card">
+                <div class="card-label">Observed Sessions</div>
+                <div class="card-value" id="stat-total">0</div>
+                <div class="card-sub">Recorded in LocalStorage</div>
+            </div>
+            <div class="tomcat-card">
+                <div class="card-label">High Risk Sessions</div>
+                <div class="card-value" id="stat-high" style="color:#b91c1c;">0</div>
+                <div class="card-sub" id="stat-high-pct">0% of observed traffic</div>
+            </div>
+            <div class="tomcat-card">
+                <div class="card-label">Average Risk Score</div>
+                <div class="card-value" id="stat-avg-score">0 / 100</div>
+                <div class="card-sub">Score threshold: &gt;=70 (High)</div>
+            </div>
+            <div class="tomcat-card">
+                <div class="card-label">Average Confidence</div>
+                <div class="card-value" id="stat-avg-conf" style="color:#15803d;">0.00</div>
+                <div class="card-sub">Mathematical Q*C*F*S score</div>
+            </div>
+            <div class="tomcat-card">
+                <div class="card-label">Enforcement Mode</div>
+                <div class="card-value" style="font-size:1.3em; color:#b45309; margin-top:6px;">SHADOW</div>
+                <div class="card-sub">Non-blocking evaluation</div>
+            </div>
+        </div>
+
+        <div class="management-split">
+            <div class="tomcat-section">
+                <div class="section-header">
+                    <span>📊 Traffic Risk Distribution</span>
+                    <span style="font-size:0.8em; font-weight:normal; color:#64748b;" id="dist-count-label">0 events</span>
                 </div>
 
-                <div style="margin-top: 10px;">
-                    <div style="font-size: 0.88em; font-weight: 700; color: #fff; margin-bottom: 6px;">Top Triggered Rules (Stored Events)</div>
-                    <div id="top-rules-container" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.82em;">
-                        <div style="color:var(--text-dim);">No rules triggered in stored events.</div>
+                <div class="dist-bar">
+                    <div class="dist-low" id="dist-bar-low" style="width:100%;"></div>
+                    <div class="dist-med" id="dist-bar-med" style="width:0%;"></div>
+                    <div class="dist-high" id="dist-bar-high" style="width:0%;"></div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; font-size:0.82em; color:var(--text-muted);">
+                    <span>🟢 0~29 Low Risk: <strong id="legend-low-pct">0% (0)</strong></span>
+                    <span>🟡 30~69 Suspicious: <strong id="legend-med-pct">0% (0)</strong></span>
+                    <span>🔴 70+ High Risk: <strong id="legend-high-pct">0% (0)</strong></span>
+                </div>
+
+                <div style="margin-top:10px;">
+                    <div style="font-size:0.9em; font-weight:700; color:var(--primary-color); margin-bottom:6px;">Triggered Policy Rules Breakdown</div>
+                    <div id="top-rules-container" style="display:flex; flex-direction:column; gap:6px; font-size:0.85em;">
+                        <!-- Dynamic -->
                     </div>
                 </div>
             </div>
 
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">🎛️ Policy Simulator (Local Re-Evaluation)</div>
+            <div class="tomcat-section">
+                <div class="section-header">
+                    <span>🎛️ Policy-as-Code Re-Evaluation</span>
                 </div>
-                <p style="font-size:0.82em; color:var(--text-muted);">현재 저장된 실제 이벤트를 새로운 가중치로 메모리에서 즉시 재계산하여 위험 세션 재분류 영향을 시뮬레이션합니다.</p>
-                
-                <div class="slider-group">
-                    <div class="slider-item">
-                        <div class="slider-label-row">
-                            <span><code>automation.webdriver</code> Weight</span>
-                            <span id="val-webdriver" style="font-family:var(--font-mono); color:var(--accent-blue);">25</span>
+                <p style="font-size:0.82em; color:#64748b;">
+                    가중치 변경 시 로컬에 저장된 실제 이벤트를 즉시 재평가하여 재분류 영향도를 산출합니다.
+                </p>
+
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.82em; font-weight:600;">
+                            <span><code>automation.webdriver</code> Weight:</span>
+                            <span id="val-webdriver" style="color:var(--primary-color); font-family:monospace;">25</span>
                         </div>
-                        <input type="range" id="slider-webdriver" min="5" max="50" value="25" oninput="runPolicySimulation()">
+                        <input type="range" id="slider-webdriver" min="5" max="50" value="25" style="width:100%;" oninput="runPolicySimulation()">
                     </div>
-                    <div class="slider-item">
-                        <div class="slider-label-row">
-                            <span><code>rate.burst_request</code> Weight</span>
-                            <span id="val-burst" style="font-family:var(--font-mono); color:var(--accent-blue);">30</span>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.82em; font-weight:600;">
+                            <span><code>rate.burst_request</code> Weight:</span>
+                            <span id="val-burst" style="color:var(--primary-color); font-family:monospace;">30</span>
                         </div>
-                        <input type="range" id="slider-burst" min="10" max="60" value="30" oninput="runPolicySimulation()">
+                        <input type="range" id="slider-burst" min="10" max="60" value="30" style="width:100%;" oninput="runPolicySimulation()">
                     </div>
                 </div>
 
-                <div class="sim-result-box">
-                    <div style="font-size:0.82em; font-weight:700; color:#fff; margin-bottom:4px;">📊 Local Reclassification Result</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.82em;">
-                        <div>
-                            <div style="color:var(--text-dim);">High Risk (Original):</div>
-                            <div id="sim-orig-high" style="font-weight:800; font-family:var(--font-mono); font-size:1.1em; color:var(--text-main);">0</div>
-                        </div>
-                        <div>
-                            <div style="color:var(--text-dim);">High Risk (Simulated):</div>
-                            <div id="sim-new-high" style="font-weight:800; font-family:var(--font-mono); font-size:1.1em; color:var(--accent-amber);">0 (+0)</div>
-                        </div>
+                <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:3px; padding:10px; margin-top:6px;">
+                    <div style="font-size:0.82em; font-weight:700; color:var(--primary-color); margin-bottom:4px;">Simulation Summary</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.82em;">
+                        <div>Original High Risk: <strong id="sim-orig-high">0</strong></div>
+                        <div>Simulated High Risk: <strong id="sim-new-high" style="color:#b45309;">0 (+0)</strong></div>
                     </div>
-                    <div style="margin-top:6px; font-size:0.75em; color:var(--text-dim);" id="sim-reclassified-ids">Reclassified: None</div>
+                    <div style="margin-top:4px; font-size:0.78em; color:#64748b;" id="sim-reclassified-ids">Reclassified: None</div>
                 </div>
             </div>
         </div>
 
-        <div class="panel">
-            <div class="panel-header">
-                <div class="panel-title">🚨 Recent Evaluated Sessions Stream (Stored in LocalStorage)</div>
-                <div style="font-size:0.8em; color:var(--text-dim);" id="table-count-label">0 total entries</div>
+        <div class="tomcat-section">
+            <div class="section-header">
+                <span>📋 Recent Evaluated Sessions Stream</span>
+                <span style="font-size:0.8em; font-weight:normal; color:#64748b;" id="table-count-label">0 total entries</span>
             </div>
 
-            <div class="table-responsive">
-                <table class="data-table">
+            <div style="overflow-x:auto;">
+                <table class="tomcat-table">
                     <thead>
                         <tr>
-                            <th>Trace ID</th>
-                            <th>Risk Score</th>
-                            <th>Confidence</th>
-                            <th>Action (Shadow)</th>
-                            <th>Recommended</th>
+                            <th style="width:130px;">Trace ID</th>
+                            <th style="width:90px;">Risk Score</th>
+                            <th style="width:90px;">Confidence</th>
+                            <th style="width:110px;">Action (Shadow)</th>
+                            <th style="width:140px;">Recommended</th>
                             <th>Triggered Evidence</th>
-                            <th>Evaluated At</th>
+                            <th style="width:100px;">Time</th>
                         </tr>
                     </thead>
                     <tbody id="sessions-tbody">
-                        <!-- Dynamic Entries -->
+                        <!-- Dynamic Rows -->
                     </tbody>
                 </table>
             </div>
         </div>
-
     </div>
 
-    <div class="modal-overlay" id="session-modal" onclick="closeSessionModal(event)">
-        <div class="modal-card" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <div style="font-size:1.1em; font-weight:700; color:#fff;" id="modal-trace-id">Session Detail</div>
-                <button class="btn" onclick="closeSessionModal()">✕ Close</button>
+    <div class="modal-overlay" id="session-modal" onclick="closeSessionModal()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+                <div style="font-weight:800; font-size:1.1em; color:var(--primary-color);" id="modal-trace-id">Session Detail</div>
+                <button class="btn-tomcat" onclick="closeSessionModal()">✕ Close</button>
             </div>
-            
+
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-                <div class="stat-card">
-                    <div class="stat-label">Score</div>
-                    <div class="stat-value" id="modal-score" style="color:var(--accent-red);">0</div>
+                <div style="background:#f8fafc; border:1px solid var(--border-color); padding:8px; border-radius:3px;">
+                    <div style="font-size:0.75em; color:#64748b; font-weight:700;">SCORE</div>
+                    <div style="font-size:1.3em; font-weight:800; font-family:monospace;" id="modal-score">0</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">Confidence</div>
-                    <div class="stat-value" id="modal-confidence">0.00</div>
+                <div style="background:#f8fafc; border:1px solid var(--border-color); padding:8px; border-radius:3px;">
+                    <div style="font-size:0.75em; color:#64748b; font-weight:700;">CONFIDENCE</div>
+                    <div style="font-size:1.3em; font-weight:800; font-family:monospace;" id="modal-confidence">0.00</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">Recommended</div>
-                    <div class="stat-value" id="modal-action" style="font-size:1.0em; margin-top:10px;">ALLOW</div>
+                <div style="background:#f8fafc; border:1px solid var(--border-color); padding:8px; border-radius:3px;">
+                    <div style="font-size:0.75em; color:#64748b; font-weight:700;">RECOMMENDED</div>
+                    <div style="font-size:0.95em; font-weight:800; margin-top:4px;" id="modal-action">ALLOW</div>
                 </div>
             </div>
 
             <div>
-                <div style="font-size:0.9em; font-weight:700; color:#fff; margin-bottom:6px;">🔬 Machine-Readable Evidence Breakdown</div>
-                <div id="modal-evidence-list">
+                <div style="font-size:0.88em; font-weight:700; color:var(--primary-color); margin-bottom:6px;">🔬 Triggered Evidence Attributes</div>
+                <div id="modal-evidence-list" style="display:flex; flex-direction:column; gap:6px;">
                     <!-- Dynamic -->
                 </div>
             </div>
@@ -452,13 +597,13 @@
 
             document.getElementById('stat-total').innerText = total.toLocaleString();
             document.getElementById('stat-high').innerText = high.toLocaleString();
-            document.getElementById('stat-high-pct').innerText = total === 0 ? '0%' : `${Math.round((high / total) * 100)}% of observed traffic`;
+            document.getElementById('stat-high-pct').innerText = total === 0 ? '0%' : `${Math.round((high / total) * 100)}% of traffic`;
             document.getElementById('stat-avg-score').innerText = `${avgScore} / 100`;
             document.getElementById('stat-avg-conf').innerText = avgConf;
 
-            document.getElementById('banner-events-count').innerText = `Events: ${total}`;
-            document.getElementById('banner-last-event').innerText = total > 0 ? `Last event: ${new Date(reports[0].evaluatedAt).toLocaleTimeString()}` : 'None';
-            document.getElementById('dist-count-label').innerText = `${total} total events`;
+            document.getElementById('banner-events-count').innerHTML = `<strong>${total} Events</strong>`;
+            document.getElementById('banner-last-event').innerText = total > 0 ? new Date(reports[0].evaluatedAt).toLocaleTimeString() : 'None';
+            document.getElementById('dist-count-label').innerText = `${total} events`;
             document.getElementById('table-count-label').innerText = `${total} total entries`;
 
             const lowPct = total === 0 ? 100 : Math.round((low / total) * 100);
@@ -483,18 +628,15 @@
             const topRulesContainer = document.getElementById('top-rules-container');
             const sortedRules = Object.entries(ruleCounts).sort((a, b) => b[1] - a[1]);
             if (sortedRules.length === 0) {
-                topRulesContainer.innerHTML = '<div style="color:var(--text-dim);">No rules triggered in stored events.</div>';
+                topRulesContainer.innerHTML = '<div style="color:#64748b;">No rules triggered.</div>';
             } else {
                 topRulesContainer.innerHTML = sortedRules.map(([rule, count]) => {
                     const pct = total === 0 ? 0 : Math.round((count / total) * 100);
                     return `
-                        <div>
+                        <div style="background:#f8fafc; border:1px solid var(--border-color); padding:6px 10px; border-radius:3px;">
                             <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
                                 <span><code>${rule}</code></span>
                                 <strong>${count} (${pct}%)</strong>
-                            </div>
-                            <div style="height:5px; background:#1e293b; border-radius:3px; overflow:hidden;">
-                                <div style="width:${pct}%; height:100%; background:var(--accent-blue);"></div>
                             </div>
                         </div>
                     `;
@@ -503,22 +645,23 @@
 
             const tbody = document.getElementById('sessions-tbody');
             if (reports.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-dim); padding:20px;">No events in store. Click "Simulate" buttons above to generate real events!</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b; padding:20px;">No events in store. Click "Simulate" buttons to generate real events!</td></tr>';
             } else {
                 tbody.innerHTML = reports.map((r, idx) => {
                     const scoreCls = r.score >= 70 ? 'score-high' : r.score >= 30 ? 'score-med' : 'score-low';
-                    const evidenceSummary = (r.evidence || []).map(e => `<code>${e.rule.split('.')[1] || e.rule} (+${e.score})</code>`).join(', ') || '<span style="color:var(--text-dim);">Clean</span>';
+                    const pillCls = r.recommendedAction === 'ALLOW' ? 'pill-allow' : r.recommendedAction === 'RATE_LIMIT' ? 'pill-deny' : r.recommendedAction === 'REQUIRE_APP_VERIFICATION' ? 'pill-verify' : 'pill-observe';
+                    const evidenceSummary = (r.evidence || []).map(e => `<code>${e.rule.split('.')[1] || e.rule} (+${e.score})</code>`).join(', ') || '<span style="color:#16a34a;">Clean</span>';
                     const timeAgo = formatTimeAgo(new Date(r.evaluatedAt));
 
                     return `
                         <tr onclick="showReportDetail(${idx})">
                             <td><code>${r.traceId}</code></td>
-                            <td><span class="score-pill ${scoreCls}">${r.score}</span></td>
-                            <td>${r.confidence}</td>
-                            <td><span class="badge-action ${r.action}">${r.action}</span></td>
-                            <td><span class="badge-action ${r.recommendedAction}">${r.recommendedAction}</span></td>
+                            <td><span class="score-box ${scoreCls}">${r.score}</span></td>
+                            <td style="font-family:monospace;">${r.confidence}</td>
+                            <td><span class="pill-action pill-observe">${r.action}</span></td>
+                            <td><span class="pill-action ${pillCls}">${r.recommendedAction}</span></td>
                             <td>${evidenceSummary}</td>
-                            <td style="color:var(--text-dim);">${timeAgo}</td>
+                            <td style="color:#64748b;">${timeAgo}</td>
                         </tr>
                     `;
                 }).join('');
@@ -584,7 +727,7 @@
             document.getElementById('sim-new-high').innerText = `${reclassifiedHigh} (${diff >= 0 ? '+' : ''}${diff})`;
 
             const idLabel = reclassifiedIds.length > 0
-                ? `Reclassified to High-Risk: ${reclassifiedIds.slice(0, 3).join(', ')}${reclassifiedIds.length > 3 ? '...' : ''}`
+                ? `Reclassified: ${reclassifiedIds.slice(0, 3).join(', ')}${reclassifiedIds.length > 3 ? '...' : ''}`
                 : 'Reclassified: None';
             document.getElementById('sim-reclassified-ids').innerText = idLabel;
         }
@@ -601,13 +744,18 @@
 
             const modalEvidenceList = document.getElementById('modal-evidence-list');
             if (!r.evidence || r.evidence.length === 0) {
-                modalEvidenceList.innerHTML = '<div style="color:var(--accent-green); padding:10px;">✅ Clean session. Zero suspicious evidence rules triggered.</div>';
+                modalEvidenceList.innerHTML = '<div style="color:#15803d; padding:10px;">✅ Clean session. Zero suspicious evidence rules triggered.</div>';
             } else {
                 modalEvidenceList.innerHTML = r.evidence.map((e, i) => `
-                    <div class="evidence-row">
-                        <div class="evidence-head"><span>${i + 1}. ${e.rule}</span> <span style="color:var(--accent-red);">+${e.score}</span></div>
-                        <div style="font-size:0.85em; color:#fff;">${e.message}</div>
-                        <div class="evidence-attr">${JSON.stringify(e.attributes)}</div>
+                    <div class="evidence-item">
+                        <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--primary-color);">
+                            <span>${i + 1}. ${e.rule}</span>
+                            <span style="color:#b91c1c;">+${e.score}</span>
+                        </div>
+                        <div style="font-size:0.85em; color:var(--text-main); margin:2px 0;">${e.message}</div>
+                        <div style="font-size:0.8em; color:#64748b; font-family:monospace; background:#ffffff; padding:4px 6px; border:1px solid var(--border-color); border-radius:2px;">
+                            ${JSON.stringify(e.attributes)}
+                        </div>
                     </div>
                 `).join('');
             }
