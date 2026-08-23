@@ -809,30 +809,59 @@
       const logs = rawApiResponse.deep_forensic_logs || [];
       rawForensicLogs = logs;
 
-      // 1. Group Time Series into Buckets based on currentTimeframe
+      // 1. Group Time Series into Continuous Uniform Buckets (with true 0 counts)
       let bucketSizeMs = 5 * 60 * 1000; // default 5m
-      if (currentTimeframe === '1m') bucketSizeMs = 1 * 60 * 1000;
-      else if (currentTimeframe === '5m') bucketSizeMs = 5 * 60 * 1000;
-      else if (currentTimeframe === '1h') bucketSizeMs = 60 * 60 * 1000;
-      else if (currentTimeframe === '1D') bucketSizeMs = 24 * 60 * 60 * 1000;
-      else if (currentTimeframe === '1W') bucketSizeMs = 7 * 24 * 60 * 60 * 1000;
-      else if (currentTimeframe === '1M') bucketSizeMs = 30 * 24 * 60 * 60 * 1000;
+      let defaultWindowMs = 12 * 60 * 60 * 1000; // default 12h
+      if (currentTimeframe === '1m') {
+        bucketSizeMs = 1 * 60 * 1000;
+        defaultWindowMs = 60 * 60 * 1000; // last 60m
+      } else if (currentTimeframe === '5m') {
+        bucketSizeMs = 5 * 60 * 1000;
+        defaultWindowMs = 12 * 60 * 60 * 1000; // last 12h
+      } else if (currentTimeframe === '1h') {
+        bucketSizeMs = 60 * 60 * 1000;
+        defaultWindowMs = 48 * 60 * 60 * 1000; // last 48h
+      } else if (currentTimeframe === '1D') {
+        bucketSizeMs = 24 * 60 * 60 * 1000;
+        defaultWindowMs = 30 * 24 * 60 * 60 * 1000; // last 30d
+      } else if (currentTimeframe === '1W') {
+        bucketSizeMs = 7 * 24 * 60 * 60 * 1000;
+        defaultWindowMs = 12 * 7 * 24 * 60 * 60 * 1000; // last 12w
+      } else if (currentTimeframe === '1M') {
+        bucketSizeMs = 30 * 24 * 60 * 60 * 1000;
+        defaultWindowMs = 365 * 24 * 60 * 60 * 1000; // last 1y
+      }
 
+      const now = Date.now();
       const startDateVal = document.getElementById('dateFilterStart').value;
       const endDateVal = document.getElementById('dateFilterEnd').value;
-      const startMs = startDateVal ? new Date(startDateVal).getTime() : 0;
-      const endMs = endDateVal ? new Date(endDateVal).getTime() + 86400000 : Infinity;
+      
+      let windowStartMs = startDateVal ? new Date(startDateVal).getTime() : (now - defaultWindowMs);
+      let windowEndMs = endDateVal ? (new Date(endDateVal).getTime() + 86400000) : now;
 
-      const buckets = new Map();
+      // Align to bucket boundaries
+      const alignedStart = Math.floor(windowStartMs / bucketSizeMs) * bucketSizeMs;
+      const alignedEnd = Math.floor(windowEndMs / bucketSizeMs) * bucketSizeMs;
+
+      // Initialize continuous grid with true 0 counts
+      const continuousBuckets = new Map();
+      const step = Math.max(bucketSizeMs, Math.floor((alignedEnd - alignedStart) / 100) || bucketSizeMs);
+      for (let t = alignedStart; t <= alignedEnd; t += step) {
+        continuousBuckets.set(t, 0);
+      }
+
+      // Increment hits into continuous grid
       timeSeries.forEach(s => {
         const t = new Date(s.created_at).getTime();
-        if (t >= startMs && t <= endMs) {
-          const bucketKey = Math.floor(t / bucketSizeMs) * bucketSizeMs;
-          buckets.set(bucketKey, (buckets.get(bucketKey) || 0) + 1);
+        if (t >= alignedStart && t <= alignedEnd + step) {
+          const bucketKey = Math.floor((t - alignedStart) / step) * step + alignedStart;
+          if (continuousBuckets.has(bucketKey)) {
+            continuousBuckets.set(bucketKey, continuousBuckets.get(bucketKey) + 1);
+          }
         }
       });
 
-      const sortedKeys = Array.from(buckets.keys()).sort((a, b) => a - b);
+      const sortedKeys = Array.from(continuousBuckets.keys()).sort((a, b) => a - b);
       const labels = sortedKeys.map(k => {
         const d = new Date(k);
         if (currentTimeframe === '1D' || currentTimeframe === '1W' || currentTimeframe === '1M') {
@@ -840,9 +869,9 @@
         }
         return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
       });
-      const volData = sortedKeys.map(k => buckets.get(k));
+      const volData = sortedKeys.map(k => continuousBuckets.get(k));
 
-      // Calculate cumulative trend line
+      // Calculate cumulative trend line across continuous timeline
       let cum = 0;
       const trendData = volData.map(v => { cum += v; return cum; });
 
