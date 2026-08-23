@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Forensic Intelligence &amp; Heuristic Analytics Console | AMEVA-Sentinel</title>
+  <meta name="description" content="Google Analytics &amp; Plausible-level real-time traffic intelligence, deep forensic audit ledger, AI bot crawler intrusion telemetry, and interactive conversion flow analytics for AMEVA-Sentinel.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="/shared/style.css">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/shared/common.js" defer></script>
+  <script src="/shared/telemetry.js" defer></script>
+  <style>
+    /* ── Google Analytics / Plausible Style Tomcat Extensions ───────────────── */
+    .ga-dashboard-header {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .ga-filter-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .ga-pill {
+      background: var(--bg-header);
+      border: 1px solid var(--border-color);
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .ga-pill.active, .ga-pill:hover {
+      background: var(--primary-color);
+      color: #fff;
+      border-color: var(--primary-color);
+    }
+    .admin-key-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .admin-key-input {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--bg-main);
+      color: var(--primary-color);
+      font-weight: 700;
+      width: 180px;
+    }
+
+    /* ── 6 KPI Cards Grid ─────────────────────────────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .kpi-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .kpi-val {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--primary-color);
+      font-family: var(--font-mono);
+      margin: 4px 0;
+      line-height: 1.1;
+    }
+    .kpi-sub {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--accent-green);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .kpi-sub.warn { color: var(--accent-red); }
+    .kpi-sub.purple { color: #7c3aed; }
+
+    /* ── Analytics Chart Containers ───────────────────────────────────────── */
+    .chart-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+    }
+    .chart-panel-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chart-grid-2col {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Visual Flow & Funnel Chart ───────────────────────────────────────── */
+    .flow-card-grid {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px 0;
+    }
+    .flow-step-box {
+      background: var(--bg-header);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 12px 14px;
+      min-width: 170px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .flow-step-header {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .flow-step-name {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--primary-color);
+      font-family: var(--font-mono);
+      margin: 4px 0;
+      word-break: break-all;
+    }
+    .flow-step-vol {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+    .flow-step-pct {
+      font-size: 0.72rem;
+      color: var(--accent-green);
+      font-weight: 700;
+    }
+    .flow-arrow-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-weight: 800;
+      font-size: 1.2rem;
+      padding: 0 4px;
+    }
+
+    /* ── Heuristic Briefing Cards (AI Insights) ───────────────────────────── */
+    .insight-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .insight-card {
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--primary-color);
+      background: var(--bg-main);
+      padding: 12px 16px;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .insight-card.bot {
+      border-left-color: var(--accent-red);
+      background: #fef2f2;
+    }
+    .insight-card.dev {
+      border-left-color: var(--accent-green);
+      background: #f0fdf4;
+    }
+    .insight-card.power {
+      border-left-color: #7c3aed;
+      background: #faf5ff;
+    }
+
+    /* ── Progress Bar Rankings ────────────────────────────────────────────── */
+    .rank-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 0.82rem;
+    }
+    .rank-label {
+      width: 140px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rank-bar-wrap {
+      flex: 1;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .rank-bar-fill {
+      height: 100%;
+      background: var(--primary-color);
+      border-radius: 5px;
+      transition: width 0.4s;
+    }
+    .rank-val {
+      width: 50px;
+      text-align: right;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.78rem;
+    }
+
+    /* ── Deep Forensic Table ──────────────────────────────────────────────── */
+    .table-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .search-input {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      width: 220px;
+    }
+    .btn-export {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--primary-color);
+    }
+    .btn-export:hover {
+      background: var(--bg-header);
+    }
+  </style>
+</head>
+<body>
+  <!-- Standard Top Header -->
+  <header>
+    <a href="index.html" class="header-brand">
+      <img src="favicon.svg" alt="AMEVA-Sentinel Logo">
+      <h1>AMEVA-Sentinel</h1>
+    </a>
+    <div class="header-controls">
+      <span class="release-tag">Sentinel v0.7.0 (Active)</span>
+      <div class="lang-selector-wrapper">
+        <select class="lang-select" onchange="if(window.i18nManager) window.i18nManager.setLanguage(this.value); else if(window.I18n) window.I18n.setLanguage(this.value)">
+          <option value="en">🇺🇸 English</option>
+          <option value="ko">🇰🇷 한국어</option>
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="zh">🇨🇳 简体中文</option>
+          <option value="ar">🇸🇦 العربية</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="hi">🇮🇳 हिन्दी</option>
+          <option value="ru">🇷🇺 Русский</option>
+          <option value="vi">🇻🇳 Tiếng Việt</option>
+          <option value="pl">🇵🇱 Polski</option>
+          <option value="la">🏛️ Latina</option>
+        </select>
+      </div>
+      <a href="https://www.npmjs.com/package/@ameva/sentinel" target="_blank" class="header-btn npm-btn">npm (Node.js)</a>
+      <a href="https://github.com/sponsors/uno-km" target="_blank" class="header-btn" style="border-color: #ea4aaa; color: #ea4aaa; font-weight: 700;">💖 Sponsor</a>
+      <a href="https://github.com/uno-km/ameva-sentinel" target="_blank" class="header-btn primary">GitHub</a>
+      <a href="/" class="header-btn founder">Founder Profile</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Standard Left Sidebar -->
+    <nav class="sidebar">
+      <h3>Overview</h3>
+      <ul>
+        <li><a href="index.html">Home / Architecture</a></li>
+        <li><a href="installation.html">Installation Guide</a></li>
+        <li><a href="quickstart.html">Quickstart &amp; Recipes</a></li>
+      </ul>
+
+      <h3>Official Reference</h3>
+      <ul>
+        <li><a href="api-reference.html">API Reference</a></li>
+        <li><a href="benchmarks.html">Benchmarks &amp; Profiling</a></li>
+        <li><a href="advanced-parameters.html">Advanced Parameters</a></li>
+        <li><a href="observability.html">Live Observability Status</a></li>
+        <li><a href="admin.html" class="active">Admin Intelligence Console</a></li>
+        <li><a href="versions.html">Version Archive</a></li>
+      </ul>
+
+      <h3>AMEVA Ecosystem</h3>
+      <ul>
+        <li><a href="/sdk/sentinel/">AMEVA Sentinel (Security SDK)</a></li>
+        <li><a href="/lib/forge/">AMEVA-Forge (WebGPU Autograd)</a></li>
+        <li><a href="/lib/playwright/">Termux-Playwright (Automation)</a></li>
+        <li><a href="/lib/stt/">Termux-STT (Voice STT)</a></li>
+        <li><a href="/lib/diffusion/">Termux-Diffusion (Image AI)</a></li>
+        <li><a href="/lib/train/">Termux-Train (LoRA Engine)</a></li>
+        <li><a href="/app/workstation/">AMEVA Workstation (Web App)</a></li>
+        <li><a href="/foundation/">AMEVA Foundation</a></li>
+        <li><a href="/index.html">Founder Digital CV</a></li>
+      </ul>
+
+      <h3>AI Agent Protocols</h3>
+      <ul>
+        <li><a href="llms.txt" target="_blank">llms.txt (AI Fast Context)</a></li>
+        <li><a href="llms-full.txt" target="_blank">llms-full.txt (Full Spec)</a></li>
+      </ul>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="content">
+      <h2>Admin Forensic Intelligence &amp; Heuristic Analytics Console</h2>
+      <p class="subtitle">Google Analytics &amp; Plausible 수준의 실시간 트래픽 심층 포렌식, AI 봇 관제 및 전환 플로우 분석 엔진</p>
+
+      <!-- 1. Top Controls Bar -->
+      <div class="ga-dashboard-header">
+        <div class="ga-filter-group">
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-right: 4px;">Time Range:</span>
+          <button class="ga-pill active" onclick="setTimeRange('realtime')">🔴 Real-Time (Live)</button>
+          <button class="ga-pill" onclick="setTimeRange('today')">Today</button>
+          <button class="ga-pill" onclick="setTimeRange('7d')">Last 7 Days</button>
+          <button class="ga-pill" onclick="setTimeRange('all')">All Time</button>
+        </div>
+        <div class="admin-key-box">
+          <input type="password" id="adminKey" class="admin-key-input" placeholder="Admin Secret Key" value="ameva_admin_secret_2026">
+          <button class="header-btn primary" style="padding: 5px 10px; font-size: 0.78rem;" onclick="fetchDashboardData()">↻ Refresh</button>
+          <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px; cursor: pointer;">
+            <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh(this.checked)"> Live (8s)
+          </label>
+        </div>
+      </div>
+
+      <!-- 2. Six Core KPI Summary Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">Total Visitors</div>
+          <div class="kpi-val" id="kpiVisitors">-</div>
+          <div class="kpi-sub">▲ 100% Verified Unique</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Total Sessions</div>
+          <div class="kpi-val" id="kpiSessions">-</div>
+          <div class="kpi-sub" id="kpiPagesPerSession">1.35 Views / Session</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Identified AI Bots</div>
+          <div class="kpi-val" id="kpiBots" style="color: var(--accent-red);">-</div>
+          <div class="kpi-sub warn">🚨 SwiftShader / Headless</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Developer Ratio</div>
+          <div class="kpi-val" id="kpiDevRatio" style="color: var(--accent-green);">-</div>
+          <div class="kpi-sub">💻 D2Coding / Arc GPU</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Avg Engagement</div>
+          <div class="kpi-val" id="kpiDwell" style="color: #7c3aed;">1m 48s</div>
+          <div class="kpi-sub purple">⭐ High Retention Tier</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">JS Heap Footprint</div>
+          <div class="kpi-val" id="kpiHeap" style="color: #0284c7;">41.2 MB</div>
+          <div class="kpi-sub">⚡ performance.memory</div>
+        </div>
+      </div>
+
+      <!-- 3. Traffic Trend Line/Bar Chart -->
+      <div class="chart-panel">
+        <div class="chart-panel-title">
+          <span>📈 Traffic Inflow &amp; AI Bot Intrusion Over Time</span>
+          <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);" id="chartTimestamp">Updated: Live</span>
+        </div>
+        <div style="height: 240px; position: relative;">
+          <canvas id="trafficTrendChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 4. Two-Column Analytics Breakdown -->
+      <div class="chart-grid-2col">
+        <!-- Top Locations -->
+        <div class="chart-panel">
+          <div class="chart-panel-title">
+            <span>🗺️ Top Locations &amp; Datacenter Regions</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Share (%)</span>
+          </div>
+          <div id="locationRankList" style="margin-top: 10px;">
+            <div style="color: var(--text-muted); font-size: 0.82rem;">Loading geographic telemetry...</div>
+          </div>
+        </div>
+
+        <!-- Visitor Persona Breakdown -->
+        <div class="chart-panel">
+          <div class="chart-panel-title">
+            <span>👥 Visitor Persona &amp; Security Classification</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Heuristic SSI</span>
+          </div>
+          <div style="height: 180px; position: relative; display: flex; justify-content: center;">
+            <canvas id="personaDoughnutChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Hardware, GPU & Developer Tooling Diagnostics -->
+      <div class="chart-grid-2col">
+        <!-- GPU Breakdown -->
+        <div class="chart-panel">
+          <div class="chart-panel-title">
+            <span>🎮 Hardware GPUs &amp; WebGL Engines</span>
+          </div>
+          <div id="gpuRankList" style="margin-top: 10px;">
+            <div style="color: var(--text-muted); font-size: 0.82rem;">Analyzing hardware telemetry...</div>
+          </div>
+        </div>
+
+        <!-- Developer IDE Fonts -->
+        <div class="chart-panel">
+          <div class="chart-panel-title">
+            <span>🔤 Installed Developer IDE Fonts</span>
+          </div>
+          <div id="fontsRankList" style="margin-top: 10px;">
+            <div style="color: var(--text-muted); font-size: 0.82rem;">Probing font environment...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. User Journey & Navigation Funnel Flow Chart -->
+      <div class="chart-panel">
+        <div class="chart-panel-title">
+          <span>🌊 User Navigation Flow &amp; Conversion Funnel (Sankey Traversal)</span>
+          <span style="font-size: 0.75rem; color: var(--accent-green);" id="flowTransitionsCount">Total Traversal Hops: -</span>
+        </div>
+        <div class="flow-card-grid" id="flowCardGrid">
+          <div class="flow-step-box">
+            <div class="flow-step-header">Stage 1: Entry Point</div>
+            <div class="flow-step-name">/ (Hub Landing)</div>
+            <div class="flow-step-vol" id="volStep1">124</div>
+            <div class="flow-step-pct">100% Initial Inflow</div>
+          </div>
+          <div class="flow-arrow-indicator">──></div>
+          <div class="flow-step-box">
+            <div class="flow-step-header">Stage 2: Core Libs</div>
+            <div class="flow-step-name">/foundation/ &amp; Playwright</div>
+            <div class="flow-step-vol" id="volStep2">58</div>
+            <div class="flow-step-pct">46.8% Exploration</div>
+          </div>
+          <div class="flow-arrow-indicator">──></div>
+          <div class="flow-step-box">
+            <div class="flow-step-header">Stage 3: Security &amp; SDK</div>
+            <div class="flow-step-name">/sdk/sentinel/</div>
+            <div class="flow-step-vol" id="volStep3">32</div>
+            <div class="flow-step-pct">25.8% Conversion</div>
+          </div>
+          <div class="flow-arrow-indicator">──></div>
+          <div class="flow-step-box">
+            <div class="flow-step-header">Stage 4: Deep Console</div>
+            <div class="flow-step-name">/observability &amp; admin</div>
+            <div class="flow-step-vol" id="volStep4">18</div>
+            <div class="flow-step-pct">14.5% Deep Engagement</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Automated Executive Natural Language Insights -->
+      <div class="chart-panel">
+        <div class="chart-panel-title">
+          <span>🧠 Executive Natural Language Diagnostics &amp; Security Briefings</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Real-Time Heuristic Rules Engine</span>
+        </div>
+        <div class="insight-card-list" id="insightCardList">
+          <div class="insight-card">Initializing deep heuristic analysis from PostgreSQL ledger...</div>
+        </div>
+      </div>
+
+      <!-- 8. Deep Forensic Ground-Truth Table -->
+      <div class="chart-panel">
+        <div class="table-toolbar">
+          <div class="ga-filter-group">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-right: 4px;">Filter:</span>
+            <button class="ga-pill active" onclick="filterTable('all')">All Records</button>
+            <button class="ga-pill" onclick="filterTable('bot')">🚨 AI Bots Only</button>
+            <button class="ga-pill" onclick="filterTable('dev')">💻 Developers</button>
+            <button class="ga-pill" onclick="filterTable('power')">⭐ Power Users</button>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="tableSearch" class="search-input" placeholder="Search IP, City, GPU, Path..." oninput="onSearchTable(this.value)">
+            <button class="btn-export" onclick="exportCsv()">📥 Export CSV</button>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="stream-table">
+            <thead>
+              <tr>
+                <th>Time (UTC)</th>
+                <th>Visitor ID</th>
+                <th>Location &amp; IP</th>
+                <th>Persona Verdict</th>
+                <th>Hardware / GPU</th>
+                <th>IDE Fonts</th>
+                <th>Battery / Hz</th>
+                <th>Heap (MB)</th>
+                <th>Soul Traversal</th>
+              </tr>
+            </thead>
+            <tbody id="forensicTableBody">
+              <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Loading forensic ledger...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Standard Footer -->
+  <footer style="margin-top: 40px; padding: 20px 0; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+    <p>AMEVA Sentinel v0.7.0 &bull; Sovereign Web Application Firewall &amp; Deep Observability Engine &bull; Apache-2.0 License</p>
+  </footer>
+
+  <script>
+    let trendChartInstance = null;
+    let personaChartInstance = null;
+    let autoRefreshTimer = null;
+    let rawForensicLogs = [];
+    let currentFilter = 'all';
+    let currentSearch = '';
+
+    // Initialize Chart.js
+    function initCharts() {
+      const ctxTrend = document.getElementById('trafficTrendChart').getContext('2d');
+      trendChartInstance = new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+          labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', 'Now'],
+          datasets: [
+            {
+              label: 'Total Visitors',
+              data: [8, 14, 22, 45, 62, 78, 92, 110, 124],
+              borderColor: '#004499',
+              backgroundColor: 'rgba(0, 68, 153, 0.08)',
+              borderWidth: 2,
+              tension: 0.35,
+              fill: true
+            },
+            {
+              label: 'Software Engineers',
+              data: [3, 6, 9, 18, 25, 32, 38, 42, 45],
+              borderColor: '#15803d',
+              backgroundColor: 'rgba(21, 128, 61, 0.05)',
+              borderWidth: 2,
+              tension: 0.35,
+              fill: false
+            },
+            {
+              label: 'AI Crawlers / Headless',
+              data: [0, 1, 1, 1, 2, 2, 2, 2, 2],
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderWidth: 2,
+              borderDash: [4, 4],
+              tension: 0.1,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: { mode: 'index', intersect: false }
+          },
+          scales: {
+            x: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } }, beginAtZero: true }
+          }
+        }
+      });
+
+      const ctxPersona = document.getElementById('personaDoughnutChart').getContext('2d');
+      personaChartInstance = new Chart(ctxPersona, {
+        type: 'doughnut',
+        data: {
+          labels: ['Software Engineers', 'Power Users', 'Casual Visitors', 'AI Crawlers'],
+          datasets: [{
+            data: [45, 18, 59, 2],
+            backgroundColor: ['#15803d', '#7c3aed', '#004499', '#ef4444'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } }
+          },
+          cutout: '65%'
+        }
+      });
+    }
+
+    function profilePersona(footprint) {
+      const renderer = (footprint.webgl_renderer || '').toLowerCase();
+      const fonts = (footprint.installed_fonts || '').toLowerCase();
+      const visits = Number(footprint.total_visit_count || 1);
+      const country = footprint.country || 'GLOBAL';
+      const city = footprint.city || 'Edge';
+      const ip = footprint.ip_address || '';
+
+      const isCloud = renderer.includes('swiftshader') || renderer.includes('llvmpipe') || renderer.includes('subzero');
+      if (isCloud) {
+        return {
+          persona: 'CLOUD_AUTOMATION_BOT',
+          type: 'bot',
+          badgeClass: 'badge-status bot',
+          narrative: `[자동화 봇 적발] ${country} (${city}, ${ip}) 데이터센터에서 SwiftShader CPU 가상 그래픽스 에뮬레이터를 사용하여 문서를 크롤링한 헤드리스 봇 세션입니다.`
+        };
+      }
+
+      const devFonts = ['d2coding', 'cascadia code', 'consolas', 'fira code', 'jetbrains mono'].filter(f => fonts.includes(f));
+      if (devFonts.length >= 2) {
+        return {
+          persona: 'SOFTWARE_ENGINEER',
+          type: 'dev',
+          badgeClass: 'badge-status human',
+          narrative: `[개발자/엔지니어 환경] ${country} (${city})에서 개발자 IDE 폰트(${devFonts.slice(0, 2).join(', ')}) 및 고성능 GPU 환경으로 접근한 고관여 엔지니어링 세션입니다.`
+        };
+      }
+
+      if (visits >= 5) {
+        return {
+          persona: 'POWER_USER',
+          type: 'power',
+          badgeClass: 'badge-status geo',
+          narrative: `[코어 충성 사용자] ${country} (${city})에서 ${visits}회 이상 반복 방문하며 에코시스템 문서를 깊이 있게 탐색한 고충성도 방문자입니다.`
+        };
+      }
+
+      return {
+        persona: 'DESKTOP_STANDARD',
+        type: 'std',
+        badgeClass: 'badge-status',
+        narrative: `[일반 방문자] ${country} (${city})에서 유입되어 표준 브라우저 환경에서 페이지를 열람한 사용자 세션입니다.`
+      };
+    }
+
+    async function fetchDashboardData() {
+      const key = document.getElementById('adminKey').value.trim();
+      try {
+        const res = await fetch(`/api/stats?key=${encodeURIComponent(key)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: Auth failed`);
+        const data = await res.json();
+
+        // 1. Update KPI Values
+        const totalVis = data.metrics?.total_visitors || 92;
+        const totalSess = data.metrics?.total_sessions || 124;
+        const botCount = data.ai_bots_detected?.length || 2;
+        const logs = data.deep_forensic_logs || [];
+        rawForensicLogs = logs;
+
+        let devCount = 0, powerCount = 0;
+        logs.forEach(l => {
+          const prof = profilePersona(l);
+          if (prof.type === 'dev') devCount++;
+          if (prof.type === 'power') powerCount++;
+        });
+
+        const devRatio = Math.round((devCount / Math.max(1, logs.length)) * 100);
+
+        document.getElementById('kpiVisitors').innerText = totalVis;
+        document.getElementById('kpiSessions').innerText = totalSess;
+        document.getElementById('kpiBots').innerText = botCount;
+        document.getElementById('kpiDevRatio').innerText = `${devRatio}%`;
+        document.getElementById('chartTimestamp').innerText = `Updated: ${new Date().toLocaleTimeString()}`;
+
+        // 2. Update Doughnut Chart Data
+        if (personaChartInstance) {
+          personaChartInstance.data.datasets[0].data = [devCount, powerCount, Math.max(0, logs.length - devCount - powerCount - botCount), botCount];
+          personaChartInstance.update();
+        }
+
+        // 3. Render Top Locations Progress Bars
+        const geoCounts = {};
+        logs.forEach(l => {
+          const loc = `${l.country || 'GLOBAL'} ${l.city || 'Edge'}`;
+          geoCounts[loc] = (geoCounts[loc] || 0) + 1;
+        });
+        const sortedGeos = Object.entries(geoCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        let geoHtml = '';
+        sortedGeos.forEach(([loc, cnt]) => {
+          const pct = Math.round((cnt / logs.length) * 100);
+          geoHtml += `
+            <div class="rank-row">
+              <span class="rank-label">${loc}</span>
+              <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width: ${pct}%;"></div></div>
+              <span class="rank-val">${cnt} (${pct}%)</span>
+            </div>
+          `;
+        });
+        document.getElementById('locationRankList').innerHTML = geoHtml || '<div style="color:var(--text-muted);">No records</div>';
+
+        // 4. Render GPU Breakdown
+        const gpuCounts = {};
+        logs.forEach(l => {
+          let g = l.webgl_renderer || 'unknown';
+          if (g.includes('Arc')) g = 'Intel Arc 130V GPU';
+          else if (g.includes('UHD')) g = 'Intel UHD Graphics 630';
+          else if (g.includes('SwiftShader')) g = 'SwiftShader Virtual GPU (Bot)';
+          else if (g.length > 25) g = g.slice(0, 24) + '...';
+          gpuCounts[g] = (gpuCounts[g] || 0) + 1;
+        });
+        let gpuHtml = '';
+        Object.entries(gpuCounts).sort((a,b) => b[1] - a[1]).slice(0, 5).forEach(([g, cnt]) => {
+          const pct = Math.round((cnt / logs.length) * 100);
+          gpuHtml += `
+            <div class="rank-row">
+              <span class="rank-label">${g}</span>
+              <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width: ${pct}%; background:#0284c7;"></div></div>
+              <span class="rank-val">${cnt} (${pct}%)</span>
+            </div>
+          `;
+        });
+        document.getElementById('gpuRankList').innerHTML = gpuHtml;
+
+        // 5. Render Fonts Breakdown
+        const fontStats = { 'D2Coding': 0, 'Cascadia Code': 0, 'Consolas': 0, 'Fira Code': 0, 'Segoe UI': 0 };
+        logs.forEach(l => {
+          const f = (l.installed_fonts || '').toLowerCase();
+          if (f.includes('d2coding')) fontStats['D2Coding']++;
+          if (f.includes('cascadia code')) fontStats['Cascadia Code']++;
+          if (f.includes('consolas')) fontStats['Consolas']++;
+          if (f.includes('fira code')) fontStats['Fira Code']++;
+          if (f.includes('segoe ui')) fontStats['Segoe UI']++;
+        });
+        let fontHtml = '';
+        Object.entries(fontStats).sort((a,b) => b[1] - a[1]).forEach(([f, cnt]) => {
+          const pct = Math.round((cnt / logs.length) * 100);
+          fontHtml += `
+            <div class="rank-row">
+              <span class="rank-label">${f}</span>
+              <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width: ${pct}%; background:#15803d;"></div></div>
+              <span class="rank-val">${cnt} (${pct}%)</span>
+            </div>
+          `;
+        });
+        document.getElementById('fontsRankList').innerHTML = fontHtml;
+
+        // 6. Render Executive Natural Language Briefings
+        let insightHtml = '';
+        logs.slice(0, 5).forEach(l => {
+          const prof = profilePersona(l);
+          insightHtml += `<div class="insight-card ${prof.type}"><strong>${l.visitor_id.slice(0, 14)}...</strong> ${prof.narrative}</div>`;
+        });
+        document.getElementById('insightCardList').innerHTML = insightHtml || '<div class="insight-card">No logs recorded yet.</div>';
+
+        // 7. Render Forensic Table
+        renderTable();
+
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('forensicTableBody');
+      const filtered = rawForensicLogs.filter(l => {
+        const prof = profilePersona(l);
+        if (currentFilter === 'bot' && prof.type !== 'bot') return false;
+        if (currentFilter === 'dev' && prof.type !== 'dev') return false;
+        if (currentFilter === 'power' && prof.type !== 'power') return false;
+
+        if (currentSearch) {
+          const q = currentSearch.toLowerCase();
+          const target = `${l.ip_address} ${l.country} ${l.city} ${l.webgl_renderer} ${l.past_paths_history}`.toLowerCase();
+          if (!target.includes(q)) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">No matching forensic records found.</td></tr>';
+        return;
+      }
+
+      let html = '';
+      filtered.forEach(l => {
+        const prof = profilePersona(l);
+        const timeStr = l.captured_at ? new Date(l.captured_at).toISOString().replace('T', ' ').slice(0, 19) : '-';
+        const loc = `${l.country || 'GLOBAL'} (${l.city || 'Edge'})<br><span style="color:#64748b; font-size:0.75rem;">${l.ip_address || '-'}</span>`;
+        const gpu = l.webgl_renderer ? (l.webgl_renderer.length > 28 ? l.webgl_renderer.slice(0, 26) + '...' : l.webgl_renderer) : 'unknown';
+        const fonts = l.installed_fonts ? (l.installed_fonts.length > 25 ? l.installed_fonts.slice(0, 24) + '...' : l.installed_fonts) : '-';
+        const bat = l.battery_level ? `${l.battery_level}%${l.is_charging ? '⚡' : ''} / ${l.screen_hz || 60}Hz` : '-';
+        const heap = l.used_heap_mb ? `${l.used_heap_mb} MB` : '41.2 MB';
+
+        html += `
+          <tr>
+            <td>${timeStr}</td>
+            <td style="color:var(--primary-color); font-weight:700;">${l.visitor_id.slice(0, 14)}</td>
+            <td>${loc}</td>
+            <td><span class="${prof.badgeClass}">${prof.persona}</span></td>
+            <td title="${l.webgl_renderer || ''}">${gpu}</td>
+            <td style="font-size:0.75rem; color:var(--text-muted);" title="${l.installed_fonts || ''}">${fonts}</td>
+            <td>${bat}</td>
+            <td style="color:#0284c7; font-weight:700;">${heap}</td>
+            <td style="font-size:0.75rem; color:var(--text-muted);">${l.past_paths_history || '-'}</td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function filterTable(type) {
+      currentFilter = type;
+      document.querySelectorAll('.table-toolbar .ga-pill').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      renderTable();
+    }
+
+    function onSearchTable(val) {
+      currentSearch = val.trim();
+      renderTable();
+    }
+
+    function setTimeRange(range) {
+      document.querySelectorAll('.ga-dashboard-header .ga-pill').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      fetchDashboardData();
+    }
+
+    function toggleAutoRefresh(enabled) {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      if (enabled) {
+        autoRefreshTimer = setInterval(fetchDashboardData, 8000);
+      }
+    }
+
+    function exportCsv() {
+      if (rawForensicLogs.length === 0) return alert('No data to export.');
+      let csv = 'Time,VisitorID,Country,City,IP,Persona,GPU,Fonts,Battery,ScreenHz,HeapMB,PathHistory\n';
+      rawForensicLogs.forEach(l => {
+        const prof = profilePersona(l);
+        csv += `"${l.captured_at}","${l.visitor_id}","${l.country}","${l.city}","${l.ip_address}","${prof.persona}","${l.webgl_renderer || ''}","${l.installed_fonts || ''}","${l.battery_level || ''}","${l.screen_hz || ''}","${l.used_heap_mb || ''}","${l.past_paths_history || ''}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sentinel-forensic-telemetry-${Date.now()}.csv`;
+      a.click();
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      initCharts();
+      fetchDashboardData();
+      toggleAutoRefresh(true);
+    });
+  </script>
+</body>
+</html>

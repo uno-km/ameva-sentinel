@@ -111,9 +111,9 @@
 Project: AMEVA-Sentinel
 Snapshot Date: 2026-08-23
 Branch: release-0.6
-Commit: 771a708279c9a6dd1dba4f68093a07c7c358e334
-Working Tree: DIRTY
-Snapshot State: HEAD + working tree snapshot
+Commit: 92061b2f19f9580231447d70402c764dae75a269
+Working Tree: CLEAN
+Snapshot State: HEAD snapshot (Git commit blob-bound)
 Operating System: win32
 Python Version: 3.12.0
 Node Version: v24.16.0
@@ -4440,7 +4440,7 @@ FILE_CONTENT_BEGIN
 
 {
   "name": "ameva-sentinel-monorepo",
-  "version": "0.6.0-alpha.1",
+  "version": "0.7.0-alpha.1",
   "description": "Privacy-first Security Observability Layer for Web Applications",
   "private": true,
   "type": "module",
@@ -4456,7 +4456,7 @@ FILE_CONTENT_BEGIN
     "test:types:static": "tsc --noEmit tests/typecheck.ts --target es2022 --module NodeNext --moduleResolution NodeNext",
     "test:types:runtime": "node tests/typecheck.runtime.js",
     "test:types": "npm run test:types:static && npm run test:types:runtime",
-    "test:unit": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js && node tests/bot-classifier.test.js && node tests/decision.test.js && node tests/collector-crypto.test.js && node tests/redirect-security.test.js && node tests/ring-buffer-sink.test.js && node tests/store-redis.test.js",
+    "test:unit": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js && node tests/bot-classifier.test.js && node tests/decision.test.js && node tests/collector-crypto.test.js && node tests/redirect-security.test.js && node tests/ring-buffer-sink.test.js && node tests/store-redis.test.js && node tests/heuristic-profiler.test.js && node tests/path-flow.test.js",
     "test": "npm run build && npm run test:types && npm run test:unit",
     "test:e2e": "npm run build && playwright test",
     "test:all": "npm run build && npm run test:types && npm run test:unit && playwright test",
@@ -4558,7 +4558,7 @@ FILE_CONTENT_BEGIN
 
 {
   "name": "@ameva/sentinel-browser",
-  "version": "0.6.0-alpha.1",
+  "version": "0.7.0-alpha.1",
   "description": "Privacy-first client-side interaction and environment telemetry collector",
   "type": "module",
   "main": "./dist/index.js",
@@ -4575,7 +4575,7 @@ FILE_CONTENT_BEGIN
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022,dom --emitDeclarationOnly --declaration --outDir dist src/index.ts"
+    "build": "tsup src/index.ts --format esm,iife --global-name SentinelBrowser --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022,dom --emitDeclarationOnly --declaration --outDir dist src/index.ts"
   },
   "keywords": [
     "telemetry",
@@ -4633,7 +4633,99 @@ export interface BrowserTelemetrySnapshot {
   keyboardEventCount: number;
   touchMismatch: boolean;
   suspiciousUA: boolean;
+  usedHeapMb: number;
+  totalHeapMb: number;
+  heapLimitMb: number;
+  totalVisitCount: number;
+  pastPathsHistory: string;
   collectedAt: string;
+}
+
+export interface HeapMemorySnapshot {
+  usedHeapMb: number;
+  totalHeapMb: number;
+  heapLimitMb: number;
+}
+
+export interface SoulHistorySnapshot {
+  firstSeenAt: string;
+  totalVisitCount: number;
+  totalSessionCount: number;
+  pastPathsHistory: string;
+}
+
+/**
+ * Capture browser JavaScript Heap Memory footprint via performance.memory (MB).
+ * Safe fallback on browsers / engines without performance.memory API.
+ */
+export function getHeapMemoryUsage(): HeapMemorySnapshot {
+  if (typeof performance !== 'undefined' && (performance as any).memory) {
+    const mem = (performance as any).memory;
+    return {
+      usedHeapMb: Math.round(((mem.usedJSHeapSize || 0) / (1024 * 1024)) * 10) / 10,
+      totalHeapMb: Math.round(((mem.totalJSHeapSize || 0) / (1024 * 1024)) * 10) / 10,
+      heapLimitMb: Math.round(((mem.jsHeapSizeLimit || 0) / (1024 * 1024)) * 10) / 10
+    };
+  }
+  return {
+    usedHeapMb: 0,
+    totalHeapMb: 0,
+    heapLimitMb: 0
+  };
+}
+
+/**
+ * Persistent Soul & History Tracking across browser sessions.
+ */
+export function getSoulHistory(currentPath: string = typeof location !== 'undefined' ? location.pathname : '/'): SoulHistorySnapshot {
+  if (typeof localStorage === 'undefined' || typeof sessionStorage === 'undefined') {
+    return {
+      firstSeenAt: new Date().toISOString(),
+      totalVisitCount: 1,
+      totalSessionCount: 1,
+      pastPathsHistory: currentPath
+    };
+  }
+  try {
+    const now = new Date().toISOString();
+    let firstSeen = localStorage.getItem('__ameva_first_seen');
+    if (!firstSeen) {
+      firstSeen = now;
+      localStorage.setItem('__ameva_first_seen', firstSeen);
+    }
+
+    let visitCount = parseInt(localStorage.getItem('__ameva_visit_count') || '0', 10) + 1;
+    localStorage.setItem('__ameva_visit_count', visitCount.toString());
+
+    let sessionCount = parseInt(localStorage.getItem('__ameva_session_count') || '0', 10);
+    if (!sessionStorage.getItem('__ameva_sid_init')) {
+      sessionCount += 1;
+      localStorage.setItem('__ameva_session_count', sessionCount.toString());
+      sessionStorage.setItem('__ameva_sid_init', '1');
+    }
+
+    let pathHistory: string[] = [];
+    try {
+      pathHistory = JSON.parse(localStorage.getItem('__ameva_path_hist') || '[]');
+    } catch (e) {}
+    pathHistory.unshift(currentPath);
+    pathHistory = pathHistory.slice(0, 10);
+    localStorage.setItem('__ameva_path_hist', JSON.stringify(pathHistory));
+
+    return {
+      firstSeenAt: firstSeen,
+      totalVisitCount: visitCount,
+      totalSessionCount: sessionCount,
+      pastPathsHistory: pathHistory.join(' -> ')
+    };
+  } catch (e) {
+    return {
+      firstSeenAt: new Date().toISOString(),
+      totalVisitCount: 1,
+      totalSessionCount: 1,
+      pastPathsHistory: currentPath
+    };
+  }
 }
 
 /**
@@ -4739,6 +4831,11 @@ export class BrowserTelemetryCollector {
         keyboardEventCount: 0,
         touchMismatch: false,
         suspiciousUA: false,
+        usedHeapMb: 0,
+        totalHeapMb: 0,
+        heapLimitMb: 0,
+        totalVisitCount: 1,
+        pastPathsHistory: '/',
         collectedAt: new Date().toISOString()
       };
     }
@@ -4750,6 +4847,8 @@ export class BrowserTelemetryCollector {
     const isMobileUA = /Android|iPhone|iPad|iPod/i.test(nav.userAgent || '');
     const isTouchMismatch = isMobileUA && !hasTouch;
     const isSuspiciousUA = !nav.userAgent || /HeadlessChrome|PhantomJS|Selenium|Playwright|curl|wget|python-requests/i.test(nav.userAgent);
+    const heap = getHeapMemoryUsage();
+    const soul = getSoulHistory();
 
     return {
       telemetryObserved: this.isListening,
@@ -4762,6 +4861,11 @@ export class BrowserTelemetryCollector {
       keyboardEventCount: this.keyboardEvents,
       touchMismatch: isTouchMismatch,
       suspiciousUA: isSuspiciousUA,
+      usedHeapMb: heap.usedHeapMb,
+      totalHeapMb: heap.totalHeapMb,
+      heapLimitMb: heap.heapLimitMb,
+      totalVisitCount: soul.totalVisitCount,
+      pastPathsHistory: soul.pastPathsHistory,
       collectedAt: new Date().toISOString()
     };
   }
@@ -4789,6 +4893,164 @@ export function createBrowserTelemetry(options?: BrowserTelemetryOptions): Brows
 }
 
 export const browserTelemetry = new BrowserTelemetryCollector();
+
+export interface DashboardMountOptions {
+  endpoint?: string;
+  data?: any;
+  headers?: Record<string, string>;
+  refreshIntervalMs?: number;
+  title?: string;
+}
+
+export interface DashboardInstance {
+  destroy: () => void;
+  refresh: () => Promise<void>;
+}
+
+/**
+ * Drop-in Embedded Observability & Forensic Intelligence Dashboard Mounter.
+ */
+export function mountDashboard(
+  container: string | HTMLElement,
+  options: DashboardMountOptions = {}
+): DashboardInstance {
+  if (typeof document === 'undefined') {
+    return {
+      destroy: () => {},
+      refresh: async () => {}
+    };
+  }
+
+  const el = typeof container === 'string' ? document.querySelector<HTMLElement>(container) : container;
+  if (!el) {
+    console.warn('[AMEVA-Sentinel] Container element not found for mountDashboard:', container);
+    return {
+      destroy: () => {},
+      refresh: async () => {}
+    };
+  }
+
+  let timer: any = null;
+  const title = options.title || 'AMEVA-Sentinel Observability Console';
+
+  el.innerHTML = `
+    <div class="sentinel-embed-dash" style="background:#090d16; color:#f8fafc; font-family:system-ui,-apple-system,sans-serif; padding:20px; border-radius:8px; border:1px solid #1e293b;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1e293b; padding-bottom:12px; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:1.2rem; color:#38bdf8; font-weight:800;">${title}</h3>
+        <button id="__sentinel_refresh_btn" style="background:#0284c7; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.8rem; font-weight:600;">↻ Refresh</button>
+      </div>
+      <div id="__sentinel_stats_grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;"></div>
+      <div id="__sentinel_briefing_box" style="background:#0f172a; border:1px solid #1e293b; border-radius:6px; padding:14px; margin-bottom:16px;">
+        <div style="font-size:0.85rem; font-weight:700; color:#38bdf8; margin-bottom:8px;">Heuristic Persona Briefing</div>
+        <div id="__sentinel_briefings" style="display:flex; flex-direction:column; gap:8px; font-size:0.85rem;">Loading diagnostics...</div>
+      </div>
+      <div id="__sentinel_flow_box" style="background:#0f172a; border:1px solid #1e293b; border-radius:6px; padding:14px; margin-bottom:16px;">
+        <div style="font-size:0.85rem; font-weight:700; color:#38bdf8; margin-bottom:8px;">Path Traversal Flow</div>
+        <div id="__sentinel_flow_diagram" style="display:flex; flex-wrap:wrap; gap:8px; font-size:0.85rem;">Aggregating paths...</div>
+      </div>
+    </div>
+  `;
+
+  async function renderData(payload: any) {
+    if (!payload) return;
+    const grid = el!.querySelector('#__sentinel_stats_grid');
+    const briefings = el!.querySelector('#__sentinel_briefings');
+    const flowDiagram = el!.querySelector('#__sentinel_flow_diagram');
+
+    const metrics = payload.metrics || payload.overview || {};
+    if (grid) {
+      grid.innerHTML = `
+        <div style="background:#0f172a; padding:12px; border-radius:6px; border:1px solid #1e293b;">
+          <div style="font-size:0.75rem; color:#94a3b8; font-weight:700;">VISITORS</div>
+          <div style="font-size:1.5rem; font-weight:800; color:#38bdf8; margin-top:2px;">${metrics.total_visitors ?? metrics.totalVisitors ?? metrics.totalRecords ?? 0}</div>
+        </div>
+        <div style="background:#0f172a; padding:12px; border-radius:6px; border:1px solid #1e293b;">
+          <div style="font-size:0.75rem; color:#94a3b8; font-weight:700;">ACTIVE SESSIONS</div>
+          <div style="font-size:1.5rem; font-weight:800; color:#38bdf8; margin-top:2px;">${metrics.total_sessions ?? metrics.totalSessions ?? 0}</div>
+        </div>
+        <div style="background:#0f172a; padding:12px; border-radius:6px; border:1px solid #1e293b;">
+          <div style="font-size:0.75rem; color:#94a3b8; font-weight:700;">BOTS IDENTIFIED</div>
+          <div style="font-size:1.5rem; font-weight:800; color:#ef4444; margin-top:2px;">${payload.ai_bots_detected?.length ?? metrics.botCount ?? 0}</div>
+        </div>
+      `;
+    }
+
+    const logs: any[] = payload.deep_forensic_logs || payload.verdicts || [];
+    if (briefings) {
+      if (logs.length === 0) {
+        briefings.innerHTML = '<div style="color:#94a3b8;">No forensic footprints logged yet.</div>';
+      } else {
+        briefings.innerHTML = logs.slice(0, 5).map((l: any) => {
+          const text = l.summaryNarrative || l.narrative || `Visitor ${l.visitor_id || l.visitorId} active from ${l.country || 'GLOBAL'}`;
+          const isBot = text.includes('봇') || text.includes('BOT');
+          const isDev = text.includes('개발자') || text.includes('ENGINEER');
+          const border = isBot ? '#ef4444' : isDev ? '#10b981' : '#38bdf8';
+          const bg = isBot ? 'rgba(239,68,68,0.1)' : isDev ? 'rgba(16,185,129,0.1)' : '#0b1329';
+          return `<div style="background:${bg}; border-left:3px solid ${border}; padding:8px 12px; border-radius:0 4px 4px 0;">${text}</div>`;
+        }).join('');
+      }
+    }
+
+    if (flowDiagram) {
+      const transitions = new Map<string, number>();
+      logs.forEach((l: any) => {
+        const hist = l.past_paths_history || l.pastPathsHistory || '';
+        const segs = hist.split(/\s*(?:->|──>)\s*/).filter(Boolean);
+        for (let i = 0; i < segs.length - 1; i++) {
+          const k = `${segs[i]} ===> ${segs[i+1]}`;
+          transitions.set(k, (transitions.get(k) || 0) + 1);
+        }
+      });
+
+      if (transitions.size === 0) {
+        flowDiagram.innerHTML = '<div style="color:#94a3b8;">No multi-hop traversal recorded.</div>';
+      } else {
+        let flowHtml = '';
+        transitions.forEach((cnt, k) => {
+          const [s, t] = k.split(' ===> ');
+          flowHtml += `<div style="display:flex; align-items:center; gap:6px; background:#0b1329; padding:6px 10px; border-radius:4px; font-family:monospace; font-size:0.8rem;"><span style="color:#38bdf8;">${s}</span><span style="color:#94a3b8;">──></span><span style="color:#38bdf8;">${t} <span style="background:#0284c7; color:#fff; padding:1px 5px; border-radius:8px; font-size:0.7rem;">${cnt}</span></span></div>`;
+        });
+        flowDiagram.innerHTML = flowHtml;
+      }
+    }
+  }
+
+  async function fetchAndRender() {
+    if (options.data) {
+      renderData(options.data);
+      return;
+    }
+    if (options.endpoint) {
+      try {
+        const res = await fetch(options.endpoint, { headers: options.headers });
+        if (res.ok) {
+          const json = await res.json();
+          renderData(json);
+        }
+      } catch (e) {
+        console.warn('[AMEVA-Sentinel] Failed to fetch dashboard data:', e);
+      }
+    }
+  }
+
+  const refreshBtn = el.querySelector('#__sentinel_refresh_btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => fetchAndRender());
+  }
+
+  fetchAndRender();
+  if (options.refreshIntervalMs && options.refreshIntervalMs > 0) {
+    timer = setInterval(fetchAndRender, options.refreshIntervalMs);
+  }
+
+  return {
+    destroy: () => {
+      if (timer) clearInterval(timer);
+      el.innerHTML = '';
+    },
+    refresh: fetchAndRender
+  };
+}
 
 ================================================================================
 FILE_CONTENT_END
@@ -5588,7 +5850,7 @@ FILE_CONTENT_BEGIN
 
 {
   "name": "@ameva/sentinel-risk-core",
-  "version": "0.6.0-alpha.1",
+  "version": "0.7.0-alpha.1",
   "description": "Deterministic rule evaluation engine and policy compiler for AMEVA Sentinel",
   "type": "module",
   "main": "./dist/index.js",
@@ -7024,6 +7286,141 @@ FILE_END: packages/risk-core/src/engine.ts
 ================================================================================
 FILE_BEGIN
 ================================================================================
+FILE_NAME: heuristic-profiler.ts
+FILE_PATH: packages/risk-core/src/heuristic-profiler.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+/**
+ * @ameva/sentinel-risk-core
+ * Heuristic Natural Language Profiling & Persona Diagnostic Engine
+ */
+
+import type { ForensicFootprint, HeuristicVerdict, VisitorPersona } from './types.js';
+
+export class HeuristicProfileEngine {
+  /**
+   * Evaluate forensic footprint and produce an automated natural language verdict.
+   */
+  static profileSession(footprint: ForensicFootprint): HeuristicVerdict {
+    const reasons: string[] = [];
+    const tags: string[] = [];
+    let persona: VisitorPersona = 'DESKTOP_STANDARD';
+    let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'LOW';
+    let confidence = 0.70;
+
+    const renderer = (footprint.webglRenderer || '').toLowerCase();
+    const vendor = (footprint.webglVendor || '').toLowerCase();
+    const fonts = (footprint.installedFonts || '').toLowerCase();
+    const visitCount = Number(footprint.totalVisitCount || 1);
+    const country = footprint.country || 'GLOBAL';
+    const city = footprint.city || 'Edge';
+    const hz = Number(footprint.screenHz || 60);
+    const isCharging = footprint.isCharging === true;
+    const battery = Number(footprint.batteryLevel || 100);
+
+    // 1. Check for Virtual / Headless Cloud Renderers
+    const isCloudHeadless =
+      renderer.includes('swiftshader') ||
+      renderer.includes('llvmpipe') ||
+      renderer.includes('subzero') ||
+      renderer.includes('softpipe') ||
+      renderer.includes('virtualbox') ||
+      renderer.includes('vmware') ||
+      renderer.includes('mesa offscreen');
+
+    if (isCloudHeadless) {
+      persona = 'CLOUD_AUTOMATION_BOT';
+      riskLevel = 'HIGH';
+      confidence = 0.95;
+      tags.push('Headless_Browser', 'Virtual_GPU', 'Cloud_Infrastructure');
+      reasons.push('Detected software CPU-emulated WebGL renderer (' + (footprint.webglRenderer || 'SwiftShader') + ').');
+    } else if (renderer === 'unknown' || !renderer) {
+      if (country === 'US' && (city.includes('Ashburn') || city.includes('Boydton') || city.includes('Dallas'))) {
+        persona = 'HEADLESS_SCRAPER';
+        riskLevel = 'MEDIUM';
+        confidence = 0.85;
+        tags.push('Datacenter_Proxy', 'GPU_Disabled');
+        reasons.push('Hardware GPU acceleration is disabled on major datacenter IP range.');
+      }
+    }
+
+    // 2. Check for Software Engineering & Developer Environments
+    const devFontMatches = [
+      'd2coding',
+      'cascadia code',
+      'consolas',
+      'fira code',
+      'jetbrains mono',
+      'monaco'
+    ].filter(f => fonts.includes(f));
+
+    if (devFontMatches.length >= 2 && !isCloudHeadless) {
+      if (persona !== 'CLOUD_AUTOMATION_BOT') {
+        persona = 'SOFTWARE_ENGINEER';
+        riskLevel = 'LOW';
+        confidence = 0.90;
+      }
+      tags.push('Developer_Environment', 'IDE_Fonts');
+      reasons.push('Installed programmer fonts detected: [' + devFontMatches.join(', ') + '].');
+    }
+
+    // 3. Check for Retention & Power Users
+    if (visitCount >= 5 && !isCloudHeadless) {
+      if (persona === 'DESKTOP_STANDARD') persona = 'POWER_USER';
+      tags.push('High_Retention', 'Visits_' + visitCount);
+      reasons.push('High engagement session with ' + visitCount + ' accumulated site visits.');
+    }
+
+    // 4. Check Power & Hardware Attributes
+    if (isCharging && battery >= 90) {
+      tags.push('AC_Powered', 'Workstation');
+    }
+    if (hz >= 120) {
+      tags.push('High_Refresh_Display', hz + 'Hz');
+    }
+
+    // 5. Generate Natural Language Executive Narrative
+    let summaryNarrative = '';
+    const locStr = country + ' (' + city + ')';
+
+    if (persona === 'CLOUD_AUTOMATION_BOT') {
+      summaryNarrative = '[자동화 봇 의심] ' + locStr + ' 클라우드 데이터센터 환경에서 가상 렌더러(' + (footprint.webglRenderer || 'SwiftShader') + ')를 통해 페이지를 스크레이핑한 헤드리스 봇 세션입니다.';
+    } else if (persona === 'HEADLESS_SCRAPER') {
+      summaryNarrative = '[데이터센터 크롤러] ' + locStr + ' 대역에서 GPU 가속 없이 벤치마크 및 문서를 순회한 데이터센터 인덱싱 봇 세션입니다.';
+    } else if (persona === 'SOFTWARE_ENGINEER') {
+      const gpuStr = footprint.webglRenderer ? footprint.webglRenderer.slice(0, 40) : '표준 그래픽스';
+      summaryNarrative = '[개발자/엔지니어 환경] ' + locStr + '에서 개발자 전용 폰트(' + devFontMatches.slice(0, 2).join(', ') + ') 및 ' + gpuStr + ' 환경으로 접근한 고관여 엔지니어링 세션입니다.';
+    } else if (persona === 'POWER_USER') {
+      summaryNarrative = '[코어 사용자] ' + locStr + '에서 ' + visitCount + '회 이상 반복 방문하며 에코시스템 문서를 집중 탐색한 충성 방문자 세션입니다.';
+    } else {
+      summaryNarrative = '[일반 방문자] ' + locStr + '에서 유입되어 표준 브라우저 환경에서 페이지를 열람한 사용자 세션입니다.';
+    }
+
+    return {
+      visitorId: footprint.visitorId,
+      persona,
+      confidence: Math.round(confidence * 100) / 100,
+      riskLevel,
+      tags,
+      summaryNarrative,
+      detailedReasons: reasons,
+      evaluatedAt: new Date().toISOString()
+    };
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/heuristic-profiler.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
 FILE_NAME: index.ts
 FILE_PATH: packages/risk-core/src/index.ts
 FILE_LANGUAGE: typescript
@@ -7044,6 +7441,8 @@ export * from './redirect-security.js';
 export * from './null-sink.js';
 export * from './composite-sink.js';
 export * from './ring-buffer-sink.js';
+export * from './heuristic-profiler.js';
+export * from './path-flow.js';
 
 export {
   CollectorVerificationError,
@@ -7111,6 +7510,91 @@ export class NullSink implements EventSink {
 FILE_CONTENT_END
 ================================================================================
 FILE_END: packages/risk-core/src/null-sink.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: path-flow.ts
+FILE_PATH: packages/risk-core/src/path-flow.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+/**
+ * @ameva/sentinel-risk-core
+ * Path Flow Aggregator & Transition Matrix Generator for Sankey Diagrams
+ */
+
+import type { PathFlowLink, PathFlowMatrix, PathFlowNode } from './types.js';
+
+export class PathFlowAggregator {
+  /**
+   * Parse an array of past_paths_history strings and aggregate into a Sankey transition matrix.
+   * e.g. ["/foundation/ -> /lib/playwright/ -> /sdk/sentinel/"]
+   */
+  static aggregateFlows(rawPathsList: (string | null | undefined)[]): PathFlowMatrix {
+    const nodeVisitCounts = new Map<string, number>();
+    const linkTransitions = new Map<string, number>();
+    let totalHops = 0;
+    let validPathsCount = 0;
+
+    for (const raw of rawPathsList) {
+      if (!raw || typeof raw !== 'string') continue;
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+
+      validPathsCount++;
+      // Split by ' -> ' or ' ──> '
+      const segments = trimmed.split(/\s*(?:->|──>)\s*/).map(s => s.trim()).filter(Boolean);
+      if (segments.length === 0) continue;
+
+      // Increment node visits
+      for (const seg of segments) {
+        nodeVisitCounts.set(seg, (nodeVisitCounts.get(seg) || 0) + 1);
+      }
+
+      // Increment transitions
+      for (let i = 0; i < segments.length - 1; i++) {
+        const source = segments[i];
+        const target = segments[i + 1];
+        if (source && target) {
+          const key = source + '===>' + target;
+          linkTransitions.set(key, (linkTransitions.get(key) || 0) + 1);
+          totalHops++;
+        }
+      }
+    }
+
+    const nodes: PathFlowNode[] = Array.from(nodeVisitCounts.entries()).map(([id, totalVisits]) => ({
+      id,
+      name: id,
+      totalVisits
+    }));
+
+    const links: PathFlowLink[] = Array.from(linkTransitions.entries()).map(([key, value]) => {
+      const [source, target] = key.split('===>');
+      return {
+        source,
+        target,
+        value
+      };
+    });
+
+    return {
+      nodes,
+      links,
+      totalHops,
+      uniquePaths: validPathsCount
+    };
+  }
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/path-flow.ts
 ================================================================================
 
 ================================================================================
@@ -8356,8 +8840,75 @@ export interface UntrustedTelemetrySignals {
   token?: string;
   tokenPresented?: boolean;
   tokenFreshnessMs?: number;
+  usedHeapMb?: number;
+  totalHeapMb?: number;
+  heapLimitMb?: number;
+  totalVisitCount?: number;
+  pastPathsHistory?: string;
   customSignals?: Record<string, unknown>;
   [key: string]: unknown;
+}
+
+/**
+ * Forensic Footprint Snapshot for Deep Analytics & Heuristic Profiling.
+ */
+export interface ForensicFootprint {
+  visitorId: string;
+  canvasHash?: string;
+  audioHash?: string;
+  webglVendor?: string;
+  webglRenderer?: string;
+  installedFonts?: string;
+  screenHz?: number;
+  batteryLevel?: number | string;
+  isCharging?: boolean;
+  usedHeapMb?: number;
+  totalVisitCount?: number;
+  pastPathsHistory?: string;
+  country?: string;
+  city?: string;
+  ipAddress?: string;
+  capturedAt?: string;
+  [key: string]: unknown;
+}
+
+export type VisitorPersona =
+  | 'CLOUD_AUTOMATION_BOT'
+  | 'HEADLESS_SCRAPER'
+  | 'SOFTWARE_ENGINEER'
+  | 'POWER_USER'
+  | 'MOBILE_CASUAL'
+  | 'DESKTOP_STANDARD'
+  | 'ANOMALOUS_PROBE';
+
+export interface HeuristicVerdict {
+  visitorId: string;
+  persona: VisitorPersona;
+  confidence: number; // 0.0 ~ 1.0
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  tags: string[];
+  summaryNarrative: string; // 1-2 sentence natural language executive briefing
+  detailedReasons: string[];
+  evaluatedAt: string;
+}
+
+export interface PathFlowNode {
+  id: string;
+  name: string;
+  totalVisits: number;
+}
+
+export interface PathFlowLink {
+  source: string;
+  target: string;
+  value: number; // Transition frequency count
+}
+
+export interface PathFlowMatrix {
+  nodes: PathFlowNode[];
+  links: PathFlowLink[];
+  totalHops: number;
+  uniquePaths: number;
 }
 
 /**
@@ -8650,7 +9201,7 @@ FILE_CONTENT_BEGIN
 
 {
   "name": "@ameva/sentinel",
-  "version": "0.6.0-alpha.1",
+  "version": "0.7.0-alpha.1",
   "description": "Privacy-first Security Observability Layer for Web Applications",
   "type": "module",
   "main": "./dist/index.js",
@@ -8670,7 +9221,7 @@ FILE_CONTENT_BEGIN
     "build": "tsup src/index.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022,dom --emitDeclarationOnly --declaration --outDir dist src/index.ts"
   },
   "dependencies": {
-    "@ameva/sentinel-risk-core": "^0.6.0-alpha.1"
+    "@ameva/sentinel-risk-core": "^0.7.0-alpha.1"
   },
   "keywords": [
     "security",
@@ -8729,7 +9280,9 @@ import {
   createTraceId,
   AsyncRingBufferSink,
   CompositeSink,
-  NullSink
+  NullSink,
+  HeuristicProfileEngine,
+  PathFlowAggregator
 } from '@ameva/sentinel-risk-core';
 
 import type {
@@ -8764,7 +9317,13 @@ import type {
   VerifiedCollectorContext,
   VerificationOutcome,
   KeyResolver,
-  NonceStore
+  NonceStore,
+  ForensicFootprint,
+  VisitorPersona,
+  HeuristicVerdict,
+  PathFlowNode,
+  PathFlowLink,
+  PathFlowMatrix
 } from '@ameva/sentinel-risk-core';
 
 export {
@@ -8798,7 +9357,9 @@ export {
   createTraceId,
   AsyncRingBufferSink,
   CompositeSink,
-  NullSink
+  NullSink,
+  HeuristicProfileEngine,
+  PathFlowAggregator
 };
 
 export type {
@@ -8833,7 +9394,13 @@ export type {
   VerifiedCollectorContext,
   VerificationOutcome,
   KeyResolver,
-  NonceStore
+  NonceStore,
+  ForensicFootprint,
+  VisitorPersona,
+  HeuristicVerdict,
+  PathFlowNode,
+  PathFlowLink,
+  PathFlowMatrix
 };
 
 export type StateFailureMode = 'FAIL_OPEN' | 'FAIL_CLOSED' | 'OBSERVE_ONLY';
@@ -9200,6 +9767,92 @@ export class Sentinel {
     }
   }
 
+  /**
+   * Evaluate a single forensic footprint and generate natural language persona verdict.
+   */
+  profileFootprint(footprint: ForensicFootprint): HeuristicVerdict {
+    return HeuristicProfileEngine.profileSession(footprint);
+  }
+
+  /**
+   * Parse an array of raw path history strings and aggregate into a Sankey transition matrix.
+   */
+  aggregatePathFlows(paths: (string | null | undefined)[]): PathFlowMatrix {
+    return PathFlowAggregator.aggregateFlows(paths);
+  }
+
+  /**
+   * Headless Forensic Analytics Engine: transforms raw footprints and risk events into
+   * executive persona verdicts, transition flow matrices, and overview KPI stats.
+   */
+  getForensicAnalytics(input: ForensicAnalyticsInput): ForensicAnalyticsReport {
+    const rawFootprints: ForensicFootprint[] = [...(input.footprints || [])];
+
+    // Map stored risk events to forensic footprints if provided
+    if (input.events) {
+      for (const ev of input.events) {
+        if (!ev) continue;
+        const sig = ev.signals || {};
+        rawFootprints.push({
+          visitorId: ev.sessionId || ev.traceId || 'anon_visitor',
+          webglRenderer: (sig.customSignals?.webglRenderer as string) || (sig.customSignals?.gpuRenderer as string) || 'unknown',
+          installedFonts: (sig.customSignals?.installedFonts as string) || '',
+          country: (sig.customSignals?.country as string) || 'GLOBAL',
+          city: (sig.customSignals?.city as string) || 'Edge',
+          totalVisitCount: Number(sig.totalVisitCount || sig.customSignals?.totalVisitCount || 1),
+          pastPathsHistory: (sig.pastPathsHistory as string) || (sig.customSignals?.pastPathsHistory as string) || '',
+          isCharging: Boolean(sig.customSignals?.isCharging),
+          screenHz: Number(sig.customSignals?.screenHz || 60),
+          capturedAt: ev.timestamp ? new Date(ev.timestamp).toISOString() : new Date().toISOString()
+        });
+      }
+    }
+
+    const uniqueVisitorIds = new Set<string>();
+    let botCount = 0;
+    let engineerCount = 0;
+    let powerUserCount = 0;
+    let standardCount = 0;
+    const verdicts: HeuristicVerdict[] = [];
+    const pathStrings: string[] = [];
+
+    for (const fp of rawFootprints) {
+      uniqueVisitorIds.add(fp.visitorId);
+      const verdict = HeuristicProfileEngine.profileSession(fp);
+      verdicts.push(verdict);
+
+      if (verdict.persona === 'CLOUD_AUTOMATION_BOT' || verdict.persona === 'HEADLESS_SCRAPER') {
+        botCount++;
+      } else if (verdict.persona === 'SOFTWARE_ENGINEER') {
+        engineerCount++;
+      } else if (verdict.persona === 'POWER_USER') {
+        powerUserCount++;
+      } else {
+        standardCount++;
+      }
+
+      if (fp.pastPathsHistory) {
+        pathStrings.push(fp.pastPathsHistory);
+      }
+    }
+
+    const flowMatrix = PathFlowAggregator.aggregateFlows(pathStrings);
+
+    return {
+      overview: {
+        totalRecords: rawFootprints.length,
+        totalUniqueVisitors: uniqueVisitorIds.size,
+        botCount,
+        engineerCount,
+        powerUserCount,
+        standardCount
+      },
+      verdicts,
+      flowMatrix,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
   private handleOperationalError(err: Error, context: string): void {
     if (this.onOperationalError) {
       try {
@@ -9207,6 +9860,26 @@ export class Sentinel {
       } catch (e) {}
     }
   }
+}
+
+export interface ForensicAnalyticsInput {
+  footprints?: ForensicFootprint[];
+  events?: (StoredRiskEvent | any)[];
+  topPathsCap?: number;
+}
+
+export interface ForensicAnalyticsReport {
+  overview: {
+    totalRecords: number;
+    totalUniqueVisitors: number;
+    botCount: number;
+    engineerCount: number;
+    powerUserCount: number;
+    standardCount: number;
+  };
+  verdicts: HeuristicVerdict[];
+  flowMatrix: PathFlowMatrix;
+  generatedAt: string;
 }
 
 export function createSentinel(options: SentinelOptions = {}): Sentinel {
@@ -9465,7 +10138,7 @@ FILE_CONTENT_BEGIN
 
 {
   "name": "@ameva/sentinel-store-redis",
-  "version": "0.6.0-alpha.1",
+  "version": "0.7.0-alpha.1",
   "description": "Enterprise Distributed Redis, Valkey, and Dragonfly Storage Adapters and Streams Pipeline for AMEVA Sentinel",
   "type": "module",
   "main": "./dist/index.js",
@@ -9487,7 +10160,7 @@ FILE_CONTENT_BEGIN
     "build": "tsup src/index.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022 --emitDeclarationOnly --declaration --outDir dist src/index.ts"
   },
   "dependencies": {
-    "@ameva/sentinel-risk-core": "^0.6.0-alpha.1"
+    "@ameva/sentinel-risk-core": "^0.7.0-alpha.1"
   },
   "peerDependencies": {
     "ioredis": "^5.0.0"
@@ -10213,8 +10886,8 @@ const testSuites = [
     category: 'Trust Boundary & Collector Crypto',
     command: 'node tests/collector-crypto.test.js',
     expectedPasses: 16,
-    pointsPerTest: 15 / 16,
-    maxPoints: 15
+    pointsPerTest: 10 / 16,
+    maxPoints: 10
   },
   {
     id: 'redirect_security',
@@ -10307,8 +10980,28 @@ const testSuites = [
     maxPoints: 5
   },
   {
+    id: 'heuristic_profiler',
+    title: '13. Heuristic Profile Engine, SwiftShader Bot, Developer Persona & Headless Analytics (8 Gates)',
+    file: 'tests/heuristic-profiler.test.js',
+    category: 'Heuristic Profile & Persona Diagnostics',
+    command: 'node tests/heuristic-profiler.test.js',
+    expectedPasses: 8,
+    pointsPerTest: 5 / 8,
+    maxPoints: 5
+  },
+  {
+    id: 'path_flow',
+    title: '14. Path Flow Aggregator, Transition Matrix & Sankey Formatting (5 Gates)',
+    file: 'tests/path-flow.test.js',
+    category: 'Path Flow & Sankey Graph Analytics',
+    command: 'node tests/path-flow.test.js',
+    expectedPasses: 5,
+    pointsPerTest: 5 / 5,
+    maxPoints: 5
+  },
+  {
     id: 'playwright',
-    title: '13. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
+    title: '15. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
     file: 'tests/browser-integration/dashboard.spec.js',
     category: 'Playwright Cross-Browser E2E (9 Tests)',
     command: 'npx playwright test',
@@ -10319,7 +11012,7 @@ const testSuites = [
 ];
 
 // Execute test suites
-console.log('🧪 Executing all 13 test suites and collecting execution logs...\n');
+console.log('🧪 Executing all 15 test suites and collecting execution logs...\n');
 const resultsData = [];
 let totalScore = 0;
 const maxTotalScore = 100;
@@ -10715,7 +11408,7 @@ const codesProvPath = path.join(CODES_DIR, 'provenance.json');
 
 const EXPECTED_SCHEMA = '1.0';
 const EXPECTED_ARTIFACT = 'scripts/codes/source_export.txt';
-const EXPECTED_TOTAL_CHECKS = 101;
+const EXPECTED_TOTAL_CHECKS = 114;
 const GIT_SHA_RE = /^[a-f0-9]{40}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -11941,6 +12634,303 @@ FILE_CONTENT_BEGIN
 FILE_CONTENT_END
 ================================================================================
 FILE_END: tests/fixtures/telemetry-test.html
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: heuristic-profiler.test.js
+FILE_PATH: tests/heuristic-profiler.test.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import assert from 'node:assert';
+import { HeuristicProfileEngine } from '../packages/sentinel/dist/index.js';
+
+let passed = 0;
+let failed = 0;
+
+async function test(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(err);
+    failed++;
+  }
+}
+
+async function main() {
+  console.log('🧪 Running Heuristic Profile Engine Test Suite...');
+
+  await test('Gate 1: SwiftShader virtual GPU detection -> CLOUD_AUTOMATION_BOT', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_azure_bot_1',
+      webglRenderer: 'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)',
+      country: 'US',
+      city: 'Boydton',
+      installedFonts: 'Consolas, Segoe UI'
+    });
+
+    assert.strictEqual(verdict.persona, 'CLOUD_AUTOMATION_BOT');
+    assert.strictEqual(verdict.riskLevel, 'HIGH');
+    assert.ok(verdict.confidence >= 0.9);
+    assert.ok(verdict.tags.includes('Headless_Browser'));
+    assert.ok(verdict.summaryNarrative.includes('자동화 봇 의심'));
+  });
+
+  await test('Gate 2: Datacenter proxy IP without GPU acceleration -> HEADLESS_SCRAPER', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_ashburn_scraper',
+      webglRenderer: 'unknown',
+      country: 'US',
+      city: 'Ashburn'
+    });
+
+    assert.strictEqual(verdict.persona, 'HEADLESS_SCRAPER');
+    assert.strictEqual(verdict.riskLevel, 'MEDIUM');
+    assert.ok(verdict.tags.includes('Datacenter_Proxy'));
+    assert.ok(verdict.summaryNarrative.includes('데이터센터 크롤러'));
+  });
+
+  await test('Gate 3: Programmer fonts (D2Coding, Cascadia Code) -> SOFTWARE_ENGINEER', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_dev_korea',
+      webglRenderer: 'ANGLE (Intel, Intel(R) Arc(TM) 130V GPU (8GB), Direct3D11)',
+      installedFonts: 'D2Coding, Cascadia Code, Malgun Gothic, Segoe UI',
+      country: 'KR',
+      city: 'Seongnam-si'
+    });
+
+    assert.strictEqual(verdict.persona, 'SOFTWARE_ENGINEER');
+    assert.strictEqual(verdict.riskLevel, 'LOW');
+    assert.ok(verdict.confidence >= 0.85);
+    assert.ok(verdict.tags.includes('Developer_Environment'));
+    assert.ok(verdict.summaryNarrative.includes('개발자/엔지니어 환경'));
+  });
+
+  await test('Gate 4: 5+ repeat visits -> POWER_USER with high retention tags', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_loyal_user',
+      totalVisitCount: 7,
+      country: 'KR',
+      city: 'Seoul'
+    });
+
+    assert.strictEqual(verdict.persona, 'POWER_USER');
+    assert.ok(verdict.tags.includes('High_Retention'));
+    assert.ok(verdict.tags.includes('Visits_7'));
+    assert.ok(verdict.summaryNarrative.includes('코어 사용자'));
+  });
+
+  await test('Gate 5: Workstation charging battery & 144Hz display tagging', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_gamer_workstation',
+      isCharging: true,
+      batteryLevel: 95,
+      screenHz: 144,
+      country: 'KR',
+      city: 'Gangnam-gu'
+    });
+
+    assert.ok(verdict.tags.includes('AC_Powered'));
+    assert.ok(verdict.tags.includes('Workstation'));
+    assert.ok(verdict.tags.includes('High_Refresh_Display'));
+    assert.ok(verdict.tags.includes('144Hz'));
+  });
+
+  await test('Gate 6: Standard desktop casual user default fallback', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_casual_reader',
+      country: 'JP',
+      city: 'Tokyo',
+      totalVisitCount: 1
+    });
+
+    assert.strictEqual(verdict.persona, 'DESKTOP_STANDARD');
+    assert.strictEqual(verdict.riskLevel, 'LOW');
+    assert.ok(verdict.summaryNarrative.includes('일반 방문자'));
+  });
+
+  await test('Gate 7: sentinel.profileFootprint() and sentinel.aggregatePathFlows() facade methods', async () => {
+    const { sentinel } = await import('../packages/sentinel/dist/index.js');
+    const v = sentinel.profileFootprint({
+      visitorId: 'usr_facade_test',
+      webglRenderer: 'SwiftShader'
+    });
+    assert.strictEqual(v.persona, 'CLOUD_AUTOMATION_BOT');
+
+    const m = sentinel.aggregatePathFlows(['/a -> /b -> /c']);
+    assert.strictEqual(m.nodes.length, 3);
+    assert.strictEqual(m.links.length, 2);
+  });
+
+  await test('Gate 8: sentinel.getForensicAnalytics() headless analytics generation', async () => {
+    const { sentinel } = await import('../packages/sentinel/dist/index.js');
+    const report = sentinel.getForensicAnalytics({
+      footprints: [
+        {
+          visitorId: 'usr_bot_1',
+          webglRenderer: 'SwiftShader',
+          pastPathsHistory: '/a -> /b'
+        },
+        {
+          visitorId: 'usr_dev_1',
+          installedFonts: 'D2Coding, Cascadia Code',
+          pastPathsHistory: '/a -> /b -> /c'
+        }
+      ]
+    });
+
+    assert.strictEqual(report.overview.totalRecords, 2);
+    assert.strictEqual(report.overview.totalUniqueVisitors, 2);
+    assert.strictEqual(report.overview.botCount, 1);
+    assert.strictEqual(report.overview.engineerCount, 1);
+    assert.strictEqual(report.verdicts.length, 2);
+    assert.strictEqual(report.flowMatrix.links.length, 2);
+  });
+
+  console.log('\n==================================================');
+  console.log(`Results: ${passed} passed, ${failed} failed, total ${passed + failed}`);
+  console.log(JSON.stringify({ suite: 'heuristic_profiler', passed, failed, total: passed + failed }));
+
+  if (failed > 0) process.exit(1);
+}
+
+main();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: tests/heuristic-profiler.test.js
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: path-flow.test.js
+FILE_PATH: tests/path-flow.test.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import assert from 'node:assert';
+import { PathFlowAggregator } from '../packages/sentinel/dist/index.js';
+
+let passed = 0;
+let failed = 0;
+
+async function test(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(err);
+    failed++;
+  }
+}
+
+async function main() {
+  console.log('🧪 Running Path Flow Aggregator Test Suite...');
+
+  await test('Gate 1: Sequential path parsing (A -> B -> C) into 3 nodes and 2 weighted links', async () => {
+    const matrix = PathFlowAggregator.aggregateFlows([
+      '/foundation/ -> /lib/playwright/ -> /sdk/sentinel/'
+    ]);
+
+    assert.strictEqual(matrix.nodes.length, 3);
+    assert.strictEqual(matrix.links.length, 2);
+    assert.strictEqual(matrix.totalHops, 2);
+    assert.strictEqual(matrix.uniquePaths, 1);
+
+    const fToP = matrix.links.find(l => l.source === '/foundation/' && l.target === '/lib/playwright/');
+    assert.ok(fToP);
+    assert.strictEqual(fToP.value, 1);
+
+    const pToS = matrix.links.find(l => l.source === '/lib/playwright/' && l.target === '/sdk/sentinel/');
+    assert.ok(pToS);
+    assert.strictEqual(pToS.value, 1);
+  });
+
+  await test('Gate 2: Multi-session link frequency aggregation', async () => {
+    const matrix = PathFlowAggregator.aggregateFlows([
+      '/ -> /foundation/',
+      '/ -> /foundation/',
+      '/ -> /foundation/ -> /lib/forge/',
+      '/ -> /lib/stt/'
+    ]);
+
+    assert.strictEqual(matrix.uniquePaths, 4);
+
+    const rootToFoundation = matrix.links.find(l => l.source === '/' && l.target === '/foundation/');
+    assert.ok(rootToFoundation);
+    assert.strictEqual(rootToFoundation.value, 3);
+
+    const rootNode = matrix.nodes.find(n => n.id === '/');
+    assert.ok(rootNode);
+    assert.strictEqual(rootNode.totalVisits, 4);
+  });
+
+  await test('Gate 3: Cycle handling (A -> B -> A -> B)', async () => {
+    const matrix = PathFlowAggregator.aggregateFlows([
+      '/foundation/ -> /lib/playwright/ -> /foundation/ -> /lib/playwright/'
+    ]);
+
+    assert.strictEqual(matrix.nodes.length, 2);
+    assert.strictEqual(matrix.totalHops, 3);
+
+    const fToP = matrix.links.find(l => l.source === '/foundation/' && l.target === '/lib/playwright/');
+    const pToF = matrix.links.find(l => l.source === '/lib/playwright/' && l.target === '/foundation/');
+
+    assert.strictEqual(fToP?.value, 2);
+    assert.strictEqual(pToF?.value, 1);
+  });
+
+  await test('Gate 4: Unicode arrow parsing (A ──> B)', async () => {
+    const matrix = PathFlowAggregator.aggregateFlows([
+      '/foundation/ ──> /lib/playwright/ ──> /sdk/sentinel/observability'
+    ]);
+
+    assert.strictEqual(matrix.nodes.length, 3);
+    assert.strictEqual(matrix.links.length, 2);
+    assert.ok(matrix.nodes.some(n => n.id === '/sdk/sentinel/observability'));
+  });
+
+  await test('Gate 5: Empty, null, and whitespace path resilience', async () => {
+    const matrix = PathFlowAggregator.aggregateFlows([
+      null,
+      undefined,
+      '',
+      '   ',
+      '/single-page/'
+    ]);
+
+    assert.strictEqual(matrix.uniquePaths, 1);
+    assert.strictEqual(matrix.nodes.length, 1);
+    assert.strictEqual(matrix.links.length, 0);
+    assert.strictEqual(matrix.totalHops, 0);
+  });
+
+  console.log('\n==================================================');
+  console.log(`Results: ${passed} passed, ${failed} failed, total ${passed + failed}`);
+  console.log(JSON.stringify({ suite: 'path_flow', passed, failed, total: passed + failed }));
+
+  if (failed > 0) process.exit(1);
+}
+
+main();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: tests/path-flow.test.js
 ================================================================================
 
 ================================================================================
@@ -13633,13 +14623,20 @@ import {
   AsyncRingBufferSink,
   CompositeSink,
   NullSink,
+  HeuristicProfileEngine,
+  PathFlowAggregator,
   type EventSink,
   type StreamRecord,
   type RiskEventRecord,
   type RingBufferStats,
   type DistributedNonceStore,
   type DistributedCounterStore,
-  type DistributedRiskEventStore
+  type DistributedRiskEventStore,
+  type ForensicFootprint,
+  type HeuristicVerdict,
+  type PathFlowMatrix,
+  type PathFlowNode,
+  type PathFlowLink
 } from '../packages/sentinel/dist/index.js';
 
 import {
@@ -13872,6 +14869,17 @@ async function runFullStaticTypeCheck(): Promise<void> {
   const distEventStore: DistributedRiskEventStore = new RedisRiskEventStore({ redis: mockRedisClient });
   const redisStreamSink: EventSink = new RedisStreamSink({ redis: mockRedisClient, streamKey: 'risk-events' });
 
+  // Forensic Profiler & Path Flow Contract Checks
+  const footprint: ForensicFootprint = {
+    visitorId: 'usr_typecheck_1',
+    webglRenderer: 'SwiftShader',
+    installedFonts: 'Consolas, D2Coding',
+    country: 'KR',
+    city: 'Seoul'
+  };
+  const heuristicVerdict: HeuristicVerdict = HeuristicProfileEngine.profileSession(footprint);
+  const flowMatrix: PathFlowMatrix = PathFlowAggregator.aggregateFlows(['/ -> /foundation/']);
+
   void isV1;
   void isV2;
   void isUniversal;
@@ -13891,6 +14899,8 @@ async function runFullStaticTypeCheck(): Promise<void> {
   void distCounterStore;
   void distEventStore;
   void redisStreamSink;
+  void heuristicVerdict;
+  void flowMatrix;
 }
 
 runFullStaticTypeCheck();
