@@ -31,7 +31,10 @@ import {
   CompositeSink,
   NullSink,
   HeuristicProfileEngine,
-  PathFlowAggregator
+  PathFlowAggregator,
+  SnapshotCache,
+  SingleflightCoalescer,
+  maskIpAddress
 } from '@ameva/sentinel-risk-core';
 
 import type {
@@ -174,6 +177,7 @@ export interface SentinelOptions {
 }
 
 export class Sentinel {
+  private globalAnalyticsCache = new SnapshotCache<ForensicAnalyticsReport>({ ttlMs: 5000 });
   private policy: SentinelPolicy;
   private mode: 'shadow' | 'enforce';
   private counterStore: CounterStore;
@@ -531,6 +535,20 @@ export class Sentinel {
   }
 
   /**
+   * Mask IP address for privacy compliance (GDPR / CCPA).
+   */
+  maskIpAddress(ip: string | null | undefined): string {
+    return maskIpAddress(ip);
+  }
+
+  /**
+   * Cached headless forensic analytics with in-memory SWR.
+   */
+  async getForensicAnalyticsCached(fetcher: () => Promise<ForensicAnalyticsReport>, cacheKey: string = 'global_analytics'): Promise<ForensicAnalyticsReport> {
+    return this.globalAnalyticsCache.getOrFetch(cacheKey, fetcher);
+  }
+
+  /**
    * Headless Forensic Analytics Engine: transforms raw footprints and risk events into
    * executive persona verdicts, transition flow matrices, and overview KPI stats.
    */
@@ -636,3 +654,5 @@ export function createSentinel(options: SentinelOptions = {}): Sentinel {
 }
 
 export const sentinel = new Sentinel();
+
+export { maskIpAddress, SnapshotCache, SingleflightCoalescer };

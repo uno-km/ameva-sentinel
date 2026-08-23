@@ -55,6 +55,9 @@ import {
   NullSink,
   HeuristicProfileEngine,
   PathFlowAggregator,
+  SnapshotCache,
+  SingleflightCoalescer,
+  maskIpAddress,
   type EventSink,
   type StreamRecord,
   type RiskEventRecord,
@@ -310,6 +313,11 @@ async function runFullStaticTypeCheck(): Promise<void> {
   const heuristicVerdict: HeuristicVerdict = HeuristicProfileEngine.profileSession(footprint);
   const flowMatrix: PathFlowMatrix = PathFlowAggregator.aggregateFlows(['/ -> /foundation/']);
 
+  // SnapshotCache & Singleflight & IP Masking Checks
+  const snapCache = new SnapshotCache<{ val: number }>({ ttlMs: 1000 });
+  const singleflight = new SingleflightCoalescer<{ val: number }>();
+  const maskedIp: string = maskIpAddress('125.132.13.175');
+
   void isV1;
   void isV2;
   void isUniversal;
@@ -331,6 +339,9 @@ async function runFullStaticTypeCheck(): Promise<void> {
   void redisStreamSink;
   void heuristicVerdict;
   void flowMatrix;
+  void snapCache;
+  void singleflight;
+  void maskedIp;
 }
 
 runFullStaticTypeCheck();

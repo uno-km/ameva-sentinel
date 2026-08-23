@@ -165,8 +165,18 @@ const testSuites = [
     maxPoints: 5
   },
   {
+    id: 'snapshot_cache',
+    title: '15. SnapshotCache SWR Engine, Singleflight Coalescing & IP Masking (6 Gates)',
+    file: 'tests/snapshot-cache.test.js',
+    category: 'SWR Snapshot Cache & Privacy Masking',
+    command: 'node tests/snapshot-cache.test.js',
+    expectedPasses: 6,
+    pointsPerTest: 5 / 6,
+    maxPoints: 5
+  },
+  {
     id: 'playwright',
-    title: '15. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
+    title: '16. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
     file: 'tests/browser-integration/dashboard.spec.js',
     category: 'Playwright Cross-Browser E2E (9 Tests)',
     command: 'npx playwright test',
@@ -177,7 +187,7 @@ const testSuites = [
 ];
 
 // Execute test suites
-console.log('🧪 Executing all 15 test suites and collecting execution logs...\n');
+console.log('🧪 Executing all 16 test suites and collecting execution logs...\n');
 const resultsData = [];
 let totalScore = 0;
 const maxTotalScore = 100;

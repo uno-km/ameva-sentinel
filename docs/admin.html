@@ -430,7 +430,7 @@
           <button class="ga-pill" onclick="setTimeRange('all')">All Time</button>
         </div>
         <div class="admin-key-box">
-          <input type="password" id="adminKey" class="admin-key-input" placeholder="Admin Secret Key" value="ameva_admin_secret_2026">
+          <span style="font-size:0.75rem; font-weight:700; color:var(--accent-green); background:#f0fdf4; border:1px solid #bbf7d0; padding:4px 8px; border-radius:4px;">[PUBLIC_LIVE_STREAM]</span>
           <button class="header-btn primary" style="padding: 5px 10px; font-size: 0.78rem;" onclick="fetchDashboardData()">Refresh</button>
           <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px; cursor: pointer;">
             <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh(this.checked)"> Auto-Refresh (8s)
@@ -1187,12 +1187,10 @@
     }
 
     async function fetchDashboardData() {
-      const key = document.getElementById('adminKey').value.trim();
       try {
-        const res = await fetch(`/api/stats?key=${encodeURIComponent(key)}`);
+        const res = await fetch('/api/stats');
         if (!res.ok) {
-          const errText = res.status === 403 ? 'Unauthorized Secret Key' : `HTTP ${res.status} Server Error`;
-          throw new Error(errText);
+          throw new Error(`HTTP ${res.status} Server Error`);
         }
         rawApiResponse = await res.json();
         recalculateCharts();

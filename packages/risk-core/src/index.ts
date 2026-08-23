@@ -32,3 +32,5 @@ export {
   isVerifiedCollectorContext
 } from './collector-crypto.js';
 
+
+export * from './snapshot-cache.js';
