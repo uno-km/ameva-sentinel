@@ -1,6 +1,6 @@
 {
   "name": "@ameva/sentinel-store-redis",
-  "version": "0.6.0-alpha.1",
+  "version": "0.7.0-alpha.1",
   "description": "Enterprise Distributed Redis, Valkey, and Dragonfly Storage Adapters and Streams Pipeline for AMEVA Sentinel",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,7 +22,7 @@
     "build": "tsup src/index.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022 --emitDeclarationOnly --declaration --outDir dist src/index.ts"
   },
   "dependencies": {
-    "@ameva/sentinel-risk-core": "^0.6.0-alpha.1"
+    "@ameva/sentinel-risk-core": "^0.7.0-alpha.1"
   },
   "peerDependencies": {
     "ioredis": "^5.0.0"

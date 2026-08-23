@@ -51,8 +51,8 @@ const testSuites = [
     category: 'Trust Boundary & Collector Crypto',
     command: 'node tests/collector-crypto.test.js',
     expectedPasses: 16,
-    pointsPerTest: 15 / 16,
-    maxPoints: 15
+    pointsPerTest: 10 / 16,
+    maxPoints: 10
   },
   {
     id: 'redirect_security',
@@ -145,8 +145,28 @@ const testSuites = [
     maxPoints: 5
   },
   {
+    id: 'heuristic_profiler',
+    title: '13. Heuristic Profile Engine, SwiftShader Bot, Developer Persona & Headless Analytics (8 Gates)',
+    file: 'tests/heuristic-profiler.test.js',
+    category: 'Heuristic Profile & Persona Diagnostics',
+    command: 'node tests/heuristic-profiler.test.js',
+    expectedPasses: 8,
+    pointsPerTest: 5 / 8,
+    maxPoints: 5
+  },
+  {
+    id: 'path_flow',
+    title: '14. Path Flow Aggregator, Transition Matrix & Sankey Formatting (5 Gates)',
+    file: 'tests/path-flow.test.js',
+    category: 'Path Flow & Sankey Graph Analytics',
+    command: 'node tests/path-flow.test.js',
+    expectedPasses: 5,
+    pointsPerTest: 5 / 5,
+    maxPoints: 5
+  },
+  {
     id: 'playwright',
-    title: '13. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
+    title: '15. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
     file: 'tests/browser-integration/dashboard.spec.js',
     category: 'Playwright Cross-Browser E2E (9 Tests)',
     command: 'npx playwright test',
@@ -157,7 +177,7 @@ const testSuites = [
 ];
 
 // Execute test suites
-console.log('🧪 Executing all 13 test suites and collecting execution logs...\n');
+console.log('🧪 Executing all 15 test suites and collecting execution logs...\n');
 const resultsData = [];
 let totalScore = 0;
 const maxTotalScore = 100;

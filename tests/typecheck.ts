@@ -53,13 +53,20 @@ import {
   AsyncRingBufferSink,
   CompositeSink,
   NullSink,
+  HeuristicProfileEngine,
+  PathFlowAggregator,
   type EventSink,
   type StreamRecord,
   type RiskEventRecord,
   type RingBufferStats,
   type DistributedNonceStore,
   type DistributedCounterStore,
-  type DistributedRiskEventStore
+  type DistributedRiskEventStore,
+  type ForensicFootprint,
+  type HeuristicVerdict,
+  type PathFlowMatrix,
+  type PathFlowNode,
+  type PathFlowLink
 } from '../packages/sentinel/dist/index.js';
 
 import {
@@ -292,6 +299,17 @@ async function runFullStaticTypeCheck(): Promise<void> {
   const distEventStore: DistributedRiskEventStore = new RedisRiskEventStore({ redis: mockRedisClient });
   const redisStreamSink: EventSink = new RedisStreamSink({ redis: mockRedisClient, streamKey: 'risk-events' });
 
+  // Forensic Profiler & Path Flow Contract Checks
+  const footprint: ForensicFootprint = {
+    visitorId: 'usr_typecheck_1',
+    webglRenderer: 'SwiftShader',
+    installedFonts: 'Consolas, D2Coding',
+    country: 'KR',
+    city: 'Seoul'
+  };
+  const heuristicVerdict: HeuristicVerdict = HeuristicProfileEngine.profileSession(footprint);
+  const flowMatrix: PathFlowMatrix = PathFlowAggregator.aggregateFlows(['/ -> /foundation/']);
+
   void isV1;
   void isV2;
   void isUniversal;
@@ -311,6 +329,8 @@ async function runFullStaticTypeCheck(): Promise<void> {
   void distCounterStore;
   void distEventStore;
   void redisStreamSink;
+  void heuristicVerdict;
+  void flowMatrix;
 }
 
 runFullStaticTypeCheck();

@@ -1,35 +1,37 @@
 # 🛡️ AMEVA Sentinel v0.6.0-alpha.1 Unified Master Verification & Audit Report
 
 - **Release Target**: `v0.6.0-alpha.1`
-- **Generated Timestamp**: `2026-08-21T08:01:32.623Z`
+- **Generated Timestamp**: `2026-08-23T13:50:49.487Z`
 - **Git Branch**: [`release-0.6`](https://github.com/uno-km/ameva-sentinel/tree/release-0.6)
-- **Implementation Commit**: `13af37266fce15b5a1222b9f4fe2431b4ca48cd2`
-- **Source Snapshot SHA-256**: `71b47889de9d3fcd5de8c41ecc944e2ca0890defe1f4d30b4d50b0fea3427458`
-- **Working Tree State**: `CLEAN`
+- **Implementation Commit**: `771a708279c9a6dd1dba4f68093a07c7c358e334`
+- **Source Snapshot SHA-256**: `28555c51d685f3c7b68fb2e091ca525785c789124e78db4d2a1be817f6d878e2`
+- **Working Tree State**: `DIRTY`
 - **Overall Gate Status**: `PASSED (100% SUCCESS)`
 - **Final Score**: `100.0 / 100 pts (Grade A+)`
-- **Total Release Checks**: `97 Executable Gates + 4 Monorepo Packaging Gates = 101 / 101 Release Checks (100% ALL PASS)`
+- **Total Release Checks**: `110 Executable Gates + 4 Monorepo Packaging Gates = 114 / 114 Release Checks (100% ALL PASS)`
 
 ---
 
-## 📊 1. Executive Test Scorecard (101 / 101 Release Checks)
+## 📊 1. Executive Test Scorecard (114 / 114 Release Checks)
 
 | Test Category | Tests Passed | Execution Time | Score Points | Gate Status |
 | :--- | :---: | :---: | :---: | :---: |
-| TypeScript Static Contract | 1 / 1 | 2818ms | 10.0 / 10 pts | 🟢 PASS |
-| TypeScript Runtime Contract | 1 / 1 | 92ms | 5.0 / 5 pts | 🟢 PASS |
-| Trust Boundary & Collector Crypto | 16 / 16 | 101ms | 15.0 / 15 pts | 🟢 PASS |
-| Redirect Security & Injection Defense | 8 / 8 | 84ms | 10.0 / 10 pts | 🟢 PASS |
-| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 86ms | 15.0 / 15 pts | 🟢 PASS |
-| Target Mode & Decision Engine | 6 / 6 | 111ms | 15.0 / 15 pts | 🟢 PASS |
-| Risk Engine Quality Gates | 7 / 7 | 183ms | 10.0 / 10 pts | 🟢 PASS |
-| Facade & State Enforcement | 17 / 17 | 145ms | 10.0 / 10 pts | 🟢 PASS |
-| Persistence & Schema V1/V2 Bounds | 8 / 8 | 91ms | 10.0 / 10 pts | 🟢 PASS |
-| Browser SDK Unit Verification | 2 / 2 | 78ms | 5.0 / 5 pts | 🟢 PASS |
-| Async RingBuffer & Composite Sinks | 8 / 8 | 307ms | 5.0 / 5 pts | 🟢 PASS |
-| Redis Distributed Storage & Streams | 6 / 6 | 96ms | 5.0 / 5 pts | 🟢 PASS |
-| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 13298ms | E2E Verified | 🟢 PASS |
-| **TOTAL EXECUTABLE AUDIT SCORE** | **97 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
+| TypeScript Static Contract | 1 / 1 | 3421ms | 10.0 / 10 pts | 🟢 PASS |
+| TypeScript Runtime Contract | 1 / 1 | 112ms | 5.0 / 5 pts | 🟢 PASS |
+| Trust Boundary & Collector Crypto | 16 / 16 | 144ms | 10.0 / 10 pts | 🟢 PASS |
+| Redirect Security & Injection Defense | 8 / 8 | 121ms | 10.0 / 10 pts | 🟢 PASS |
+| Smart Bot Classifier & ReDoS Safety | 8 / 8 | 124ms | 15.0 / 15 pts | 🟢 PASS |
+| Target Mode & Decision Engine | 6 / 6 | 134ms | 15.0 / 15 pts | 🟢 PASS |
+| Risk Engine Quality Gates | 7 / 7 | 103ms | 10.0 / 10 pts | 🟢 PASS |
+| Facade & State Enforcement | 17 / 17 | 122ms | 10.0 / 10 pts | 🟢 PASS |
+| Persistence & Schema V1/V2 Bounds | 8 / 8 | 102ms | 10.0 / 10 pts | 🟢 PASS |
+| Browser SDK Unit Verification | 2 / 2 | 87ms | 5.0 / 5 pts | 🟢 PASS |
+| Async RingBuffer & Composite Sinks | 8 / 8 | 330ms | 5.0 / 5 pts | 🟢 PASS |
+| Redis Distributed Storage & Streams | 6 / 6 | 98ms | 5.0 / 5 pts | 🟢 PASS |
+| Heuristic Profile & Persona Diagnostics | 8 / 8 | 103ms | 5.0 / 5 pts | 🟢 PASS |
+| Path Flow & Sankey Graph Analytics | 5 / 5 | 93ms | 5.0 / 5 pts | 🟢 PASS |
+| Playwright Cross-Browser E2E (9 Tests) | 9 / 9 | 15077ms | E2E Verified | 🟢 PASS |
+| **TOTAL EXECUTABLE AUDIT SCORE** | **110 Passed / 0 Failed** | **—** | **100.0 / 100.0 pts (Grade A+)** | **🏆 PASS** |
 
 ---
 
@@ -39,22 +41,22 @@
 ```json
 {
   "schemaVersion": "1.0",
-  "sourceCommit": "13af37266fce15b5a1222b9f4fe2431b4ca48cd2",
+  "sourceCommit": "771a708279c9a6dd1dba4f68093a07c7c358e334",
   "artifactPath": "scripts/codes/source_export.txt",
-  "sha256": "71b47889de9d3fcd5de8c41ecc944e2ca0890defe1f4d30b4d50b0fea3427458",
+  "sha256": "28555c51d685f3c7b68fb2e091ca525785c789124e78db4d2a1be817f6d878e2",
   "branch": "release-0.6",
-  "workingTreeAtExport": "CLEAN",
-  "executable": 97,
+  "workingTreeAtExport": "DIRTY",
+  "executable": 110,
   "packaging": 4,
-  "total": 101,
-  "passed": 101,
+  "total": 114,
+  "passed": 114,
   "failed": 0,
   "executableFailed": 0,
   "packagingFailed": 0,
   "score": 100,
   "grade": "A+",
   "status": "PASS",
-  "generatedAt": "2026-08-21T08:01:32.623Z"
+  "generatedAt": "2026-08-23T13:50:49.487Z"
 }
 ```
 
@@ -62,15 +64,15 @@
 ```json
 {
   "schemaVersion": "1.0",
-  "sourceCommit": "13af37266fce15b5a1222b9f4fe2431b4ca48cd2",
+  "sourceCommit": "771a708279c9a6dd1dba4f68093a07c7c358e334",
   "artifactPath": "scripts/codes/source_export.txt",
-  "sha256": "71b47889de9d3fcd5de8c41ecc944e2ca0890defe1f4d30b4d50b0fea3427458",
+  "sha256": "28555c51d685f3c7b68fb2e091ca525785c789124e78db4d2a1be817f6d878e2",
   "branch": "release-0.6",
-  "workingTreeAtExport": "CLEAN",
-  "totalChecks": 101,
-  "passedChecks": 101,
+  "workingTreeAtExport": "DIRTY",
+  "totalChecks": 114,
+  "passedChecks": 114,
   "status": "PASS",
-  "timestamp": "2026-08-21T08:01:32.623Z"
+  "timestamp": "2026-08-23T13:50:49.487Z"
 }
 ```
 
@@ -91,11 +93,11 @@
 
 ### 1. TypeScript Static Consumer Contract Gate (32+ Types, Guards, Interfaces)
 * **Target File**: [`tests/typecheck.ts`](../../tests/typecheck.ts)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 2818ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 3421ms)
 
 #### Execution Console Output:
 ```text
-> ameva-sentinel-monorepo@0.6.0-alpha.1 test:types:static
+> ameva-sentinel-monorepo@0.7.0-alpha.1 test:types:static
 > tsc --noEmit tests/typecheck.ts --target es2022 --module NodeNext --moduleResolution NodeNext
 ```
 
@@ -156,13 +158,20 @@ import {
   AsyncRingBufferSink,
   CompositeSink,
   NullSink,
+  HeuristicProfileEngine,
+  PathFlowAggregator,
   type EventSink,
   type StreamRecord,
   type RiskEventRecord,
   type RingBufferStats,
   type DistributedNonceStore,
   type DistributedCounterStore,
-  type DistributedRiskEventStore
+  type DistributedRiskEventStore,
+  type ForensicFootprint,
+  type HeuristicVerdict,
+  type PathFlowMatrix,
+  type PathFlowNode,
+  type PathFlowLink
 } from '../packages/sentinel/dist/index.js';
 
 import {
@@ -395,6 +404,17 @@ async function runFullStaticTypeCheck(): Promise<void> {
   const distEventStore: DistributedRiskEventStore = new RedisRiskEventStore({ redis: mockRedisClient });
   const redisStreamSink: EventSink = new RedisStreamSink({ redis: mockRedisClient, streamKey: 'risk-events' });
 
+  // Forensic Profiler & Path Flow Contract Checks
+  const footprint: ForensicFootprint = {
+    visitorId: 'usr_typecheck_1',
+    webglRenderer: 'SwiftShader',
+    installedFonts: 'Consolas, D2Coding',
+    country: 'KR',
+    city: 'Seoul'
+  };
+  const heuristicVerdict: HeuristicVerdict = HeuristicProfileEngine.profileSession(footprint);
+  const flowMatrix: PathFlowMatrix = PathFlowAggregator.aggregateFlows(['/ -> /foundation/']);
+
   void isV1;
   void isV2;
   void isUniversal;
@@ -414,6 +434,8 @@ async function runFullStaticTypeCheck(): Promise<void> {
   void distCounterStore;
   void distEventStore;
   void redisStreamSink;
+  void heuristicVerdict;
+  void flowMatrix;
 }
 
 runFullStaticTypeCheck();
@@ -424,14 +446,14 @@ runFullStaticTypeCheck();
 
 ### 2. TypeScript Runtime Consumer Contract Gate (Live Execution & Assertion)
 * **Target File**: [`tests/typecheck.runtime.js`](../../tests/typecheck.runtime.js)
-* **Execution Status**: `PASS` (1 passed, 0 failed in 92ms)
+* **Execution Status**: `PASS` (1 passed, 0 failed in 112ms)
 
 #### Execution Console Output:
 ```text
 🔍 Running TypeScript Consumer API Runtime Contract Gate...
 
 [TypeScript v0.6.0 Contract Gate] ALL 32+ SDK Types & Runtime Interfaces 100% Verified.
-  - TraceId: trc_b7ae38b9268c495f
+  - TraceId: trc_43acc3c628344914
   - Decision Action: ALLOW (BOT_ALLOWLIST_PASSED)
   - Bot Classification: SEARCH_ENGINE (Googlebot)
   - SessionId: ephemeral_local_session
@@ -595,7 +617,7 @@ runRuntimeContract().catch(err => {
 
 ### 3. Trust Boundary Collector HMAC, RFC 4231 Vectors, Freshness, Replay Attack, Capacity Saturation & 100-Race Suite (16 Gates)
 * **Target File**: [`tests/collector-crypto.test.js`](../../tests/collector-crypto.test.js)
-* **Execution Status**: `PASS` (16 passed, 0 failed in 101ms)
+* **Execution Status**: `PASS` (16 passed, 0 failed in 144ms)
 
 #### Execution Console Output:
 ```text
@@ -913,7 +935,7 @@ main();
 
 ### 4. Redirect Security & Closed-Destination Injection Defense Suite (8 Gates)
 * **Target File**: [`tests/redirect-security.test.js`](../../tests/redirect-security.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 84ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 121ms)
 
 #### Execution Console Output:
 ```text
@@ -1069,7 +1091,7 @@ console.log(`\n{"suite":"redirect_security","passed":${passedTests},"failed":${f
 
 ### 5. Smart Bot Classifier & ReDoS Safety Suite (7 Taxonomies, 8 Gates)
 * **Target File**: [`tests/bot-classifier.test.js`](../../tests/bot-classifier.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 86ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 124ms)
 
 #### Execution Console Output:
 ```text
@@ -1253,7 +1275,7 @@ console.log(`\n{"suite":"bot_classifier","passed":${passedTests},"failed":${fail
 
 ### 6. Target Mode & Decision Engine Suite (Closed-Destination Routing, 6 Gates)
 * **Target File**: [`tests/decision.test.js`](../../tests/decision.test.js)
-* **Execution Status**: `PASS` (6 passed, 0 failed in 111ms)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 134ms)
 
 #### Execution Console Output:
 ```text
@@ -1492,7 +1514,7 @@ main();
 
 ### 7. Risk Core Pure Engine & Clamping Quality Gates (7 Gates)
 * **Target File**: [`tests/engine.test.js`](../../tests/engine.test.js)
-* **Execution Status**: `PASS` (7 passed, 0 failed in 183ms)
+* **Execution Status**: `PASS` (7 passed, 0 failed in 103ms)
 
 #### Execution Console Output:
 ```text
@@ -1660,7 +1682,7 @@ console.log(`\n{"suite":"engine","passed":${passedTests},"failed":${failedTests}
 
 ### 8. Sentinel Facade & Stateful Rate Enforcement Tests (17 Gates)
 * **Target File**: [`tests/sentinel.test.js`](../../tests/sentinel.test.js)
-* **Execution Status**: `PASS` (17 passed, 0 failed in 145ms)
+* **Execution Status**: `PASS` (17 passed, 0 failed in 122ms)
 
 #### Execution Console Output:
 ```text
@@ -2134,7 +2156,7 @@ run();
 
 ### 9. RiskEventStore V1 & V2 Schema Validation & Migration Suite (8 Gates)
 * **Target File**: [`tests/store.test.js`](../../tests/store.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 91ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 102ms)
 
 #### Execution Console Output:
 ```text
@@ -2321,7 +2343,7 @@ await main();
 
 ### 10. @ameva/sentinel-browser Client Telemetry Unit Tests (2 Gates)
 * **Target File**: [`tests/browser.test.js`](../../tests/browser.test.js)
-* **Execution Status**: `PASS` (2 passed, 0 failed in 78ms)
+* **Execution Status**: `PASS` (2 passed, 0 failed in 87ms)
 
 #### Execution Console Output:
 ```text
@@ -2387,7 +2409,7 @@ console.log(`\n{"suite":"browser","passed":${passedTests},"failed":${failedTests
 
 ### 11. Async RingBuffer WorkerSink, CompositeSink Fan-out & Dropping Policies (8 Gates)
 * **Target File**: [`tests/ring-buffer-sink.test.js`](../../tests/ring-buffer-sink.test.js)
-* **Execution Status**: `PASS` (8 passed, 0 failed in 307ms)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 330ms)
 
 #### Execution Console Output:
 ```text
@@ -2679,7 +2701,7 @@ main();
 
 ### 12. Redis Distributed Storage, Lua TTL Drift Guard & Stream Sinks (6 Gates)
 * **Target File**: [`tests/store-redis.test.js`](../../tests/store-redis.test.js)
-* **Execution Status**: `PASS` (6 passed, 0 failed in 96ms)
+* **Execution Status**: `PASS` (6 passed, 0 failed in 98ms)
 
 #### Execution Console Output:
 ```text
@@ -3089,25 +3111,341 @@ main();
 
 ---
 
-### 13. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)
+### 13. Heuristic Profile Engine, SwiftShader Bot, Developer Persona & Headless Analytics (8 Gates)
+* **Target File**: [`tests/heuristic-profiler.test.js`](../../tests/heuristic-profiler.test.js)
+* **Execution Status**: `PASS` (8 passed, 0 failed in 103ms)
+
+#### Execution Console Output:
+```text
+🧪 Running Heuristic Profile Engine Test Suite...
+  ✅ PASS: Gate 1: SwiftShader virtual GPU detection -> CLOUD_AUTOMATION_BOT
+  ✅ PASS: Gate 2: Datacenter proxy IP without GPU acceleration -> HEADLESS_SCRAPER
+  ✅ PASS: Gate 3: Programmer fonts (D2Coding, Cascadia Code) -> SOFTWARE_ENGINEER
+  ✅ PASS: Gate 4: 5+ repeat visits -> POWER_USER with high retention tags
+  ✅ PASS: Gate 5: Workstation charging battery & 144Hz display tagging
+  ✅ PASS: Gate 6: Standard desktop casual user default fallback
+  ✅ PASS: Gate 7: sentinel.profileFootprint() and sentinel.aggregatePathFlows() facade methods
+  ✅ PASS: Gate 8: sentinel.getForensicAnalytics() headless analytics generation
+
+==================================================
+Results: 8 passed, 0 failed, total 8
+{"suite":"heuristic_profiler","passed":8,"failed":0,"total":8}
+```
+
+#### Source Code Verification (`tests/heuristic-profiler.test.js`):
+```javascript
+import assert from 'node:assert';
+import { HeuristicProfileEngine } from '../packages/sentinel/dist/index.js';
+
+let passed = 0;
+let failed = 0;
+
+async function test(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(err);
+    failed++;
+  }
+}
+
+async function main() {
+  console.log('🧪 Running Heuristic Profile Engine Test Suite...');
+
+  await test('Gate 1: SwiftShader virtual GPU detection -> CLOUD_AUTOMATION_BOT', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_azure_bot_1',
+      webglRenderer: 'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)',
+      country: 'US',
+      city: 'Boydton',
+      installedFonts: 'Consolas, Segoe UI'
+    });
+
+    assert.strictEqual(verdict.persona, 'CLOUD_AUTOMATION_BOT');
+    assert.strictEqual(verdict.riskLevel, 'HIGH');
+    assert.ok(verdict.confidence >= 0.9);
+    assert.ok(verdict.tags.includes('Headless_Browser'));
+    assert.ok(verdict.summaryNarrative.includes('자동화 봇 의심'));
+  });
+
+  await test('Gate 2: Datacenter proxy IP without GPU acceleration -> HEADLESS_SCRAPER', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_ashburn_scraper',
+      webglRenderer: 'unknown',
+      country: 'US',
+      city: 'Ashburn'
+    });
+
+    assert.strictEqual(verdict.persona, 'HEADLESS_SCRAPER');
+    assert.strictEqual(verdict.riskLevel, 'MEDIUM');
+    assert.ok(verdict.tags.includes('Datacenter_Proxy'));
+    assert.ok(verdict.summaryNarrative.includes('데이터센터 크롤러'));
+  });
+
+  await test('Gate 3: Programmer fonts (D2Coding, Cascadia Code) -> SOFTWARE_ENGINEER', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_dev_korea',
+      webglRenderer: 'ANGLE (Intel, Intel(R) Arc(TM) 130V GPU (8GB), Direct3D11)',
+      installedFonts: 'D2Coding, Cascadia Code, Malgun Gothic, Segoe UI',
+      country: 'KR',
+      city: 'Seongnam-si'
+    });
+
+    assert.strictEqual(verdict.persona, 'SOFTWARE_ENGINEER');
+    assert.strictEqual(verdict.riskLevel, 'LOW');
+    assert.ok(verdict.confidence >= 0.85);
+    assert.ok(verdict.tags.includes('Developer_Environment'));
+    assert.ok(verdict.summaryNarrative.includes('개발자/엔지니어 환경'));
+  });
+
+  await test('Gate 4: 5+ repeat visits -> POWER_USER with high retention tags', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_loyal_user',
+      totalVisitCount: 7,
+      country: 'KR',
+      city: 'Seoul'
+    });
+
+    assert.strictEqual(verdict.persona, 'POWER_USER');
+    assert.ok(verdict.tags.includes('High_Retention'));
+    assert.ok(verdict.tags.includes('Visits_7'));
+    assert.ok(verdict.summaryNarrative.includes('코어 사용자'));
+  });
+
+  await test('Gate 5: Workstation charging battery & 144Hz display tagging', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_gamer_workstation',
+      isCharging: true,
+      batteryLevel: 95,
+      screenHz: 144,
+      country: 'KR',
+      city: 'Gangnam-gu'
+    });
+
+    assert.ok(verdict.tags.includes('AC_Powered'));
+    assert.ok(verdict.tags.includes('Workstation'));
+    assert.ok(verdict.tags.includes('High_Refresh_Display'));
+    assert.ok(verdict.tags.includes('144Hz'));
+  });
+
+  await test('Gate 6: Standard desktop casual user default fallback', async () => {
+    const verdict = HeuristicProfileEngine.profileSession({
+      visitorId: 'usr_casual_reader',
+      country: 'JP',
+      city: 'Tokyo',
+      totalVisitCount: 1
+    });
+
+    assert.strictEqual(verdict.persona, 'DESKTOP_STANDARD');
+    assert.strictEqual(verdict.riskLevel, 'LOW');
+    assert.ok(verdict.summaryNarrative.includes('일반 방문자'));
+  });
+
+  await test('Gate 7: sentinel.profileFootprint() and sentinel.aggregatePathFlows() facade methods', async () => {
+    const { sentinel } = await import('../packages/sentinel/dist/index.js');
+    const v = sentinel.profileFootprint({
+      visitorId: 'usr_facade_test',
+      webglRenderer: 'SwiftShader'
+    });
+    assert.strictEqual(v.persona, 'CLOUD_AUTOMATION_BOT');
+
+    const m = sentinel.aggregatePathFlows(['/a -> /b -> /c']);
+    assert.strictEqual(m.nodes.length, 3);
+    assert.strictEqual(m.links.length, 2);
+  });
+
+  await test('Gate 8: sentinel.getForensicAnalytics() headless analytics generation', async () => {
+    const { sentinel } = await import('../packages/sentinel/dist/index.js');
+    const report = sentinel.getForensicAnalytics({
+      footprints: [
+        {
+          visitorId: 'usr_bot_1',
+          webglRenderer: 'SwiftShader',
+          pastPathsHistory: '/a -> /b'
+        },
+        {
+          visitorId: 'usr_dev_1',
+          installedFonts: 'D2Coding, Cascadia Code',
+          pastPathsHistory: '/a -> /b -> /c'
+        }
+      ]
+    });
+
+    assert.strictEqual(report.overview.totalRecords, 2);
+    assert.strictEqual(report.overview.totalUniqueVisitors, 2);
+    assert.strictEqual(report.overview.botCount, 1);
+    assert.strictEqual(report.overview.engineerCount, 1);
+    assert.strictEqual(report.verdicts.length, 2);
+    assert.strictEqual(report.flowMatrix.links.length, 2);
+  });
+
+  console.log('\n==================================================');
+  console.log(`Results: ${passed} passed, ${failed} failed, total ${passed + failed}`);
+  console.log(JSON.stringify({ suite: 'heuristic_profiler', passed, failed, total: passed + failed }));
+
+  if (failed > 0) process.exit(1);
+}
+
+main();
+
+```
+
+---
+
+### 14. Path Flow Aggregator, Transition Matrix & Sankey Formatting (5 Gates)
+* **Target File**: [`tests/path-flow.test.js`](../../tests/path-flow.test.js)
+* **Execution Status**: `PASS` (5 passed, 0 failed in 93ms)
+
+#### Execution Console Output:
+```text
+🧪 Running Path Flow Aggregator Test Suite...
+  ✅ PASS: Gate 1: Sequential path parsing (A -> B -> C) into 3 nodes and 2 weighted links
+  ✅ PASS: Gate 2: Multi-session link frequency aggregation
+  ✅ PASS: Gate 3: Cycle handling (A -> B -> A -> B)
+  ✅ PASS: Gate 4: Unicode arrow parsing (A ──> B)
+  ✅ PASS: Gate 5: Empty, null, and whitespace path resilience
+
+==================================================
+Results: 5 passed, 0 failed, total 5
+{"suite":"path_flow","passed":5,"failed":0,"total":5}
+```
+
+#### Source Code Verification (`tests/path-flow.test.js`):
+```javascript
+import assert from 'node:assert';
+import { PathFlowAggregator } from '../packages/sentinel/dist/index.js';
+
+let passed = 0;
+let failed = 0;
+
+async function test(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(err);
+    failed++;
+  }
+}
+
+async function main() {
+  console.log('🧪 Running Path Flow Aggregator Test Suite...');
+
+  await test('Gate 1: Sequential path parsing (A -> B -> C) into 3 nodes and 2 weighted links', async () => {
+    const matrix = PathFlowAggregator.aggregateFlows([
+      '/foundation/ -> /lib/playwright/ -> /sdk/sentinel/'
+    ]);
+
+    assert.strictEqual(matrix.nodes.length, 3);
+    assert.strictEqual(matrix.links.length, 2);
+    assert.strictEqual(matrix.totalHops, 2);
+    assert.strictEqual(matrix.uniquePaths, 1);
+
+    const fToP = matrix.links.find(l => l.source === '/foundation/' && l.target === '/lib/playwright/');
+    assert.ok(fToP);
+    assert.strictEqual(fToP.value, 1);
+
+    const pToS = matrix.links.find(l => l.source === '/lib/playwright/' && l.target === '/sdk/sentinel/');
+    assert.ok(pToS);
+    assert.strictEqual(pToS.value, 1);
+  });
+
+  await test('Gate 2: Multi-session link frequency aggregation', async () => {
+    const matrix = PathFlowAggregator.aggregateFlows([
+      '/ -> /foundation/',
+      '/ -> /foundation/',
+      '/ -> /foundation/ -> /lib/forge/',
+      '/ -> /lib/stt/'
+    ]);
+
+    assert.strictEqual(matrix.uniquePaths, 4);
+
+    const rootToFoundation = matrix.links.find(l => l.source === '/' && l.target === '/foundation/');
+    assert.ok(rootToFoundation);
+    assert.strictEqual(rootToFoundation.value, 3);
+
+    const rootNode = matrix.nodes.find(n => n.id === '/');
+    assert.ok(rootNode);
+    assert.strictEqual(rootNode.totalVisits, 4);
+  });
+
+  await test('Gate 3: Cycle handling (A -> B -> A -> B)', async () => {
+    const matrix = PathFlowAggregator.aggregateFlows([
+      '/foundation/ -> /lib/playwright/ -> /foundation/ -> /lib/playwright/'
+    ]);
+
+    assert.strictEqual(matrix.nodes.length, 2);
+    assert.strictEqual(matrix.totalHops, 3);
+
+    const fToP = matrix.links.find(l => l.source === '/foundation/' && l.target === '/lib/playwright/');
+    const pToF = matrix.links.find(l => l.source === '/lib/playwright/' && l.target === '/foundation/');
+
+    assert.strictEqual(fToP?.value, 2);
+    assert.strictEqual(pToF?.value, 1);
+  });
+
+  await test('Gate 4: Unicode arrow parsing (A ──> B)', async () => {
+    const matrix = PathFlowAggregator.aggregateFlows([
+      '/foundation/ ──> /lib/playwright/ ──> /sdk/sentinel/observability'
+    ]);
+
+    assert.strictEqual(matrix.nodes.length, 3);
+    assert.strictEqual(matrix.links.length, 2);
+    assert.ok(matrix.nodes.some(n => n.id === '/sdk/sentinel/observability'));
+  });
+
+  await test('Gate 5: Empty, null, and whitespace path resilience', async () => {
+    const matrix = PathFlowAggregator.aggregateFlows([
+      null,
+      undefined,
+      '',
+      '   ',
+      '/single-page/'
+    ]);
+
+    assert.strictEqual(matrix.uniquePaths, 1);
+    assert.strictEqual(matrix.nodes.length, 1);
+    assert.strictEqual(matrix.links.length, 0);
+    assert.strictEqual(matrix.totalHops, 0);
+  });
+
+  console.log('\n==================================================');
+  console.log(`Results: ${passed} passed, ${failed} failed, total ${passed + failed}`);
+  console.log(JSON.stringify({ suite: 'path_flow', passed, failed, total: passed + failed }));
+
+  if (failed > 0) process.exit(1);
+}
+
+main();
+
+```
+
+---
+
+### 15. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)
 * **Target File**: [`tests/browser-integration/dashboard.spec.js`](../../tests/browser-integration/dashboard.spec.js)
-* **Execution Status**: `PASS` (9 passed, 0 failed in 13298ms)
+* **Execution Status**: `PASS` (9 passed, 0 failed in 15077ms)
 
 #### Execution Console Output:
 ```text
 Running 9 tests using 1 worker
 
-  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (480ms)
-  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (646ms)
-  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (229ms)
-  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.7s)
-  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.3s)
-  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (414ms)
-  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (693ms)
-  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (779ms)
-  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (273ms)
+  ok 1 [chromium] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (509ms)
+  ok 2 [chromium] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (532ms)
+  ok 3 [chromium] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (174ms)
+  ok 4 [firefox] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (1.9s)
+  ok 5 [firefox] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (1.5s)
+  ok 6 [firefox] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (450ms)
+  ok 7 [webkit] › tests\browser-integration\dashboard.spec.js:12:3 › AMEVA Sentinel Real-Browser Integration › stored report survives page reload with identical traceId (625ms)
+  ok 8 [webkit] › tests\browser-integration\dashboard.spec.js:30:3 › AMEVA Sentinel Real-Browser Integration › risk event is synchronized in real-time across tabs (790ms)
+  ok 9 [webkit] › tests\browser-integration\dashboard.spec.js:53:3 › AMEVA Sentinel Real-Browser Integration › destroy() stops active telemetry collection and listener observation (309ms)
 
-  9 passed (11.6s)
+  9 passed (13.1s)
 ```
 
 #### Source Code Verification (`tests/browser-integration/dashboard.spec.js`):

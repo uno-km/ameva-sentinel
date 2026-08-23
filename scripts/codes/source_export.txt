@@ -45,8 +45,10 @@
 │   │   │   ├── counter.ts
 │   │   │   ├── decision.ts
 │   │   │   ├── engine.ts
+│   │   │   ├── heuristic-profiler.ts
 │   │   │   ├── index.ts
 │   │   │   ├── null-sink.ts
+│   │   │   ├── path-flow.ts
 │   │   │   ├── policy.ts
 │   │   │   ├── redirect-security.ts
 │   │   │   ├── ring-buffer-sink.ts
@@ -88,6 +90,8 @@
 │   ├── collector-crypto.test.js
 │   ├── decision.test.js
 │   ├── engine.test.js
+│   ├── heuristic-profiler.test.js
+│   ├── path-flow.test.js
 │   ├── redirect-security.test.js
 │   ├── ring-buffer-sink.test.js
 │   ├── sentinel.test.js
@@ -105,11 +109,11 @@
 
 # PROJECT_METADATA
 Project: AMEVA-Sentinel
-Snapshot Date: 2026-08-21
+Snapshot Date: 2026-08-23
 Branch: release-0.6
-Commit: 13af37266fce15b5a1222b9f4fe2431b4ca48cd2
-Working Tree: CLEAN
-Snapshot State: HEAD snapshot (Git commit blob-bound)
+Commit: 771a708279c9a6dd1dba4f68093a07c7c358e334
+Working Tree: DIRTY
+Snapshot State: HEAD + working tree snapshot
 Operating System: win32
 Python Version: 3.12.0
 Node Version: v24.16.0

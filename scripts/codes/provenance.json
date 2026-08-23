@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0",
-  "sourceCommit": "13af37266fce15b5a1222b9f4fe2431b4ca48cd2",
+  "sourceCommit": "771a708279c9a6dd1dba4f68093a07c7c358e334",
   "artifactPath": "scripts/codes/source_export.txt",
-  "sha256": "71b47889de9d3fcd5de8c41ecc944e2ca0890defe1f4d30b4d50b0fea3427458",
+  "sha256": "28555c51d685f3c7b68fb2e091ca525785c789124e78db4d2a1be817f6d878e2",
   "branch": "release-0.6",
-  "workingTreeAtExport": "CLEAN",
-  "totalChecks": 101,
-  "passedChecks": 101,
+  "workingTreeAtExport": "DIRTY",
+  "totalChecks": 114,
+  "passedChecks": 114,
   "status": "PASS",
-  "timestamp": "2026-08-21T08:01:32.623Z"
+  "timestamp": "2026-08-23T13:50:49.487Z"
 }

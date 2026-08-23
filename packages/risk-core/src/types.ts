@@ -144,8 +144,75 @@ export interface UntrustedTelemetrySignals {
   token?: string;
   tokenPresented?: boolean;
   tokenFreshnessMs?: number;
+  usedHeapMb?: number;
+  totalHeapMb?: number;
+  heapLimitMb?: number;
+  totalVisitCount?: number;
+  pastPathsHistory?: string;
   customSignals?: Record<string, unknown>;
   [key: string]: unknown;
+}
+
+/**
+ * Forensic Footprint Snapshot for Deep Analytics & Heuristic Profiling.
+ */
+export interface ForensicFootprint {
+  visitorId: string;
+  canvasHash?: string;
+  audioHash?: string;
+  webglVendor?: string;
+  webglRenderer?: string;
+  installedFonts?: string;
+  screenHz?: number;
+  batteryLevel?: number | string;
+  isCharging?: boolean;
+  usedHeapMb?: number;
+  totalVisitCount?: number;
+  pastPathsHistory?: string;
+  country?: string;
+  city?: string;
+  ipAddress?: string;
+  capturedAt?: string;
+  [key: string]: unknown;
+}
+
+export type VisitorPersona =
+  | 'CLOUD_AUTOMATION_BOT'
+  | 'HEADLESS_SCRAPER'
+  | 'SOFTWARE_ENGINEER'
+  | 'POWER_USER'
+  | 'MOBILE_CASUAL'
+  | 'DESKTOP_STANDARD'
+  | 'ANOMALOUS_PROBE';
+
+export interface HeuristicVerdict {
+  visitorId: string;
+  persona: VisitorPersona;
+  confidence: number; // 0.0 ~ 1.0
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  tags: string[];
+  summaryNarrative: string; // 1-2 sentence natural language executive briefing
+  detailedReasons: string[];
+  evaluatedAt: string;
+}
+
+export interface PathFlowNode {
+  id: string;
+  name: string;
+  totalVisits: number;
+}
+
+export interface PathFlowLink {
+  source: string;
+  target: string;
+  value: number; // Transition frequency count
+}
+
+export interface PathFlowMatrix {
+  nodes: PathFlowNode[];
+  links: PathFlowLink[];
+  totalHops: number;
+  uniquePaths: number;
 }
 
 /**

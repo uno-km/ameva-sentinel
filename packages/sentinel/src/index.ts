@@ -29,7 +29,9 @@ import {
   createTraceId,
   AsyncRingBufferSink,
   CompositeSink,
-  NullSink
+  NullSink,
+  HeuristicProfileEngine,
+  PathFlowAggregator
 } from '@ameva/sentinel-risk-core';
 
 import type {
@@ -64,7 +66,13 @@ import type {
   VerifiedCollectorContext,
   VerificationOutcome,
   KeyResolver,
-  NonceStore
+  NonceStore,
+  ForensicFootprint,
+  VisitorPersona,
+  HeuristicVerdict,
+  PathFlowNode,
+  PathFlowLink,
+  PathFlowMatrix
 } from '@ameva/sentinel-risk-core';
 
 export {
@@ -98,7 +106,9 @@ export {
   createTraceId,
   AsyncRingBufferSink,
   CompositeSink,
-  NullSink
+  NullSink,
+  HeuristicProfileEngine,
+  PathFlowAggregator
 };
 
 export type {
@@ -133,7 +143,13 @@ export type {
   VerifiedCollectorContext,
   VerificationOutcome,
   KeyResolver,
-  NonceStore
+  NonceStore,
+  ForensicFootprint,
+  VisitorPersona,
+  HeuristicVerdict,
+  PathFlowNode,
+  PathFlowLink,
+  PathFlowMatrix
 };
 
 export type StateFailureMode = 'FAIL_OPEN' | 'FAIL_CLOSED' | 'OBSERVE_ONLY';
@@ -500,6 +516,92 @@ export class Sentinel {
     }
   }
 
+  /**
+   * Evaluate a single forensic footprint and generate natural language persona verdict.
+   */
+  profileFootprint(footprint: ForensicFootprint): HeuristicVerdict {
+    return HeuristicProfileEngine.profileSession(footprint);
+  }
+
+  /**
+   * Parse an array of raw path history strings and aggregate into a Sankey transition matrix.
+   */
+  aggregatePathFlows(paths: (string | null | undefined)[]): PathFlowMatrix {
+    return PathFlowAggregator.aggregateFlows(paths);
+  }
+
+  /**
+   * Headless Forensic Analytics Engine: transforms raw footprints and risk events into
+   * executive persona verdicts, transition flow matrices, and overview KPI stats.
+   */
+  getForensicAnalytics(input: ForensicAnalyticsInput): ForensicAnalyticsReport {
+    const rawFootprints: ForensicFootprint[] = [...(input.footprints || [])];
+
+    // Map stored risk events to forensic footprints if provided
+    if (input.events) {
+      for (const ev of input.events) {
+        if (!ev) continue;
+        const sig = ev.signals || {};
+        rawFootprints.push({
+          visitorId: ev.sessionId || ev.traceId || 'anon_visitor',
+          webglRenderer: (sig.customSignals?.webglRenderer as string) || (sig.customSignals?.gpuRenderer as string) || 'unknown',
+          installedFonts: (sig.customSignals?.installedFonts as string) || '',
+          country: (sig.customSignals?.country as string) || 'GLOBAL',
+          city: (sig.customSignals?.city as string) || 'Edge',
+          totalVisitCount: Number(sig.totalVisitCount || sig.customSignals?.totalVisitCount || 1),
+          pastPathsHistory: (sig.pastPathsHistory as string) || (sig.customSignals?.pastPathsHistory as string) || '',
+          isCharging: Boolean(sig.customSignals?.isCharging),
+          screenHz: Number(sig.customSignals?.screenHz || 60),
+          capturedAt: ev.timestamp ? new Date(ev.timestamp).toISOString() : new Date().toISOString()
+        });
+      }
+    }
+
+    const uniqueVisitorIds = new Set<string>();
+    let botCount = 0;
+    let engineerCount = 0;
+    let powerUserCount = 0;
+    let standardCount = 0;
+    const verdicts: HeuristicVerdict[] = [];
+    const pathStrings: string[] = [];
+
+    for (const fp of rawFootprints) {
+      uniqueVisitorIds.add(fp.visitorId);
+      const verdict = HeuristicProfileEngine.profileSession(fp);
+      verdicts.push(verdict);
+
+      if (verdict.persona === 'CLOUD_AUTOMATION_BOT' || verdict.persona === 'HEADLESS_SCRAPER') {
+        botCount++;
+      } else if (verdict.persona === 'SOFTWARE_ENGINEER') {
+        engineerCount++;
+      } else if (verdict.persona === 'POWER_USER') {
+        powerUserCount++;
+      } else {
+        standardCount++;
+      }
+
+      if (fp.pastPathsHistory) {
+        pathStrings.push(fp.pastPathsHistory);
+      }
+    }
+
+    const flowMatrix = PathFlowAggregator.aggregateFlows(pathStrings);
+
+    return {
+      overview: {
+        totalRecords: rawFootprints.length,
+        totalUniqueVisitors: uniqueVisitorIds.size,
+        botCount,
+        engineerCount,
+        powerUserCount,
+        standardCount
+      },
+      verdicts,
+      flowMatrix,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
   private handleOperationalError(err: Error, context: string): void {
     if (this.onOperationalError) {
       try {
@@ -507,6 +609,26 @@ export class Sentinel {
       } catch (e) {}
     }
   }
+}
+
+export interface ForensicAnalyticsInput {
+  footprints?: ForensicFootprint[];
+  events?: (StoredRiskEvent | any)[];
+  topPathsCap?: number;
+}
+
+export interface ForensicAnalyticsReport {
+  overview: {
+    totalRecords: number;
+    totalUniqueVisitors: number;
+    botCount: number;
+    engineerCount: number;
+    powerUserCount: number;
+    standardCount: number;
+  };
+  verdicts: HeuristicVerdict[];
+  flowMatrix: PathFlowMatrix;
+  generatedAt: string;
 }
 
 export function createSentinel(options: SentinelOptions = {}): Sentinel {
