@@ -114,9 +114,9 @@
 Project: AMEVA-Sentinel
 Snapshot Date: 2026-08-23
 Branch: release-0.6
-Commit: 3b0cc6587e84e684e3f4bc21effacbd71185c4fe
-Working Tree: DIRTY
-Snapshot State: HEAD + working tree snapshot
+Commit: 8e37d72d07257abeeaf5622bd38825dce3d4d72a
+Working Tree: CLEAN
+Snapshot State: HEAD snapshot (Git commit blob-bound)
 Operating System: win32
 Python Version: 3.12.0
 Node Version: v24.16.0
@@ -1545,7 +1545,7 @@ FILE_CONTENT_BEGIN
           <button class="ga-pill" onclick="setTimeRange('all')">All Time</button>
         </div>
         <div class="admin-key-box">
-          <input type="password" id="adminKey" class="admin-key-input" placeholder="Admin Secret Key" value="ameva_admin_secret_2026">
+          <span style="font-size:0.75rem; font-weight:700; color:var(--accent-green); background:#f0fdf4; border:1px solid #bbf7d0; padding:4px 8px; border-radius:4px;">[PUBLIC_LIVE_STREAM]</span>
           <button class="header-btn primary" style="padding: 5px 10px; font-size: 0.78rem;" onclick="fetchDashboardData()">Refresh</button>
           <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px; cursor: pointer;">
             <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh(this.checked)"> Auto-Refresh (8s)
@@ -2302,12 +2302,10 @@ FILE_CONTENT_BEGIN
     }
 
     async function fetchDashboardData() {
-      const key = document.getElementById('adminKey').value.trim();
       try {
-        const res = await fetch(`/api/stats?key=${encodeURIComponent(key)}`);
+        const res = await fetch('/api/stats');
         if (!res.ok) {
-          const errText = res.status === 403 ? 'Unauthorized Secret Key' : `HTTP ${res.status} Server Error`;
-          throw new Error(errText);
+          throw new Error(`HTTP ${res.status} Server Error`);
         }
         rawApiResponse = await res.json();
         recalculateCharts();
@@ -8900,6 +8898,8 @@ export {
 } from './collector-crypto.js';
 
 
+export * from './snapshot-cache.js';
+
 ================================================================================
 FILE_CONTENT_END
 ================================================================================
@@ -9748,6 +9748,134 @@ export const rules = {
 FILE_CONTENT_END
 ================================================================================
 FILE_END: packages/risk-core/src/rules.ts
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
+FILE_NAME: snapshot-cache.ts
+FILE_PATH: packages/risk-core/src/snapshot-cache.ts
+FILE_LANGUAGE: typescript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+/**
+ * SnapshotCache & Singleflight Coalescer Engine
+ */
+
+export interface SnapshotCacheOptions {
+  ttlMs?: number;
+  maxStaleMs?: number;
+}
+
+export class SingleflightCoalescer<T> {
+  private inFlightPromises = new Map<string, Promise<T>>();
+
+  async execute(key: string, fn: () => Promise<T>): Promise<T> {
+    const existing = this.inFlightPromises.get(key);
+    if (existing) {
+      return existing;
+    }
+
+    const promise = (async () => {
+      try {
+        return await fn();
+      } finally {
+        this.inFlightPromises.delete(key);
+      }
+    })();
+
+    this.inFlightPromises.set(key, promise);
+    return promise;
+  }
+
+  get inFlightCount(): number {
+    return this.inFlightPromises.size;
+  }
+}
+
+export class SnapshotCache<T> {
+  private cachedValue: T | null = null;
+  private lastFetchedAt: number = 0;
+  private isRefreshing: boolean = false;
+  private coalescer = new SingleflightCoalescer<T>();
+  private ttlMs: number;
+
+  constructor(options: SnapshotCacheOptions = {}) {
+    this.ttlMs = Math.max(10, options.ttlMs ?? 5000);
+  }
+
+  async getOrFetch(key: string, fetcher: () => Promise<T>): Promise<T> {
+    const now = Date.now();
+    const isFresh = this.cachedValue !== null && (now - this.lastFetchedAt) < this.ttlMs;
+
+    if (isFresh && this.cachedValue !== null) {
+      return this.cachedValue;
+    }
+
+    if (this.cachedValue !== null) {
+      if (!this.isRefreshing) {
+        this.isRefreshing = true;
+        this.coalescer.execute(key, async () => {
+          try {
+            const fresh = await fetcher();
+            this.cachedValue = fresh;
+            this.lastFetchedAt = Date.now();
+            return fresh;
+          } finally {
+            this.isRefreshing = false;
+          }
+        }).catch(() => {});
+      }
+      return this.cachedValue;
+    }
+
+    const result = await this.coalescer.execute(key, async () => {
+      const fresh = await fetcher();
+      this.cachedValue = fresh;
+      this.lastFetchedAt = Date.now();
+      return fresh;
+    });
+    return result;
+  }
+
+  invalidate(): void {
+    this.cachedValue = null;
+    this.lastFetchedAt = 0;
+  }
+
+  get lastUpdated(): number {
+    return this.lastFetchedAt;
+  }
+}
+
+export function maskIpAddress(ip: string | null | undefined): string {
+  if (!ip || typeof ip !== "string") return "***.***.***.***";
+  const trimmed = ip.trim();
+  if (trimmed === "127.0.0.1" || trimmed === "localhost") return "127.0.***.***";
+
+  if (trimmed.includes(".")) {
+    const parts = trimmed.split(".");
+    if (parts.length === 4) {
+      return parts[0] + "." + parts[1] + ".***.***";
+    }
+  }
+
+  if (trimmed.includes(":")) {
+    const parts = trimmed.split(":");
+    if (parts.length >= 2) {
+      return parts[0] + ":" + parts[1] + ":****:****";
+    }
+  }
+
+  return "***.***.***.***";
+}
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: packages/risk-core/src/snapshot-cache.ts
 ================================================================================
 
 ================================================================================
@@ -10719,7 +10847,10 @@ import {
   CompositeSink,
   NullSink,
   HeuristicProfileEngine,
-  PathFlowAggregator
+  PathFlowAggregator,
+  SnapshotCache,
+  SingleflightCoalescer,
+  maskIpAddress
 } from '@ameva/sentinel-risk-core';
 
 import type {
@@ -10862,6 +10993,7 @@ export interface SentinelOptions {
 }
 
 export class Sentinel {
+  private globalAnalyticsCache = new SnapshotCache<ForensicAnalyticsReport>({ ttlMs: 5000 });
   private policy: SentinelPolicy;
   private mode: 'shadow' | 'enforce';
   private counterStore: CounterStore;
@@ -11219,6 +11351,20 @@ export class Sentinel {
   }
 
   /**
+   * Mask IP address for privacy compliance (GDPR / CCPA).
+   */
+  maskIpAddress(ip: string | null | undefined): string {
+    return maskIpAddress(ip);
+  }
+
+  /**
+   * Cached headless forensic analytics with in-memory SWR.
+   */
+  async getForensicAnalyticsCached(fetcher: () => Promise<ForensicAnalyticsReport>, cacheKey: string = 'global_analytics'): Promise<ForensicAnalyticsReport> {
+    return this.globalAnalyticsCache.getOrFetch(cacheKey, fetcher);
+  }
+
+  /**
    * Headless Forensic Analytics Engine: transforms raw footprints and risk events into
    * executive persona verdicts, transition flow matrices, and overview KPI stats.
    */
@@ -11324,6 +11470,8 @@ export function createSentinel(options: SentinelOptions = {}): Sentinel {
 }
 
 export const sentinel = new Sentinel();
+
+export { maskIpAddress, SnapshotCache, SingleflightCoalescer };
 
 ================================================================================
 FILE_CONTENT_END
@@ -12437,8 +12585,18 @@ const testSuites = [
     maxPoints: 5
   },
   {
+    id: 'snapshot_cache',
+    title: '15. SnapshotCache SWR Engine, Singleflight Coalescing & IP Masking (6 Gates)',
+    file: 'tests/snapshot-cache.test.js',
+    category: 'SWR Snapshot Cache & Privacy Masking',
+    command: 'node tests/snapshot-cache.test.js',
+    expectedPasses: 6,
+    pointsPerTest: 5 / 6,
+    maxPoints: 5
+  },
+  {
     id: 'playwright',
-    title: '15. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
+    title: '16. Playwright Cross-Browser Integration (Chromium, Firefox, WebKit, 9 Tests)',
     file: 'tests/browser-integration/dashboard.spec.js',
     category: 'Playwright Cross-Browser E2E (9 Tests)',
     command: 'npx playwright test',
@@ -12449,7 +12607,7 @@ const testSuites = [
 ];
 
 // Execute test suites
-console.log('🧪 Executing all 15 test suites and collecting execution logs...\n');
+console.log('🧪 Executing all 16 test suites and collecting execution logs...\n');
 const resultsData = [];
 let totalScore = 0;
 const maxTotalScore = 100;
@@ -12845,7 +13003,7 @@ const codesProvPath = path.join(CODES_DIR, 'provenance.json');
 
 const EXPECTED_SCHEMA = '1.0';
 const EXPECTED_ARTIFACT = 'scripts/codes/source_export.txt';
-const EXPECTED_TOTAL_CHECKS = 114;
+const EXPECTED_TOTAL_CHECKS = 120;
 const GIT_SHA_RE = /^[a-f0-9]{40}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -15255,6 +15413,130 @@ FILE_END: tests/sentinel.test.js
 ================================================================================
 FILE_BEGIN
 ================================================================================
+FILE_NAME: snapshot-cache.test.js
+FILE_PATH: tests/snapshot-cache.test.js
+FILE_LANGUAGE: javascript
+================================================================================
+FILE_CONTENT_BEGIN
+================================================================================
+
+import assert from 'node:assert';
+import { SnapshotCache, SingleflightCoalescer, maskIpAddress } from '../packages/risk-core/dist/index.js';
+import { sentinel } from '../packages/sentinel/dist/index.js';
+
+let passed = 0;
+let failed = 0;
+
+async function test(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✅ PASS: ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ❌ FAIL: ${name}`);
+    console.error(err);
+    failed++;
+  }
+}
+
+async function main() {
+  console.log('🧪 Running Snapshot Cache, Singleflight & IP Masking Test Suite...');
+
+  await test('Gate 1: SnapshotCache in-memory TTL hit', async () => {
+    const cache = new SnapshotCache({ ttlMs: 200 });
+    let fetchCount = 0;
+    const fetcher = async () => {
+      fetchCount++;
+      return { data: 'test_payload', count: fetchCount };
+    };
+
+    const res1 = await cache.getOrFetch('k1', fetcher);
+    assert.strictEqual(res1.count, 1);
+    assert.strictEqual(fetchCount, 1);
+
+    const res2 = await cache.getOrFetch('k1', fetcher);
+    assert.strictEqual(res2.count, 1);
+    assert.strictEqual(fetchCount, 1, 'Fetcher must not be called during active TTL');
+  });
+
+  await test('Gate 2: Stale-While-Revalidate (SWR) asynchronous update', async () => {
+    const cache = new SnapshotCache({ ttlMs: 50 });
+    let fetchCount = 0;
+    const fetcher = async () => {
+      fetchCount++;
+      return { version: fetchCount };
+    };
+
+    await cache.getOrFetch('k2', fetcher);
+    assert.strictEqual(fetchCount, 1);
+
+    await new Promise(r => setTimeout(r, 70));
+
+    const stale = await cache.getOrFetch('k2', fetcher);
+    assert.strictEqual(stale.version, 1);
+
+    await new Promise(r => setTimeout(r, 50));
+
+    const fresh = await cache.getOrFetch('k2', fetcher);
+    assert.strictEqual(fresh.version, 2, 'Cache must reflect revalidated value');
+  });
+
+  await test('Gate 3: Singleflight coalesces 50 concurrent requests into 1 execution', async () => {
+    const coalescer = new SingleflightCoalescer();
+    let dbExecutions = 0;
+
+    const heavyDbQuery = async () => {
+      dbExecutions++;
+      await new Promise(r => setTimeout(r, 50));
+      return { status: 'ok', queryId: dbExecutions };
+    };
+
+    const requests = Array.from({ length: 50 }, () => coalescer.execute('heavy_query', heavyDbQuery));
+    const results = await Promise.all(requests);
+
+    assert.strictEqual(dbExecutions, 1, '50 concurrent requests must coalesce into exactly 1 underlying DB query');
+    results.forEach(r => {
+      assert.strictEqual(r.queryId, 1);
+    });
+  });
+
+  await test('Gate 4: IPv4 address privacy masking', async () => {
+    assert.strictEqual(maskIpAddress('125.132.13.175'), '125.132.***.***');
+    assert.strictEqual(maskIpAddress('52.167.144.177'), '52.167.***.***');
+    assert.strictEqual(maskIpAddress('57.141.0.51'), '57.141.***.***');
+    assert.strictEqual(maskIpAddress('127.0.0.1'), '127.0.***.***');
+  });
+
+  await test('Gate 5: IPv6 address privacy masking', async () => {
+    assert.strictEqual(maskIpAddress('2001:0db8:85a3:0000:0000:8a2e:0370:7334'), '2001:0db8:****:****');
+    assert.strictEqual(maskIpAddress('2600:1f18:63fe::1'), '2600:1f18:****:****');
+  });
+
+  await test('Gate 6: Null and edge case IP robustness', async () => {
+    assert.strictEqual(maskIpAddress(null), '***.***.***.***');
+    assert.strictEqual(maskIpAddress(undefined), '***.***.***.***');
+    assert.strictEqual(maskIpAddress(''), '***.***.***.***');
+    assert.strictEqual(sentinel.maskIpAddress('192.168.1.100'), '192.168.***.***');
+  });
+
+  console.log('\n==================================================');
+  console.log(`Results: ${passed} passed, ${failed} failed, total ${passed + failed}`);
+  console.log(JSON.stringify({ suite: 'snapshot_cache', passed, failed, total: passed + failed }));
+
+  if (failed > 0) process.exit(1);
+}
+
+main();
+
+================================================================================
+FILE_CONTENT_END
+================================================================================
+FILE_END: tests/snapshot-cache.test.js
+================================================================================
+
+================================================================================
+FILE_BEGIN
+================================================================================
 FILE_NAME: store-redis.test.js
 FILE_PATH: tests/store-redis.test.js
 FILE_LANGUAGE: javascript
@@ -16062,6 +16344,9 @@ import {
   NullSink,
   HeuristicProfileEngine,
   PathFlowAggregator,
+  SnapshotCache,
+  SingleflightCoalescer,
+  maskIpAddress,
   type EventSink,
   type StreamRecord,
   type RiskEventRecord,
@@ -16317,6 +16602,11 @@ async function runFullStaticTypeCheck(): Promise<void> {
   const heuristicVerdict: HeuristicVerdict = HeuristicProfileEngine.profileSession(footprint);
   const flowMatrix: PathFlowMatrix = PathFlowAggregator.aggregateFlows(['/ -> /foundation/']);
 
+  // SnapshotCache & Singleflight & IP Masking Checks
+  const snapCache = new SnapshotCache<{ val: number }>({ ttlMs: 1000 });
+  const singleflight = new SingleflightCoalescer<{ val: number }>();
+  const maskedIp: string = maskIpAddress('125.132.13.175');
+
   void isV1;
   void isV2;
   void isUniversal;
@@ -16338,6 +16628,9 @@ async function runFullStaticTypeCheck(): Promise<void> {
   void redisStreamSink;
   void heuristicVerdict;
   void flowMatrix;
+  void snapCache;
+  void singleflight;
+  void maskedIp;
 }
 
 runFullStaticTypeCheck();
