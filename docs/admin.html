@@ -988,11 +988,15 @@
       const key = document.getElementById('adminKey').value.trim();
       try {
         const res = await fetch(`/api/stats?key=${encodeURIComponent(key)}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}: Auth failed`);
+        if (!res.ok) {
+          const errText = res.status === 403 ? 'Unauthorized Secret Key' : `HTTP ${res.status} Server Error`;
+          throw new Error(errText);
+        }
         rawApiResponse = await res.json();
         recalculateCharts();
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
+        document.getElementById('insightCardList').innerHTML = `<div class="insight-card bot"><strong>[Telemetry Notice]</strong> ${err.message}. Retrying stream in 8 seconds...</div>`;
       }
     }
 
