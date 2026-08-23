@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Forensic Intelligence &amp; Multi-Timeframe Telemetry Console | AMEVA-Sentinel</title>
-  <meta name="description" content="Enterprise multi-timeframe traffic analytics, deep forensic audit ledger, AI bot crawler intrusion telemetry, and financial-grade OHLC candlestick charts for AMEVA-Sentinel.">
+  <meta name="description" content="Enterprise multi-timeframe traffic analytics, deep forensic audit ledger, AI bot crawler intrusion telemetry, traffic acquisition intent, and live user action stream for AMEVA-Sentinel.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="/shared/style.css">
   <link rel="stylesheet" href="assets/style.css">
@@ -210,7 +210,7 @@
       font-size: 0.82rem;
     }
     .rank-label {
-      width: 150px;
+      width: 160px;
       font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
@@ -312,7 +312,7 @@
       border: 1px solid var(--border-color);
       border-radius: 8px;
       width: 90%;
-      max-width: 1000px;
+      max-width: 1050px;
       max-height: 85vh;
       overflow-y: auto;
       padding: 24px;
@@ -326,6 +326,20 @@
       padding-bottom: 12px;
       margin-bottom: 16px;
     }
+
+    .badge-action {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+    .badge-action.copy { background: #dbeafe; color: #1e40af; }
+    .badge-action.click { background: #fef3c7; color: #92400e; }
+    .badge-action.outbound { background: #fee2e2; color: #991b1b; }
+    .badge-action.dwell { background: #f3e8ff; color: #6b21a8; }
   </style>
 </head>
 <body>
@@ -404,7 +418,7 @@
     <!-- Main Content Area -->
     <main class="content">
       <h2>Admin Forensic Intelligence &amp; Multi-Timeframe Telemetry Console</h2>
-      <p class="subtitle">Real-time deep forensic audit ledger, AI bot crawler intrusion telemetry, and financial-grade multi-timeframe traffic analytics</p>
+      <p class="subtitle">Traffic acquisition intent, live user action stream, deep forensic audit ledger, and financial-grade multi-timeframe analytics</p>
 
       <!-- 1. Top Controls Bar -->
       <div class="ga-dashboard-header">
@@ -428,27 +442,27 @@
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-title">Total Unique Visitors</div>
-          <div class="kpi-val" id="kpiVisitors">-</div>
+          <div class="kpi-val" id="kpiVisitors">0</div>
           <div class="kpi-sub">Verified Unique Footprints</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-title">Total Active Sessions</div>
-          <div class="kpi-val" id="kpiSessions">-</div>
+          <div class="kpi-val" id="kpiSessions">0</div>
           <div class="kpi-sub" id="kpiPagesPerSession">Page Inflow Stream</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-title">Identified AI Bots</div>
-          <div class="kpi-val" id="kpiBots" style="color: var(--accent-red);">-</div>
+          <div class="kpi-val" id="kpiBots" style="color: var(--accent-red);">0</div>
           <div class="kpi-sub warn">SwiftShader / Headless Detection</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-title">Software Engineer Ratio</div>
-          <div class="kpi-val" id="kpiDevRatio" style="color: var(--accent-green);">-</div>
+          <div class="kpi-val" id="kpiDevRatio" style="color: var(--accent-green);">0%</div>
           <div class="kpi-sub">D2Coding / Arc GPU Workstation</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-title">Avg Session Dwell Time</div>
-          <div class="kpi-val" id="kpiDwell" style="color: #7c3aed;">-</div>
+          <div class="kpi-val" id="kpiDwell" style="color: #7c3aed;">0s</div>
           <div class="kpi-sub purple">High Retention Tier</div>
         </div>
         <div class="kpi-card">
@@ -462,7 +476,7 @@
       <div class="chart-panel">
         <div class="chart-panel-title">
           <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <span>Multi-Timeframe Traffic Inflow &amp; OHLC Volume Stream</span>
+            <span>Multi-Timeframe Traffic Inflow &amp; Continuous Zero-Grid Volume Stream</span>
             <div class="ga-filter-group">
               <button class="ga-pill" onclick="setTimeframe('1m')">1m</button>
               <button class="ga-pill active" onclick="setTimeframe('5m')">5m</button>
@@ -483,7 +497,57 @@
         </div>
       </div>
 
-      <!-- 4. Two-Column Distribution Grid -->
+      <!-- 4. Traffic Acquisition & Inflow Intent [WHY DID THEY VISIT] -->
+      <div class="chart-grid-2col">
+        <!-- Inflow Referrers -->
+        <div class="chart-panel">
+          <div class="chart-panel-title">
+            <span>Traffic Acquisition Sources (Referrers &amp; Search) [WHY THEY VISITED]</span>
+            <button class="btn-expand" onclick="openModal('modalReferrers')">[+] Expand Sources</button>
+          </div>
+          <div id="referrerRankList" style="margin-top: 10px;">
+            <div style="color: var(--text-muted); font-size: 0.82rem;">Loading acquisition sources...</div>
+          </div>
+        </div>
+
+        <!-- Inflow Intent Categories -->
+        <div class="chart-panel">
+          <div class="chart-panel-title">
+            <span>Entry Landing Pages &amp; Topic Intent [VISITOR INTENT]</span>
+            <button class="btn-expand" onclick="openModal('modalIntent')">[+] Expand Intent</button>
+          </div>
+          <div id="intentRankList" style="margin-top: 10px;">
+            <div style="color: var(--text-muted); font-size: 0.82rem;">Analyzing intent categories...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Real-Time User Micro-Interactions & Action Stream [WHAT DID THEY DO] -->
+      <div class="chart-panel">
+        <div class="chart-panel-title">
+          <span>Live User Interaction &amp; Behavior Action Stream [WHAT THEY DID]</span>
+          <button class="btn-expand" onclick="openModal('modalActions')">[+] Expand All Actions</button>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="stream-table">
+            <thead>
+              <tr>
+                <th>Time (UTC)</th>
+                <th>Visitor ID</th>
+                <th>Location</th>
+                <th>Action Type</th>
+                <th>Page Path</th>
+                <th>Target Element / Copied Snippet</th>
+              </tr>
+            </thead>
+            <tbody id="actionsTableBody">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading live behavior stream...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 6. Two-Column Geographic & Persona Distribution Grid -->
       <div class="chart-grid-2col">
         <!-- Top Locations -->
         <div class="chart-panel">
@@ -508,7 +572,7 @@
         </div>
       </div>
 
-      <!-- 5. Hardware Diagnostics & Multi-Dimensional Clustering -->
+      <!-- 7. Hardware Diagnostics & Multi-Dimensional Clustering -->
       <div class="chart-grid-2col">
         <!-- GPU Breakdown -->
         <div class="chart-panel">
@@ -533,7 +597,7 @@
         </div>
       </div>
 
-      <!-- 6. Developer IDE Fonts & Screen Refreshes -->
+      <!-- 8. Developer IDE Fonts & Screen Refreshes -->
       <div class="chart-panel">
         <div class="chart-panel-title">
           <span>Developer IDE Fonts &amp; Probed Programming Environments</span>
@@ -544,7 +608,7 @@
         </div>
       </div>
 
-      <!-- 7. Navigation Flow & Conversion Funnel -->
+      <!-- 9. Navigation Flow & Conversion Funnel -->
       <div class="chart-panel">
         <div class="chart-panel-title">
           <span>Navigation Flow &amp; Path Traversal Funnel Matrix</span>
@@ -554,34 +618,34 @@
           <div class="flow-step-box">
             <div class="flow-step-header">Stage 1: Hub Entry</div>
             <div class="flow-step-name">/ (Hub Landing)</div>
-            <div class="flow-step-vol" id="volStep1">-</div>
+            <div class="flow-step-vol" id="volStep1">0</div>
             <div class="flow-step-pct">100% Inflow</div>
           </div>
           <div class="flow-arrow-indicator">──></div>
           <div class="flow-step-box">
             <div class="flow-step-header">Stage 2: Core Engineering</div>
             <div class="flow-step-name">/foundation/ &amp; Playwright</div>
-            <div class="flow-step-vol" id="volStep2">-</div>
-            <div class="flow-step-pct" id="pctStep2">-</div>
+            <div class="flow-step-vol" id="volStep2">0</div>
+            <div class="flow-step-pct" id="pctStep2">0%</div>
           </div>
           <div class="flow-arrow-indicator">──></div>
           <div class="flow-step-box">
             <div class="flow-step-header">Stage 3: Security &amp; SDK</div>
             <div class="flow-step-name">/sdk/sentinel/</div>
-            <div class="flow-step-vol" id="volStep3">-</div>
-            <div class="flow-step-pct" id="pctStep3">-</div>
+            <div class="flow-step-vol" id="volStep3">0</div>
+            <div class="flow-step-pct" id="pctStep3">0%</div>
           </div>
           <div class="flow-arrow-indicator">──></div>
           <div class="flow-step-box">
             <div class="flow-step-header">Stage 4: Deep Console</div>
             <div class="flow-step-name">/observability &amp; admin</div>
-            <div class="flow-step-vol" id="volStep4">-</div>
-            <div class="flow-step-pct" id="pctStep4">-</div>
+            <div class="flow-step-vol" id="volStep4">0</div>
+            <div class="flow-step-pct" id="pctStep4">0%</div>
           </div>
         </div>
       </div>
 
-      <!-- 8. Executive Heuristic AI Insights -->
+      <!-- 10. Executive Heuristic AI Insights -->
       <div class="chart-panel">
         <div class="chart-panel-title">
           <span>Executive Heuristic Diagnostics &amp; Real-Time Security Briefings</span>
@@ -592,7 +656,7 @@
         </div>
       </div>
 
-      <!-- 9. Deep Forensic Ground-Truth Table -->
+      <!-- 11. Deep Forensic Ground-Truth Table -->
       <div class="chart-panel">
         <div class="table-toolbar">
           <div class="ga-filter-group">
@@ -810,26 +874,26 @@
       rawForensicLogs = logs;
 
       // 1. Group Time Series into Continuous Uniform Buckets (with true 0 counts)
-      let bucketSizeMs = 5 * 60 * 1000; // default 5m
-      let defaultWindowMs = 12 * 60 * 60 * 1000; // default 12h
+      let bucketSizeMs = 5 * 60 * 1000;
+      let defaultWindowMs = 12 * 60 * 60 * 1000;
       if (currentTimeframe === '1m') {
         bucketSizeMs = 1 * 60 * 1000;
-        defaultWindowMs = 60 * 60 * 1000; // last 60m
+        defaultWindowMs = 60 * 60 * 1000;
       } else if (currentTimeframe === '5m') {
         bucketSizeMs = 5 * 60 * 1000;
-        defaultWindowMs = 12 * 60 * 60 * 1000; // last 12h
+        defaultWindowMs = 12 * 60 * 60 * 1000;
       } else if (currentTimeframe === '1h') {
         bucketSizeMs = 60 * 60 * 1000;
-        defaultWindowMs = 48 * 60 * 60 * 1000; // last 48h
+        defaultWindowMs = 48 * 60 * 60 * 1000;
       } else if (currentTimeframe === '1D') {
         bucketSizeMs = 24 * 60 * 60 * 1000;
-        defaultWindowMs = 30 * 24 * 60 * 60 * 1000; // last 30d
+        defaultWindowMs = 30 * 24 * 60 * 60 * 1000;
       } else if (currentTimeframe === '1W') {
         bucketSizeMs = 7 * 24 * 60 * 60 * 1000;
-        defaultWindowMs = 12 * 7 * 24 * 60 * 60 * 1000; // last 12w
+        defaultWindowMs = 12 * 7 * 24 * 60 * 60 * 1000;
       } else if (currentTimeframe === '1M') {
         bucketSizeMs = 30 * 24 * 60 * 60 * 1000;
-        defaultWindowMs = 365 * 24 * 60 * 60 * 1000; // last 1y
+        defaultWindowMs = 365 * 24 * 60 * 60 * 1000;
       }
 
       const now = Date.now();
@@ -839,18 +903,15 @@
       let windowStartMs = startDateVal ? new Date(startDateVal).getTime() : (now - defaultWindowMs);
       let windowEndMs = endDateVal ? (new Date(endDateVal).getTime() + 86400000) : now;
 
-      // Align to bucket boundaries
       const alignedStart = Math.floor(windowStartMs / bucketSizeMs) * bucketSizeMs;
       const alignedEnd = Math.floor(windowEndMs / bucketSizeMs) * bucketSizeMs;
 
-      // Initialize continuous grid with true 0 counts
       const continuousBuckets = new Map();
       const step = Math.max(bucketSizeMs, Math.floor((alignedEnd - alignedStart) / 100) || bucketSizeMs);
       for (let t = alignedStart; t <= alignedEnd; t += step) {
         continuousBuckets.set(t, 0);
       }
 
-      // Increment hits into continuous grid
       timeSeries.forEach(s => {
         const t = new Date(s.created_at).getTime();
         if (t >= alignedStart && t <= alignedEnd + step) {
@@ -871,7 +932,6 @@
       });
       const volData = sortedKeys.map(k => continuousBuckets.get(k));
 
-      // Calculate cumulative trend line across continuous timeline
       let cum = 0;
       const trendData = volData.map(v => { cum += v; return cum; });
 
@@ -924,7 +984,6 @@
       const totalSess = Number(rawApiResponse.metrics?.total_sessions || timeSeries.length || 0);
       const devRatio = logs.length > 0 ? Math.round((devCount / logs.length) * 100) : 0;
 
-      // Real Dwell Time calculation from session timestamp deltas
       let totalDwellSec = 0, dwellSamples = 0;
       const sessionTimeline = {};
       timeSeries.forEach(s => {
@@ -944,7 +1003,6 @@
       const avgDwellSec = dwellSamples > 0 ? Math.round(totalDwellSec / dwellSamples) : (totalSess > 0 ? 95 : 0);
       const dwellFormatted = avgDwellSec >= 60 ? `${Math.floor(avgDwellSec / 60)}m ${avgDwellSec % 60}s` : `${avgDwellSec}s`;
 
-      // Real JS Heap Calculation from telemetry
       const validHeaps = logs.map(l => Number(l.used_heap_mb)).filter(v => !isNaN(v) && v > 0);
       const avgHeapMb = validHeaps.length > 0 ? (validHeaps.reduce((a,b)=>a+b,0)/validHeaps.length).toFixed(1) + ' MB' : (logs.length > 0 ? '41.2 MB' : '-');
 
@@ -956,7 +1014,92 @@
       document.getElementById('kpiHeap').innerText = avgHeapMb;
       document.getElementById('chartTimestamp').innerText = `Updated: ${new Date().toLocaleTimeString()}`;
 
-      // 5. Geographic Rankings (100% Dynamic)
+      // 5. Inflow Referrers & Acquisition Channels ("왜 접속했는지")
+      const referrers = rawApiResponse.top_referrers || [];
+      let refHtml = '';
+      referrers.slice(0, 6).forEach(r => {
+        const pct = totalSess > 0 ? Math.round((Number(r.count) / totalSess) * 100) : 0;
+        let label = r.source;
+        if (label.includes('github.com')) label = 'GitHub (Code Repository & Docs)';
+        else if (label.includes('google.')) label = 'Google Organic Search';
+        else if (label.includes('t.co') || label.includes('twitter') || label.includes('x.com')) label = 'Twitter / X Inflow';
+        else if (label.length > 28) label = label.slice(0, 26) + '...';
+
+        refHtml += `
+          <div class="rank-row">
+            <span class="rank-label" title="${r.source}">${label}</span>
+            <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width: ${pct}%; background:#2563eb;"></div></div>
+            <span class="rank-val">${r.count} (${pct}%)</span>
+          </div>
+        `;
+      });
+      document.getElementById('referrerRankList').innerHTML = refHtml || '<div style="color:var(--text-muted);">Direct / Clean URL Inflow</div>';
+
+      // 6. Landing Pages & Intent Categories
+      const pages = rawApiResponse.page_views_flow || [];
+      const intentMap = {
+        'Termux-Playwright Automation': 0,
+        'Sentinel Security WAF': 0,
+        'Foundation & Core Specs': 0,
+        'Founder Profile & Hub': 0
+      };
+      pages.forEach(p => {
+        const path = p.pathname || '';
+        const v = Number(p.views || 1);
+        if (path.includes('playwright')) intentMap['Termux-Playwright Automation'] += v;
+        else if (path.includes('sentinel')) intentMap['Sentinel Security WAF'] += v;
+        else if (path.includes('foundation') || path.includes('forge') || path.includes('stt')) intentMap['Foundation & Core Specs'] += v;
+        else intentMap['Founder Profile & Hub'] += v;
+      });
+      let intentHtml = '';
+      Object.entries(intentMap).sort((a,b) => b[1] - a[1]).forEach(([intent, cnt]) => {
+        const pct = totalSess > 0 ? Math.round((cnt / totalSess) * 100) : 0;
+        intentHtml += `
+          <div class="rank-row">
+            <span class="rank-label">${intent}</span>
+            <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width: ${pct}%; background:#7c3aed;"></div></div>
+            <span class="rank-val">${cnt} (${pct}%)</span>
+          </div>
+        `;
+      });
+      document.getElementById('intentRankList').innerHTML = intentHtml;
+
+      // 7. Live User Actions Table ("들어와서 뭘했는지")
+      const actions = rawApiResponse.recent_actions || [];
+      const actionsTbody = document.getElementById('actionsTableBody');
+      if (actions.length === 0) {
+        actionsTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No micro-interaction events recorded yet.</td></tr>';
+      } else {
+        let actHtml = '';
+        actions.slice(0, 15).forEach(a => {
+          const timeStr = a.occurred_at ? new Date(a.occurred_at).toISOString().replace('T', ' ').slice(11, 19) : '-';
+          const loc = `${a.country || 'GLOBAL'} (${a.city || 'Edge'})`;
+          let badgeClass = 'badge-action click';
+          let actionLabel = 'CLICK';
+          if (a.event_type === 'copy_snippet') {
+            badgeClass = 'badge-action copy';
+            actionLabel = 'CODE_COPY';
+          } else if (a.target_url && a.target_url.startsWith('http')) {
+            badgeClass = 'badge-action outbound';
+            actionLabel = 'OUTBOUND';
+          }
+
+          const targetSnippet = a.target_text ? (a.target_text.length > 35 ? a.target_text.slice(0, 33) + '...' : a.target_text) : (a.target_tag || '-');
+          actHtml += `
+            <tr>
+              <td>${timeStr}</td>
+              <td><a href="javascript:void(0)" onclick="openVisitorStory('${a.visitor_id}')" style="color:var(--primary-color); font-weight:700;">${a.visitor_id.slice(0, 12)}...</a></td>
+              <td>${loc}</td>
+              <td><span class="${badgeClass}">${actionLabel}</span></td>
+              <td style="font-family:var(--font-mono); font-size:0.75rem;">${a.pathname || '/'}</td>
+              <td style="font-family:var(--font-mono); font-size:0.75rem; color:#475569;" title="${a.target_text || ''}">${targetSnippet}</td>
+            </tr>
+          `;
+        });
+        actionsTbody.innerHTML = actHtml;
+      }
+
+      // 8. Geographic Rankings
       const topCountries = rawApiResponse.top_countries || [];
       let geoHtml = '';
       topCountries.slice(0, 6).forEach(c => {
@@ -971,7 +1114,7 @@
       });
       document.getElementById('locationRankList').innerHTML = geoHtml || '<div style="color:var(--text-muted);">No records found</div>';
 
-      // 6. GPU Rankings (100% Dynamic)
+      // 9. GPU Rankings
       const topGpus = rawApiResponse.top_gpus || [];
       let gpuHtml = '';
       topGpus.slice(0, 6).forEach(g => {
@@ -987,7 +1130,7 @@
       });
       document.getElementById('gpuRankList').innerHTML = gpuHtml || '<div style="color:var(--text-muted);">No records found</div>';
 
-      // 7. Dynamic Font Environment Probing (100% Dynamic Map)
+      // 10. Dynamic Font Environment Probing
       const dynamicFontStats = {};
       logs.forEach(l => {
         if (l.installed_fonts) {
@@ -1013,8 +1156,7 @@
       });
       document.getElementById('fontsRankList').innerHTML = fontHtml || '<div style="color:var(--text-muted);">No font telemetry collected</div>';
 
-      // 8. Navigation Funnel Steps (100% Dynamic Aggregation)
-      const pages = rawApiResponse.page_views_flow || [];
+      // 11. Funnel Steps
       const vRoot = Number(pages.find(p => p.pathname === '/' || p.pathname === '/index.html')?.views || totalSess || 0);
       const vLibs = Number(pages.filter(p => p.pathname.includes('/foundation') || p.pathname.includes('/playwright') || p.pathname.includes('/forge') || p.pathname.includes('/stt') || p.pathname.includes('/diffusion') || p.pathname.includes('/train')).reduce((a,b) => a + Number(b.views), 0));
       const vSec = Number(pages.filter(p => p.pathname.includes('/sentinel')).reduce((a,b) => a + Number(b.views), 0));
@@ -1032,7 +1174,7 @@
       document.getElementById('volStep4').innerText = vAdmin;
       document.getElementById('pctStep4').innerText = `${pctAdmin}% Deep Engagement`;
 
-      // 9. Briefings (100% Dynamic)
+      // 12. Briefings
       let insightHtml = '';
       logs.slice(0, 5).forEach(l => {
         const prof = profilePersona(l);
@@ -1040,7 +1182,7 @@
       });
       document.getElementById('insightCardList').innerHTML = insightHtml || '<div class="insight-card">No logs recorded yet.</div>';
 
-      // 10. Render Table
+      // 13. Render Forensic Table
       renderTable();
     }
 
@@ -1089,12 +1231,12 @@
         const gpu = l.webgl_renderer ? (l.webgl_renderer.length > 28 ? l.webgl_renderer.slice(0, 26) + '...' : l.webgl_renderer) : 'unknown';
         const fonts = l.installed_fonts ? (l.installed_fonts.length > 25 ? l.installed_fonts.slice(0, 24) + '...' : l.installed_fonts) : '-';
         const bat = l.battery_level ? `${l.battery_level}%${l.is_charging ? ' (AC)' : ''} / ${l.screen_hz || 60}Hz` : '-';
-        const heap = l.used_heap_mb ? `${l.used_heap_mb} MB` : '41.2 MB';
+        const heap = l.used_heap_mb ? `${l.used_heap_mb} MB` : '-';
 
         html += `
           <tr>
             <td>${timeStr}</td>
-            <td style="color:var(--primary-color); font-weight:700;">${l.visitor_id.slice(0, 14)}</td>
+            <td><a href="javascript:void(0)" onclick="openVisitorStory('${l.visitor_id}')" style="color:var(--primary-color); font-weight:700;">${l.visitor_id.slice(0, 14)}</a></td>
             <td>${loc}</td>
             <td><span class="${prof.badgeClass}">${prof.persona}</span></td>
             <td title="${l.webgl_renderer || ''}">${gpu}</td>
@@ -1141,12 +1283,76 @@
       }
     }
 
+    function openVisitorStory(vid) {
+      const modal = document.getElementById('expandModal');
+      const title = document.getElementById('modalTitle');
+      const content = document.getElementById('modalContent');
+
+      title.innerText = `Visitor Journey & Behavior Story: ${vid}`;
+
+      const userJourneys = (rawApiResponse?.visitor_journeys || []).filter(j => j.visitor_id === vid);
+      const userActions = (rawApiResponse?.recent_actions || []).filter(a => a.visitor_id === vid);
+      const userFootprint = (rawApiResponse?.deep_forensic_logs || []).find(f => f.visitor_id === vid);
+
+      let html = `
+        <div style="background:var(--bg-main); padding:12px; border-radius:6px; margin-bottom:14px; border:1px solid var(--border-color);">
+          <strong>Client Profile:</strong> ${userFootprint?.country || 'GLOBAL'} (${userFootprint?.city || 'Edge'}), ${userFootprint?.ip_address || '-'} &bull; <strong>Hardware:</strong> ${userFootprint?.webgl_renderer || 'Generic'} &bull; <strong>Fonts:</strong> ${userFootprint?.installed_fonts || 'Standard'}
+        </div>
+        <h4 style="margin:12px 0 6px 0; color:var(--primary-color);">1. Traffic Inflow Source ("왜 접속했는지")</h4>
+        <p style="margin:0 0 10px 0; color:var(--text-muted);">Referrer: <strong>${userJourneys[0]?.referrer || 'Direct Inflow / Clean Bookmark'}</strong></p>
+
+        <h4 style="margin:14px 0 6px 0; color:var(--primary-color);">2. Chronological Action Stream ("들어와서 뭘했는지")</h4>
+      `;
+
+      if (userActions.length === 0 && userJourneys.length === 0) {
+        html += '<p style="color:var(--text-muted);">No micro-actions recorded for this session yet.</p>';
+      } else {
+        html += '<div class="insight-card-list">';
+        userJourneys.forEach(j => {
+          html += `
+            <div class="insight-card dev">
+              <strong>[PAGE_VIEW]</strong> Viewed <code>${j.pathname}</code> at ${new Date(j.viewed_at).toLocaleTimeString()} (Dwell: ${j.dwell_seconds || 0}s, Scroll: ${j.max_scroll_percent || 0}%)
+            </div>
+          `;
+        });
+        userActions.forEach(a => {
+          html += `
+            <div class="insight-card ${a.event_type === 'copy_snippet' ? 'power' : 'std'}">
+              <strong>[${a.event_type.toUpperCase()}]</strong> ${a.event_type === 'copy_snippet' ? 'Copied code snippet: ' : 'Clicked element: '}<code>${a.target_text || a.target_tag}</code> on <code>${a.pathname}</code>
+            </div>
+          `;
+        });
+        html += '</div>';
+      }
+
+      content.innerHTML = html;
+      modal.classList.add('show');
+    }
+
     function openModal(type) {
       const modal = document.getElementById('expandModal');
       const title = document.getElementById('modalTitle');
       const content = document.getElementById('modalContent');
 
-      if (type === 'modalGeo') {
+      if (type === 'modalReferrers') {
+        title.innerText = 'Traffic Acquisition Sources (Referrers & Inflows) [WHY THEY VISITED]';
+        const referrers = rawApiResponse?.top_referrers || [];
+        let html = '<table class="stream-table"><thead><tr><th>Inflow Referrer URL</th><th>Inflow Sessions</th></tr></thead><tbody>';
+        referrers.forEach(r => {
+          html += `<tr><td>${r.source}</td><td><strong>${r.count}</strong></td></tr>`;
+        });
+        html += '</tbody></table>';
+        content.innerHTML = html;
+      } else if (type === 'modalActions') {
+        title.innerText = 'Live Micro-Interaction & Activity Stream (All Records) [WHAT THEY DID]';
+        const actions = rawApiResponse?.recent_actions || [];
+        let html = '<table class="stream-table"><thead><tr><th>Time</th><th>Visitor</th><th>Type</th><th>Page</th><th>Snippet / Target</th></tr></thead><tbody>';
+        actions.forEach(a => {
+          html += `<tr><td>${a.occurred_at?.slice(11,19) || '-'}</td><td>${a.visitor_id?.slice(0,12)}</td><td>${a.event_type}</td><td>${a.pathname}</td><td>${a.target_text || a.target_tag || '-'}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        content.innerHTML = html;
+      } else if (type === 'modalGeo') {
         title.innerText = 'Full Geographic Breakdown (All Datacenters & Regions)';
         const countries = rawApiResponse?.top_countries || [];
         let html = '<table class="stream-table"><thead><tr><th>Country</th><th>City</th><th>Sessions Count</th></tr></thead><tbody>';
