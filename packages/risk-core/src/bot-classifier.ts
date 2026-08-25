@@ -2,11 +2,14 @@ import {
   BotCategory,
   BotClassificationResult,
   BotIdentityState,
-  TelemetrySignals
+  TelemetrySignals,
+  TriageCategory
 } from './types.js';
 
 interface BotSignatureEntry {
   category: BotCategory;
+  triageCategory: TriageCategory;
+  vendorGroup: string;
   name: string;
   pattern: RegExp;
 }
@@ -14,55 +17,60 @@ interface BotSignatureEntry {
 // Strictly bounded linear pattern table (Zero nested quantifiers, ReDoS-safe)
 const BOT_SIGNATURES: readonly BotSignatureEntry[] = [
   // 1. Search Engines (Claimed)
-  { category: 'SEARCH_ENGINE', name: 'Googlebot', pattern: /Googlebot/i },
-  { category: 'SEARCH_ENGINE', name: 'Bingbot', pattern: /bingbot|msnbot/i },
-  { category: 'SEARCH_ENGINE', name: 'YandexBot', pattern: /YandexBot/i },
-  { category: 'SEARCH_ENGINE', name: 'Baiduspider', pattern: /Baiduspider/i },
-  { category: 'SEARCH_ENGINE', name: 'DuckDuckBot', pattern: /DuckDuckBot/i },
-  { category: 'SEARCH_ENGINE', name: 'SogouSpider', pattern: /Sogou/i },
+  { category: 'SEARCH_ENGINE', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SearchEngine', name: 'Googlebot', pattern: /Googlebot/i },
+  { category: 'SEARCH_ENGINE', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SearchEngine', name: 'Bingbot', pattern: /bingbot|msnbot/i },
+  { category: 'SEARCH_ENGINE', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SearchEngine', name: 'YandexBot', pattern: /YandexBot/i },
+  { category: 'SEARCH_ENGINE', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SearchEngine', name: 'Baiduspider', pattern: /Baiduspider/i },
+  { category: 'SEARCH_ENGINE', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SearchEngine', name: 'DuckDuckBot', pattern: /DuckDuckBot/i },
+  { category: 'SEARCH_ENGINE', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SearchEngine', name: 'SogouSpider', pattern: /Sogou/i },
+  { category: 'SEARCH_ENGINE', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SearchEngine', name: 'NaverYeti', pattern: /Yeti|NaverBot/i },
 
   // 2. AI Agents & LLM Scrapers (Claimed)
-  { category: 'AI_AGENT', name: 'GPTBot', pattern: /GPTBot|ChatGPT-User/i },
-  { category: 'AI_AGENT', name: 'ClaudeBot', pattern: /ClaudeBot|Claude-Web|anthropic-ai/i },
-  { category: 'AI_AGENT', name: 'PerplexityBot', pattern: /PerplexityBot/i },
-  { category: 'AI_AGENT', name: 'Google-Extended', pattern: /Google-Extended/i },
-  { category: 'AI_AGENT', name: 'Bytespider', pattern: /Bytespider/i },
-  { category: 'AI_AGENT', name: 'CCBot', pattern: /CCBot/i },
-  { category: 'AI_AGENT', name: 'CohereBot', pattern: /cohere-ai/i },
+  { category: 'AI_AGENT', triageCategory: 'AI_AGENT', vendorGroup: 'OpenAI', name: 'GPTBot', pattern: /GPTBot|ChatGPT-User|OAI-SearchBot/i },
+  { category: 'AI_AGENT', triageCategory: 'AI_AGENT', vendorGroup: 'Anthropic', name: 'ClaudeBot', pattern: /ClaudeBot|Claude-Web|anthropic-ai/i },
+  { category: 'AI_AGENT', triageCategory: 'AI_AGENT', vendorGroup: 'Perplexity', name: 'PerplexityBot', pattern: /PerplexityBot/i },
+  { category: 'AI_AGENT', triageCategory: 'AI_AGENT', vendorGroup: 'Google', name: 'Google-Extended', pattern: /Google-Extended|GoogleOther/i },
+  { category: 'AI_AGENT', triageCategory: 'AI_AGENT', vendorGroup: 'ByteDance', name: 'Bytespider', pattern: /Bytespider/i },
+  { category: 'AI_AGENT', triageCategory: 'AI_AGENT', vendorGroup: 'CommonCrawl', name: 'CCBot', pattern: /CCBot/i },
+  { category: 'AI_AGENT', triageCategory: 'AI_AGENT', vendorGroup: 'Cohere', name: 'CohereBot', pattern: /cohere-ai/i },
+  { category: 'AI_AGENT', triageCategory: 'AI_AGENT', vendorGroup: 'DeepSeek', name: 'DeepSeekBot', pattern: /DeepSeek|DeepSeekBot/i },
+  { category: 'AI_AGENT', triageCategory: 'AI_AGENT', vendorGroup: 'Mistral', name: 'MistralBot', pattern: /MistralAI|Mistral/i },
+  { category: 'AI_AGENT', triageCategory: 'AI_AGENT', vendorGroup: 'OtherAI', name: 'LLMAgent', pattern: /langchain|llamaindex|autogpt|chatglm|qwen/i },
 
   // 3. Social Media & Link Preview Bots (Claimed)
-  { category: 'SOCIAL_PREVIEW', name: 'Twitterbot', pattern: /Twitterbot/i },
-  { category: 'SOCIAL_PREVIEW', name: 'Slackbot', pattern: /Slackbot/i },
-  { category: 'SOCIAL_PREVIEW', name: 'Discordbot', pattern: /Discordbot/i },
-  { category: 'SOCIAL_PREVIEW', name: 'FacebookBot', pattern: /facebookexternalhit|facebookcatalog/i },
-  { category: 'SOCIAL_PREVIEW', name: 'TelegramBot', pattern: /TelegramBot/i },
-  { category: 'SOCIAL_PREVIEW', name: 'WhatsApp', pattern: /WhatsApp/i },
-  { category: 'SOCIAL_PREVIEW', name: 'LinkedInBot', pattern: /LinkedInBot/i },
+  { category: 'SOCIAL_PREVIEW', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SocialPreview', name: 'Twitterbot', pattern: /Twitterbot/i },
+  { category: 'SOCIAL_PREVIEW', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SocialPreview', name: 'Slackbot', pattern: /Slackbot/i },
+  { category: 'SOCIAL_PREVIEW', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SocialPreview', name: 'Discordbot', pattern: /Discordbot/i },
+  { category: 'SOCIAL_PREVIEW', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SocialPreview', name: 'FacebookBot', pattern: /facebookexternalhit|facebookcatalog/i },
+  { category: 'SOCIAL_PREVIEW', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SocialPreview', name: 'TelegramBot', pattern: /TelegramBot/i },
+  { category: 'SOCIAL_PREVIEW', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SocialPreview', name: 'WhatsApp', pattern: /WhatsApp/i },
+  { category: 'SOCIAL_PREVIEW', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'SocialPreview', name: 'LinkedInBot', pattern: /LinkedInBot/i },
 
   // 4. Monitoring & Healthcheck Services (Claimed)
-  { category: 'MONITORING', name: 'Pingdom', pattern: /Pingdom/i },
-  { category: 'MONITORING', name: 'UptimeRobot', pattern: /UptimeRobot/i },
-  { category: 'MONITORING', name: 'Datadog', pattern: /Datadog/i },
-  { category: 'MONITORING', name: 'NewRelic', pattern: /NewRelicPinger/i },
-  { category: 'MONITORING', name: 'BetterUptime', pattern: /Better Uptime/i },
+  { category: 'MONITORING', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'Monitoring', name: 'Pingdom', pattern: /Pingdom/i },
+  { category: 'MONITORING', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'Monitoring', name: 'UptimeRobot', pattern: /UptimeRobot/i },
+  { category: 'MONITORING', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'Monitoring', name: 'Datadog', pattern: /Datadog/i },
+  { category: 'MONITORING', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'Monitoring', name: 'NewRelic', pattern: /NewRelicPinger/i },
+  { category: 'MONITORING', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'Monitoring', name: 'BetterUptime', pattern: /Better Uptime/i },
 
   // 5. Feed Fetchers & Readers (Claimed)
-  { category: 'FEED_FETCHER', name: 'AppleNewsBot', pattern: /AppleNewsBot/i },
-  { category: 'FEED_FETCHER', name: 'Feedfetcher-Google', pattern: /Feedfetcher-Google/i },
-  { category: 'FEED_FETCHER', name: 'Feedly', pattern: /Feedly/i },
+  { category: 'FEED_FETCHER', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'FeedFetcher', name: 'AppleNewsBot', pattern: /AppleNewsBot/i },
+  { category: 'FEED_FETCHER', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'FeedFetcher', name: 'Feedfetcher-Google', pattern: /Feedfetcher-Google/i },
+  { category: 'FEED_FETCHER', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'FeedFetcher', name: 'Feedly', pattern: /Feedly/i },
 
   // 6. Automated Tools, Scrapers & Headless Drivers (Claimed / Suspected)
-  { category: 'AUTOMATED_TOOL', name: 'Playwright', pattern: /Playwright/i },
-  { category: 'AUTOMATED_TOOL', name: 'Puppeteer', pattern: /Puppeteer/i },
-  { category: 'AUTOMATED_TOOL', name: 'Selenium', pattern: /Selenium/i },
-  { category: 'AUTOMATED_TOOL', name: 'HeadlessChrome', pattern: /HeadlessChrome/i },
-  { category: 'AUTOMATED_TOOL', name: 'PhantomJS', pattern: /PhantomJS/i },
-  { category: 'AUTOMATED_TOOL', name: 'cURL', pattern: /^curl\//i },
-  { category: 'AUTOMATED_TOOL', name: 'Wget', pattern: /^Wget\//i },
-  { category: 'AUTOMATED_TOOL', name: 'Python-requests', pattern: /python-requests|python-urllib|aiohttp|httpx|Scrapy/i },
-  { category: 'AUTOMATED_TOOL', name: 'Go-http-client', pattern: /Go-http-client/i },
-  { category: 'AUTOMATED_TOOL', name: 'Axios', pattern: /axios\//i },
-  { category: 'AUTOMATED_TOOL', name: 'Java-HttpClient', pattern: /Java\/|Apache-HttpClient/i }
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'HeadlessDriver', name: 'Playwright', pattern: /Playwright/i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'HeadlessDriver', name: 'Puppeteer', pattern: /Puppeteer/i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'HeadlessDriver', name: 'Selenium', pattern: /Selenium/i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'HeadlessDriver', name: 'HeadlessChrome', pattern: /HeadlessChrome/i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'HeadlessDriver', name: 'PhantomJS', pattern: /PhantomJS/i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'CLITool', name: 'cURL', pattern: /^curl\//i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'CLITool', name: 'Wget', pattern: /^Wget\//i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'CLITool', name: 'Python-requests', pattern: /python-requests|python-urllib|aiohttp|httpx|Scrapy/i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'CLITool', name: 'Go-http-client', pattern: /Go-http-client/i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'CLITool', name: 'Axios', pattern: /axios\//i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'CLITool', name: 'Node-fetch', pattern: /node-fetch|undici/i },
+  { category: 'AUTOMATED_TOOL', triageCategory: 'CRAWLER_TOOL', vendorGroup: 'CLITool', name: 'Java-HttpClient', pattern: /Java\/|Apache-HttpClient/i }
 ];
 
 const GENERIC_BOT_PATTERN = /\b(bot|crawler|spider|scraper|archiver|transcoder)\b/i;
@@ -84,10 +92,12 @@ export function classifyBot(uaString?: string, signals?: TelemetrySignals): BotC
 
   // Guard 2: Missing or completely empty User-Agent
   if (!ua) {
-    if (signals?.webdriver) {
+    if (signals?.webdriver || signals?.isHeadlessRenderer || signals?.headlessEvasionsDetected) {
       return {
         isBotLikely: true,
         category: 'AUTOMATED_TOOL',
+        triageCategory: 'CRAWLER_TOOL',
+        vendorGroup: 'HeadlessDriver',
         claimedName: 'headless-webdriver',
         identityState: 'SUSPECTED',
         heuristicConfidence: 0.95,
@@ -97,6 +107,8 @@ export function classifyBot(uaString?: string, signals?: TelemetrySignals): BotC
     return {
       isBotLikely: false,
       category: 'NONE',
+      triageCategory: 'HUMAN',
+      vendorGroup: 'HumanUser',
       identityState: 'NOT_BOT',
       heuristicConfidence: 0.20,
       evidenceCodes: ['UA_EMPTY']
@@ -107,7 +119,7 @@ export function classifyBot(uaString?: string, signals?: TelemetrySignals): BotC
   for (const entry of BOT_SIGNATURES) {
     if (entry.pattern.test(ua)) {
       evidenceCodes.push(`SIGNATURE_MATCH_${entry.category}`);
-      if (signals?.webdriver) {
+      if (signals?.webdriver || signals?.isHeadlessRenderer) {
         evidenceCodes.push('SIGNAL_WEBDRIVER_ACTIVE');
       }
 
@@ -117,6 +129,8 @@ export function classifyBot(uaString?: string, signals?: TelemetrySignals): BotC
       return {
         isBotLikely: true,
         category: entry.category,
+        triageCategory: entry.triageCategory,
+        vendorGroup: entry.vendorGroup,
         claimedName: entry.name,
         identityState,
         heuristicConfidence: entry.category === 'AUTOMATED_TOOL' ? 0.90 : 0.80,
@@ -131,6 +145,8 @@ export function classifyBot(uaString?: string, signals?: TelemetrySignals): BotC
     return {
       isBotLikely: true,
       category: 'UNKNOWN_BOT',
+      triageCategory: 'CRAWLER_TOOL',
+      vendorGroup: 'OtherCrawler',
       claimedName: 'generic-crawler',
       identityState: 'CLAIMED',
       heuristicConfidence: 0.70,
@@ -139,14 +155,31 @@ export function classifyBot(uaString?: string, signals?: TelemetrySignals): BotC
   }
 
   // Step 3: Check Environmental Automation Signals on Standard Browser UA
-  if (signals?.webdriver) {
+  if (signals?.webdriver || signals?.isHeadlessRenderer || signals?.headlessEvasionsDetected) {
     evidenceCodes.push('SIGNAL_WEBDRIVER_ON_STANDARD_UA');
     return {
       isBotLikely: true,
       category: 'AUTOMATED_TOOL',
-      claimedName: 'automated-browser',
+      triageCategory: 'CRAWLER_TOOL',
+      vendorGroup: 'HeadlessDriver',
+      claimedName: 'stealth-headless-browser',
       identityState: 'SUSPECTED',
-      heuristicConfidence: 0.85,
+      heuristicConfidence: 0.95,
+      evidenceCodes
+    };
+  }
+
+  // Step 3b: Check HTTP Missing Headers on Standard Browser UA (e.g. cURL pretending to be Chrome)
+  if (signals?.httpMissingHeaders) {
+    evidenceCodes.push('SIGNAL_SPOOFED_BROWSER_UA_CLI');
+    return {
+      isBotLikely: true,
+      category: 'AUTOMATED_TOOL',
+      triageCategory: 'CRAWLER_TOOL',
+      vendorGroup: 'CLITool',
+      claimedName: 'spoofed-http-client',
+      identityState: 'SUSPECTED',
+      heuristicConfidence: 0.88,
       evidenceCodes
     };
   }
@@ -156,6 +189,8 @@ export function classifyBot(uaString?: string, signals?: TelemetrySignals): BotC
   return {
     isBotLikely: false,
     category: 'NONE',
+    triageCategory: 'HUMAN',
+    vendorGroup: 'HumanUser',
     identityState: 'NOT_BOT',
     heuristicConfidence: 0.90,
     evidenceCodes

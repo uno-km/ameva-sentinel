@@ -74,10 +74,10 @@ async function run() {
       lastReport = await rateSentinel.score(attackerReq);
     }
 
-    // 35 requests exceeds threshold (30) -> triggers rate.burst_request (30) + suspicious_ua (15) = 45 score
+    // 35 requests exceeds threshold (30) -> triggers rate.burst_request (30) + suspicious_ua (15) + bot.classification (35) = 80 score
     assert.ok(lastReport.score >= 45, `Expected score >= 45, got ${lastReport.score}`);
     assert.strictEqual(lastReport.action, SentinelAction.OBSERVE, 'In Shadow Mode, action must remain OBSERVE');
-    assert.strictEqual(lastReport.recommendedAction, SentinelAction.RATE_LIMIT);
+    assert.strictEqual(lastReport.recommendedAction, SentinelAction.TEMPORARY_DENY);
 
     const rulesTriggered = lastReport.evidence.map(e => e.rule);
     assert.ok(rulesTriggered.includes('rate.burst_request'));

@@ -34,7 +34,10 @@ export function createPolicy(options: CreatePolicyOptions = {}): SentinelPolicy 
       rules.burst({ weight: 30, threshold: 30 }),
       rules.trustedInputAbsent({ weight: 20 }),
       rules.touchMismatch({ weight: 15 }),
-      rules.suspiciousUA({ weight: 15 })
+      rules.suspiciousUA({ weight: 15 }),
+      rules.botClassification({ weight: 35 }),
+      rules.headlessDeep({ weight: 40 }),
+      rules.httpMissingHeaders({ weight: 35 })
     ],
     botPolicy: options.botPolicy
   };

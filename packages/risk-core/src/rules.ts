@@ -167,7 +167,7 @@ export const rules = {
    * Evaluates Bot Category against Denylist and Automated Tool patterns
    */
   botClassification: (options: { weight?: number } = {}): RuleDefinition => {
-    const weight = options.weight ?? 30;
+    const weight = options.weight ?? 35;
     return {
       id: 'bot.classification_denylist',
       weight,
@@ -184,6 +184,58 @@ export const rules = {
           message: isAutomatedTool
             ? `Automated tool/scraper category detected (${signals.claimedBot || 'scraper'})`
             : 'Bot classification posture is standard'
+        };
+      }
+    };
+  },
+
+  /**
+   * Evaluates deep headless browser evasions & software WebGL renderers (Playwright/Puppeteer/Selenium)
+   */
+  headlessDeep: (options: { weight?: number } = {}): RuleDefinition => {
+    const weight = options.weight ?? 40;
+    return {
+      id: 'automation.headless_deep',
+      weight,
+      evaluate: (signals) => {
+        const isTriggered = !!signals.isHeadlessRenderer || !!signals.headlessEvasionsDetected;
+        return {
+          triggered: isTriggered,
+          score: isTriggered ? weight : 0,
+          attributes: {
+            headless_renderer: !!signals.isHeadlessRenderer,
+            evasions_detected: !!signals.headlessEvasionsDetected,
+            webgl_renderer: signals.webglRenderer || null,
+            webgl_vendor: signals.webglVendor || null
+          },
+          message: isTriggered
+            ? `Stealth headless browser artifact or virtual CPU renderer detected (${signals.webglRenderer || 'SwiftShader/Headless'})`
+            : 'Browser graphics and environment runtime is authentic'
+        };
+      }
+    };
+  },
+
+  /**
+   * Evaluates missing standard browser headers on Browser-claiming User-Agent (cURL/CLI spoofing)
+   */
+  httpMissingHeaders: (options: { weight?: number } = {}): RuleDefinition => {
+    const weight = options.weight ?? 35;
+    return {
+      id: 'header.http_missing_headers',
+      weight,
+      evaluate: (signals) => {
+        const isTriggered = !!signals.httpMissingHeaders;
+        return {
+          triggered: isTriggered,
+          score: isTriggered ? weight : 0,
+          attributes: {
+            http_missing_headers: isTriggered,
+            user_agent: signals.userAgent || null
+          },
+          message: isTriggered
+            ? 'Browser User-Agent claiming request lacks mandatory Sec-Fetch / Sec-CH-UA browser headers (CLI/cURL Spoofing)'
+            : 'HTTP protocol headers are consistent with browser signature'
         };
       }
     };

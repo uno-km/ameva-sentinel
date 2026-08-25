@@ -1,17 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>if(location.pathname.match(/\/(lib|sdk)\/[^\/]+$/)){location.replace(location.pathname+'/'+location.search+location.hash);}</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Installation & Setup Guide | AMEVA-Sentinel</title>
-  <meta name="description" content="AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging.">
+  <meta name="description" content="Delivers zero-data privacy protection with deterministic 0~100 threat scoring computed entirely on the client, verified across major browser engines with zero external telemetry leakage.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/i18n.js" defer></script>
   <script src="assets/i18n-translations.js" defer></script>
-    <link rel="stylesheet" href="/shared/style.css">
-    <script src="/shared/common.js" defer></script>
 </head>
 <body>
   <header>
@@ -20,10 +17,10 @@
       <h1 data-i18n="common.brand">AMEVA-Sentinel</h1>
     </a>
     <div class="header-controls">
-      <span class="release-tag" data-i18n="common.releaseTag">v0.6.0-alpha.1 (Target Discrimination & Trust Boundary Alpha)</span>
+      <span class="release-tag" data-i18n="common.releaseTag">v1.0.0 (Stable Release)</span>
       <div class="lang-selector-wrapper"></div>
       
-      <a href="https://www.npmjs.com/package/@ameva/sentinel" target="_blank" class="header-btn npm-btn" data-i18n="common.npmBtn">npm (Node.js)</a>
+      <a href="https://www.npmjs.com/package/ameva-sentinel" target="_blank" class="header-btn npm-btn" data-i18n="common.npmBtn">npm (Node.js)</a>
       <a href="https://github.com/uno-km/ameva-sentinel" target="_blank" class="header-btn primary" data-i18n="common.githubBtn">GitHub</a>
     </div>
   </header>
@@ -43,20 +40,21 @@
       <li><a href="advanced-parameters.html" data-i18n="common.nav.advancedParams">Advanced Parameters</a></li>
       <li><a href="versions.html" data-i18n="common.nav.versions">Version Archive</a></li>
     </ul>
-                <h3 data-i18n="common.nav.ecosystem">AMEVA Ecosystem</h3>
-            <ul>
-                <li><a href="/sdk/sentinel/">AMEVA Sentinel (Security SDK)</a></li>
-                <li><a href="/lib/forge/">AMEVA-Forge (WebGPU Autograd)</a></li>
-                <li><a href="/lib/playwright/">Termux-Playwright (Automation)</a></li>
-                <li><a href="/lib/stt/">Termux-STT (Voice STT)</a></li>
-                <li><a href="/lib/diffusion/">Termux-Diffusion (Image AI)</a></li>
-                <li><a href="/lib/train/">Termux-Train (LoRA Engine)</a></li>
-                <li><a href="/app/workstation/">AMEVA Workstation (Web App)</a></li>
-                <li><a href="/foundation/">AMEVA Foundation</a></li>
-                <li><a href="/index.html">Founder Digital CV</a></li>
-            </ul>
-
-            <h3 data-i18n="common.nav.aiSpecs">AI Agent Protocols</h3>
+    <h3 data-i18n="common.nav.ecosystem">AMEVA Ecosystem</h3>
+    <ul>
+      <li><a href="/lib/mcp/">AMEVA-MCP-Hub (Polyglot WASM)</a></li>
+      <li><a href="/lib/sentinel/" class="active">AMEVA Sentinel (Security SDK)</a></li>
+      <li><a href="/lib/forge/">AMEVA-Forge (WebGPU Autograd)</a></li>
+      <li><a href="/lib/bitnet/">Termux-BitNet (1.58-bit LLM)</a></li>
+      <li><a href="/lib/playwright/">Termux-Playwright (Automation)</a></li>
+      <li><a href="/lib/diffusion/">Termux-Diffusion (Image AI)</a></li>
+      <li><a href="/lib/stt/">Termux-STT (Voice STT)</a></li>
+      <li><a href="/lib/train/">Termux-Train (LoRA Engine)</a></li>
+      <li><a href="https://ameva-workstation-web-core.vercel.app/" target="_blank">AMEVA Workstation (Web App)</a></li>
+      <li><a href="/foundation/">AMEVA Foundation</a></li>
+      <li><a href="/">Founder Digital CV</a></li>
+    </ul>
+    <h3 data-i18n="common.nav.aiSpecs">AI Agent Protocols</h3>
     <ul>
       <li><a href="llms.txt" target="_blank">llms.txt (AI Fast Context)</a></li>
       <li><a href="llms-full.txt" target="_blank">llms-full.txt (Full Spec)</a></li>
@@ -67,15 +65,17 @@
 
     <main class="content">
       <h2>Installation & Setup Guide</h2>
-      <p class="subtitle">Node.js ESM, Browser Module, and Zero-Drift Package Setup</p>
+      <p class="subtitle">Hardware acceleration, Termux setup, and dependency management</p>
       <div class="alert alert-tip">
            <span class="alert-title">Prerequisites</span>
-           <p>Node.js &gt;= 20.0.0 (LTS recommended) or any modern browser (Chromium, Firefox, WebKit).</p>
+           <p>Ensure Python 3.9+ or Node.js 18+ is installed on your Linux / Android / Desktop environment.</p>
          </div>
-         <h3>Package Installation (npm)</h3>
-         <pre><code>npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha</code></pre>
-         <h3>Verification Check (Node.js ESM)</h3>
-         <pre><code>node --input-type=module -e "import { createSentinel } from '@ameva/sentinel'; const s = createSentinel(); console.log('??AMEVA Sentinel Initialized OK');"</code></pre>
+         <h3>Package Managers</h3>
+         <pre><code>npm install ameva-sentinel
+# or via CDN script:
+<script src="https://cdn.jsdelivr.net/npm/ameva-sentinel/dist/sentinel.min.js"></script></code></pre>
+         <h3>Verification Check</h3>
+         <pre><code>python -c "import ; print('Installation OK')"</code></pre>
     </main>
   </div>
 

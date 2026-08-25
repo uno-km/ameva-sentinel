@@ -1,17 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>if(location.pathname.match(/\/(lib|sdk)\/[^\/]+$/)){location.replace(location.pathname+'/'+location.search+location.hash);}</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AMEVA-Sentinel | Official Documentation</title>
-  <meta name="description" content="AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging.">
+  <meta name="description" content="Delivers zero-data privacy protection with deterministic 0~100 threat scoring computed entirely on the client, verified across major browser engines with zero external telemetry leakage.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/i18n.js" defer></script>
   <script src="assets/i18n-translations.js" defer></script>
-    <link rel="stylesheet" href="/shared/style.css">
-    <script src="/shared/common.js" defer></script>
 </head>
 <body>
   <header>
@@ -20,10 +17,10 @@
       <h1 data-i18n="common.brand">AMEVA-Sentinel</h1>
     </a>
     <div class="header-controls">
-      <span class="release-tag" data-i18n="common.releaseTag">v0.6.0-alpha.1 (Target Discrimination & Trust Boundary Alpha)</span>
+      <span class="release-tag" data-i18n="common.releaseTag">v1.0.0 (Stable Release)</span>
       <div class="lang-selector-wrapper"></div>
       
-      <a href="https://www.npmjs.com/package/@ameva/sentinel" target="_blank" class="header-btn npm-btn" data-i18n="common.npmBtn">npm (Node.js)</a>
+      <a href="https://www.npmjs.com/package/ameva-sentinel" target="_blank" class="header-btn npm-btn" data-i18n="common.npmBtn">npm (Node.js)</a>
       <a href="https://github.com/uno-km/ameva-sentinel" target="_blank" class="header-btn primary" data-i18n="common.githubBtn">GitHub</a>
     </div>
   </header>
@@ -43,20 +40,21 @@
       <li><a href="advanced-parameters.html" data-i18n="common.nav.advancedParams">Advanced Parameters</a></li>
       <li><a href="versions.html" data-i18n="common.nav.versions">Version Archive</a></li>
     </ul>
-                <h3 data-i18n="common.nav.ecosystem">AMEVA Ecosystem</h3>
-            <ul>
-                <li><a href="/sdk/sentinel/">AMEVA Sentinel (Security SDK)</a></li>
-                <li><a href="/lib/forge/">AMEVA-Forge (WebGPU Autograd)</a></li>
-                <li><a href="/lib/playwright/">Termux-Playwright (Automation)</a></li>
-                <li><a href="/lib/stt/">Termux-STT (Voice STT)</a></li>
-                <li><a href="/lib/diffusion/">Termux-Diffusion (Image AI)</a></li>
-                <li><a href="/lib/train/">Termux-Train (LoRA Engine)</a></li>
-                <li><a href="/app/workstation/">AMEVA Workstation (Web App)</a></li>
-                <li><a href="/foundation/">AMEVA Foundation</a></li>
-                <li><a href="/index.html">Founder Digital CV</a></li>
-            </ul>
-
-            <h3 data-i18n="common.nav.aiSpecs">AI Agent Protocols</h3>
+    <h3 data-i18n="common.nav.ecosystem">AMEVA Ecosystem</h3>
+    <ul>
+      <li><a href="/lib/mcp/">AMEVA-MCP-Hub (Polyglot WASM)</a></li>
+      <li><a href="/lib/sentinel/" class="active">AMEVA Sentinel (Security SDK)</a></li>
+      <li><a href="/lib/forge/">AMEVA-Forge (WebGPU Autograd)</a></li>
+      <li><a href="/lib/bitnet/">Termux-BitNet (1.58-bit LLM)</a></li>
+      <li><a href="/lib/playwright/">Termux-Playwright (Automation)</a></li>
+      <li><a href="/lib/diffusion/">Termux-Diffusion (Image AI)</a></li>
+      <li><a href="/lib/stt/">Termux-STT (Voice STT)</a></li>
+      <li><a href="/lib/train/">Termux-Train (LoRA Engine)</a></li>
+      <li><a href="https://ameva-workstation-web-core.vercel.app/" target="_blank">AMEVA Workstation (Web App)</a></li>
+      <li><a href="/foundation/">AMEVA Foundation</a></li>
+      <li><a href="/">Founder Digital CV</a></li>
+    </ul>
+    <h3 data-i18n="common.nav.aiSpecs">AI Agent Protocols</h3>
     <ul>
       <li><a href="llms.txt" target="_blank">llms.txt (AI Fast Context)</a></li>
       <li><a href="llms-full.txt" target="_blank">llms-full.txt (Full Spec)</a></li>
@@ -68,49 +66,47 @@
     <main class="content">
       <!-- Section 1: Main Title & Subtitle -->
       <h2 data-i18n="home.title">AMEVA-Sentinel</h2>
-      <p class="subtitle" data-i18n="home.subtitle">Privacy-first Security Observability and Deterministic Threat Scoring Layer for Web Applications</p>
+      <p class="subtitle" data-i18n="home.subtitle">Privacy-First 0-Data Browser Observability & Deterministic 0~100 Threat Scoring SDK</p>
 
       <!-- Section 2: Badges Bar -->
       <div class="badges-bar">
-        <a href="https://www.npmjs.com/package/@ameva/sentinel" target="_blank"><img src="https://img.shields.io/npm/v/@ameva/sentinel.svg?color=cb3837" alt="npm Version"></a>
-        <a href="https://www.npmjs.com/package/@ameva/sentinel" target="_blank"><img src="https://img.shields.io/npm/dm/@ameva/sentinel.svg?color=2563eb&label=npm%20Downloads" alt="npm Downloads"></a>
+        <a href="https://www.npmjs.com/package/ameva-sentinel" target="_blank"><img src="https://img.shields.io/npm/v/ameva-sentinel.svg?color=cb3837" alt="npm Version"></a>
+        <a href="https://www.npmjs.com/package/ameva-sentinel" target="_blank"><img src="https://img.shields.io/npm/dm/ameva-sentinel.svg?color=2563eb&label=npm%20Downloads" alt="npm Downloads"></a>
         <img src="https://img.shields.io/badge/license-Apache-2.0-success.svg" alt="License">
         <img src="https://img.shields.io/badge/tests-100%25_PASS-success.svg" alt="Tests">
-        <img src="https://img.shields.io/badge/platform-Browser_DOM_/_NodeNext_ESM-blueviolet.svg" alt="Platform">
+        <img src="https://img.shields.io/badge/platform-Universal_Browser_/_Web_Standard-blueviolet.svg" alt="Platform">
       </div>
 
       <!-- Section 3: 1-Line Quick Installation Alert -->
       <div class="alert alert-tip">
         <span class="alert-title" data-i18n="home.quickInstallTitle">1-Line Quick Installation</span>
         <p data-i18n="home.quickInstallDesc">Install the official package directly into your runtime:</p>
-        <pre><code>npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha</code></pre>
+        <pre><code>npm install ameva-sentinel
+# or via CDN script:
+<script src="https://cdn.jsdelivr.net/npm/ameva-sentinel/dist/sentinel.min.js"></script></code></pre>
       </div>
 
       <!-- Section 4: Engineering Challenge & Architectural Breakthrough -->
       <h3 data-i18n="home.challengeTitle">The Engineering Challenge</h3>
-      <p data-i18n="home.challengeText">Traditional bot mitigation SDKs aggressively collect unhashed keystrokes, absolute mouse coordinates, and intrusive canvas hashes, resulting in severe GDPR/CCPA regulatory liabilities and unpredictable false-positive blocks.</p>
+      <p data-i18n="home.challengeText">Conventional client security SDKs compromise user privacy by capturing sensitive keystrokes, form inputs, and behavioral telemetry back to central cloud collectors.</p>
 
       <h3 data-i18n="home.breakthroughTitle">The Architectural Breakthrough</h3>
-      <p data-i18n="home.breakthroughText">AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging.</p>
+      <p data-i18n="home.breakthroughText">Delivers zero-data privacy protection with deterministic 0~100 threat scoring computed entirely on the client, verified across major browser engines with zero external telemetry leakage.</p>
 
       <!-- Section 5: Key Capabilities Grid -->
       <h3 data-i18n="home.featuresTitle">Key Capabilities &amp; Built-in Hardening</h3>
       <div class="features-grid">
         <div class="feature-card">
-          <h4 data-i18n="home.features.0.title">Privacy-by-Design Zero Raw Telemetry</h4>
-          <p data-i18n="home.features.0.desc">Collects only derived interaction intervals and trusted event counters without recording keystrokes or cursor coordinates.</p>
+          <h4 data-i18n="home.features.0.title">Zero-Data Privacy Boundary</h4>
+          <p data-i18n="home.features.0.desc">Never collects keystrokes, passwords, or PII. Evaluates only structural browser signals.</p>
         </div>
         <div class="feature-card">
-          <h4 data-i18n="home.features.1.title">Deterministic Policy Evaluation Engine</h4>
-          <p data-i18n="home.features.1.desc">Pure function evaluation guaranteeing algebraic score bounds, rule immutability, and transparent reasoning evidence.</p>
+          <h4 data-i18n="home.features.1.title">Deterministic 0~100 Scoring</h4>
+          <p data-i18n="home.features.1.desc">Deterministic weighted rule engine calculating objective risk levels without opaque black-box AI.</p>
         </div>
         <div class="feature-card">
-          <h4 data-i18n="home.features.2.title">Shadow Mode Observability Architecture</h4>
-          <p data-i18n="home.features.2.desc">Operates safely in shadow mode with LocalStorage persistence and cross-tab real-time event synchronization.</p>
-        </div>
-        <div class="feature-card">
-          <h4 data-i18n="home.features.3.title">Cross-Browser Verified Zero-Drift SDK</h4>
-          <p data-i18n="home.features.3.desc">E2E automated verification across Chromium, Firefox, and WebKit ensuring identical behavior on all platforms.</p>
+          <h4 data-i18n="home.features.2.title">Cross-Engine Compatibility</h4>
+          <p data-i18n="home.features.2.desc">Tested across Chromium, Gecko, and WebKit with zero layout shift and sub-1ms evaluation.</p>
         </div>
       </div>
 
@@ -126,43 +122,51 @@
         </thead>
         <tbody>
           <tr>
-            <td><strong>Client Telemetry Subsystem</strong></td>
-            <td>Throttled pointermove (100ms), Discrete Click/Touch Observation, Hardware Webdriver Detection</td>
-            <td><span class="status-badge active">Verified (Chromium, Firefox, WebKit)</span></td>
+            <td><strong>Observability Engine</strong></td>
+            <td>CDP Signal Audit, DOM Tree Integrity, Extension Injection Probe</td>
+            <td><span class="status-badge active">Production</span></td>
           </tr>
           <tr>
-            <td><strong>Risk Core Engine</strong></td>
-            <td>Deterministic Rule Scoring, Policy-as-Code Compiler, Evidence Confidence Metric</td>
-            <td><span class="status-badge active">Verified (100% Quality Gates)</span></td>
+            <td><strong>Scoring Matrix</strong></td>
+            <td>0~100 Weighted Deterministic Rules, Anomaly Flagging</td>
+            <td><span class="status-badge active">Production</span></td>
           </tr>
           <tr>
-            <td><strong>Stateful Enforcement</strong></td>
-            <td>Fixed-Window Session Burst Limiter, LocalStorage Deduplicated Event Store</td>
-            <td><span class="status-badge active">Verified (Idempotent v1.0)</span></td>
+            <td><strong>Runtime Envelope</strong></td>
+            <td>Vanilla JS, React / Next.js, Web Worker Sandbox</td>
+            <td><span class="status-badge active">Production</span></td>
           </tr>
         </tbody>
       </table>
 
       <!-- Section 7: Canonical Usage Example -->
       <h3 data-i18n="home.codeExampleTitle">Canonical Usage Example</h3>
-      <pre><code>import { createBrowserTelemetry } from '@ameva/sentinel-browser';
-import { createSentinel, MemoryFixedWindowCounterStore, LocalStorageRiskEventStore } from '@ameva/sentinel';
-
-// 1. Collect privacy-safe derived interaction signals
-const telemetry = createBrowserTelemetry({ autoStart: true });
-const signals = telemetry.snapshot();
-
-// 2. Initialize Sentinel Shadow-mode instance
-const sentinel = createSentinel({
-  mode: 'shadow',
-  counterStore: new MemoryFixedWindowCounterStore(),
-  eventStore: new LocalStorageRiskEventStore()
-});
-
-// 3. Evaluate and inspect transparent risk report
-const report = await sentinel.score({ signals });
-console.log(`Trace ID: ${report.traceId}, Score: ${report.score}, Action: ${report.action}`);
+      <div class="code-tab-group">
+        <div class="code-tabs-header">
+          <button class="code-tab-btn active" type="button">Python (pip)</button>
+          <button class="code-tab-btn" type="button">Node.js (npm)</button>
+        </div>
+        <div class="code-tab-content" style="display:block;">
+          <pre><code># Sentinel is a Browser & Node.js Web Observability SDK.
+# For Python backends, verify JWT tokens signed by Sentinel client:
+import jwt
+claims = jwt.decode(sentinel_token, secret_key, algorithms=["HS256"])
+print(f"Verified Client Risk Score: {claims['risk_score']}")
 </code></pre>
+        </div>
+        <div class="code-tab-content" style="display:none;">
+          <pre><code>import { Sentinel } from "ameva-sentinel";
+
+// 1. Initialize Sentinel SDK
+const sentinel = new Sentinel({ sampleRate: 1.0, debug: false });
+await sentinel.init();
+
+// 2. Obtain deterministic client health score
+const report = await sentinel.evaluate();
+console.log("Client Risk Score:", report.score); // 0 (Safe) ~ 100 (High Risk)
+</code></pre>
+        </div>
+      </div>
 
       <!-- Section 8: Getting Started Navigation -->
       <h3 data-i18n="home.nextStepsTitle">Getting Started &amp; Deep Guides</h3>

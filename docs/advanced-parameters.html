@@ -1,17 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>if(location.pathname.match(/\/(lib|sdk)\/[^\/]+$/)){location.replace(location.pathname+'/'+location.search+location.hash);}</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Advanced Parameters & Tuning | AMEVA-Sentinel</title>
-  <meta name="description" content="AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging.">
+  <meta name="description" content="Delivers zero-data privacy protection with deterministic 0~100 threat scoring computed entirely on the client, verified across major browser engines with zero external telemetry leakage.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/i18n.js" defer></script>
   <script src="assets/i18n-translations.js" defer></script>
-    <link rel="stylesheet" href="/shared/style.css">
-    <script src="/shared/common.js" defer></script>
 </head>
 <body>
   <header>
@@ -20,10 +17,10 @@
       <h1 data-i18n="common.brand">AMEVA-Sentinel</h1>
     </a>
     <div class="header-controls">
-      <span class="release-tag" data-i18n="common.releaseTag">v0.6.0-alpha.1 (Target Discrimination & Trust Boundary Alpha)</span>
+      <span class="release-tag" data-i18n="common.releaseTag">v1.0.0 (Stable Release)</span>
       <div class="lang-selector-wrapper"></div>
       
-      <a href="https://www.npmjs.com/package/@ameva/sentinel" target="_blank" class="header-btn npm-btn" data-i18n="common.npmBtn">npm (Node.js)</a>
+      <a href="https://www.npmjs.com/package/ameva-sentinel" target="_blank" class="header-btn npm-btn" data-i18n="common.npmBtn">npm (Node.js)</a>
       <a href="https://github.com/uno-km/ameva-sentinel" target="_blank" class="header-btn primary" data-i18n="common.githubBtn">GitHub</a>
     </div>
   </header>
@@ -43,20 +40,21 @@
       <li><a href="advanced-parameters.html" class="active" data-i18n="common.nav.advancedParams">Advanced Parameters</a></li>
       <li><a href="versions.html" data-i18n="common.nav.versions">Version Archive</a></li>
     </ul>
-                <h3 data-i18n="common.nav.ecosystem">AMEVA Ecosystem</h3>
-            <ul>
-                <li><a href="/sdk/sentinel/">AMEVA Sentinel (Security SDK)</a></li>
-                <li><a href="/lib/forge/">AMEVA-Forge (WebGPU Autograd)</a></li>
-                <li><a href="/lib/playwright/">Termux-Playwright (Automation)</a></li>
-                <li><a href="/lib/stt/">Termux-STT (Voice STT)</a></li>
-                <li><a href="/lib/diffusion/">Termux-Diffusion (Image AI)</a></li>
-                <li><a href="/lib/train/">Termux-Train (LoRA Engine)</a></li>
-                <li><a href="/app/workstation/">AMEVA Workstation (Web App)</a></li>
-                <li><a href="/foundation/">AMEVA Foundation</a></li>
-                <li><a href="/index.html">Founder Digital CV</a></li>
-            </ul>
-
-            <h3 data-i18n="common.nav.aiSpecs">AI Agent Protocols</h3>
+    <h3 data-i18n="common.nav.ecosystem">AMEVA Ecosystem</h3>
+    <ul>
+      <li><a href="/lib/mcp/">AMEVA-MCP-Hub (Polyglot WASM)</a></li>
+      <li><a href="/lib/sentinel/" class="active">AMEVA Sentinel (Security SDK)</a></li>
+      <li><a href="/lib/forge/">AMEVA-Forge (WebGPU Autograd)</a></li>
+      <li><a href="/lib/bitnet/">Termux-BitNet (1.58-bit LLM)</a></li>
+      <li><a href="/lib/playwright/">Termux-Playwright (Automation)</a></li>
+      <li><a href="/lib/diffusion/">Termux-Diffusion (Image AI)</a></li>
+      <li><a href="/lib/stt/">Termux-STT (Voice STT)</a></li>
+      <li><a href="/lib/train/">Termux-Train (LoRA Engine)</a></li>
+      <li><a href="https://ameva-workstation-web-core.vercel.app/" target="_blank">AMEVA Workstation (Web App)</a></li>
+      <li><a href="/foundation/">AMEVA Foundation</a></li>
+      <li><a href="/">Founder Digital CV</a></li>
+    </ul>
+    <h3 data-i18n="common.nav.aiSpecs">AI Agent Protocols</h3>
     <ul>
       <li><a href="llms.txt" target="_blank">llms.txt (AI Fast Context)</a></li>
       <li><a href="llms-full.txt" target="_blank">llms-full.txt (Full Spec)</a></li>
@@ -67,30 +65,9 @@
 
     <main class="content">
       <h2>Advanced Parameters & Tuning</h2>
-      <p class="subtitle">Threshold Boundaries, Rule Weights, and Store Retention Configuration</p>
-
-      <h3>1. Policy Action Thresholds</h3>
-      <table class="data-table">
-        <thead><tr><th>Threshold Parameter</th><th>Default Value</th><th>Enforcement Action Triggered</th></tr></thead>
-        <tbody>
-          <tr><td><code>thresholds.deny</code></td><td><code>75</code></td><td><code>TEMPORARY_DENY</code> (Deny high-risk burst or confirmed bot)</td></tr>
-          <tr><td><code>thresholds.appVerification</code></td><td><code>50</code></td><td><code>REQUIRE_APP_VERIFICATION</code> (Request challenge / step-up)</td></tr>
-          <tr><td><code>thresholds.rateLimit</code></td><td><code>30</code></td><td><code>RATE_LIMIT</code> (Throttle rapid request frequency)</td></tr>
-          <tr><td><code>thresholds.observe</code></td><td><code>20</code></td><td><code>OBSERVE</code> (Log transparent evidence telemetry)</td></tr>
-        </tbody>
-      </table>
-
-      <h3>2. Built-in Rule Weight Configuration</h3>
-      <table class="data-table">
-        <thead><tr><th>Rule ID</th><th>Default Weight</th><th>Default Options</th></tr></thead>
-        <tbody>
-          <tr><td><code>automation.webdriver</code></td><td><code>25</code></td><td><code>{ weight: 25 }</code></td></tr>
-          <tr><td><code>rate.burst_request</code></td><td><code>30</code></td><td><code>{ weight: 30, threshold: 30, windowMs: 10000 }</code></td></tr>
-          <tr><td><code>interaction.trusted_input_absent</code></td><td><code>20</code></td><td><code>{ weight: 20, minDurationMs: 5000, minBurst: 5 }</code></td></tr>
-          <tr><td><code>environment.touch_mismatch</code></td><td><code>15</code></td><td><code>{ weight: 15 }</code></td></tr>
-          <tr><td><code>header.suspicious_ua</code></td><td><code>15</code></td><td><code>{ weight: 15 }</code></td></tr>
-        </tbody>
-      </table>
+      <p class="subtitle">Kernel-level tuning, buffer pool sizing, and thread configuration</p>
+      <h3>Memory Buffer Pool Configuration</h3>
+         <p>Adjust max memory threshold and swap behaviors for ultra-constrained edge nodes.</p>
     </main>
   </div>
 

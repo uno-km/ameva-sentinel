@@ -1,7 +1,7 @@
-# 🛡️ AMEVA Sentinel
+# AMEVA Sentinel
 
-> **Privacy-first Security Observability Layer for Web Applications**  
-> *AMEVA Sentinel v0.6.0-alpha.1 — Target Discrimination, Smart Bot Classifier & Trust Boundary Engine*
+> **Privacy-First Security Observability & Deterministic Traffic Governance Layer for Web Applications**  
+> *AMEVA Sentinel v0.7.0 — Multi-Taxonomy Bot Classification, Cryptographic Trust Boundaries, and Zero-Data Telemetry.*
 
 [![Official Documentation](https://img.shields.io/badge/docs-uno--km.vercel.app%2Fsentinel-004499?style=flat-square&logo=vercel)](https://uno-km.vercel.app/sentinel/)
 [![npm package](https://img.shields.io/npm/v/@ameva/sentinel/alpha?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/@ameva/sentinel)
@@ -10,20 +10,16 @@
 [![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)](https://uno-km.vercel.app/sentinel/)
 [![Foundation](https://img.shields.io/badge/AOSF-Tier%201%20TLP-f59e0b?style=flat-square)](https://uno-km.vercel.app/docs/foundation/)
 
-> [!NOTE]
-> **Pre-release Notice**: Version `0.6.0-alpha.1` introduces Target Discrimination (`HUMANS_ONLY`, `BOTS_ONLY`, `VERIFIED_PARTNERS_ONLY`), 7-tier bot taxonomy, cryptographic trust boundary collector verification (`sv1` envelope), and closed-destination URL routing.  
-> Complete interactive documentation & API reference: [https://uno-km.vercel.app/sentinel/](https://uno-km.vercel.app/sentinel/)
+---
+
+## Canonical Mission
+
+> **"Observe, Measure, Explain, and Score incoming web traffic with privacy-by-design."**  
+> *0% mouse coordinate collection, 0% keylogging, 100% deterministic scorecards.*
 
 ---
 
-## 🎯 Canonical Mission
-
-> **"웹 서비스에 들어오는 트래픽을 관측하고, 측정하고, 설명하고, 점수화한다."**  
-> *(Observe, Measure, Explain, and Score incoming web traffic with privacy-by-design.)*
-
----
-
-## 🏗️ Architecture & Single Source of Truth
+## Architecture & Single Source of Truth
 
 ```text
 [Incoming Request / Client Interaction]
@@ -46,7 +42,7 @@
 
 ---
 
-## 📦 10-Second Quickstart
+## 10-Second Quickstart
 
 ### 1. Installation
 ```bash
@@ -58,49 +54,27 @@ npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-
 import { createBrowserTelemetry } from '@ameva/sentinel-browser';
 
 const telemetry = createBrowserTelemetry({ autoStart: true });
-const signals = telemetry.snapshot();
+const envelope = await telemetry.flush();
 ```
 
-### 3. Server Risk Evaluation & Collector Verification (`@ameva/sentinel`)
+### 3. Server-Side Risk Verification (`@ameva/sentinel`)
 ```javascript
-import {
-  createSentinel,
-  StaticKeyResolver,
-  MemoryNonceStore,
-  MemoryFixedWindowCounterStore,
-  LocalStorageRiskEventStore
-} from '@ameva/sentinel';
+import { Sentinel } from '@ameva/sentinel';
 
-const sentinel = createSentinel({
-  mode: 'shadow',
-  keyResolver: new StaticKeyResolver({ 'prod-key-1': process.env.COLLECTOR_SECRET }),
-  nonceStore: new MemoryNonceStore(),
-  expectedAudience: 'sentinel-api-prod',
-  expectedPurpose: 'telemetry-collect',
-  allowedIssuers: ['partner-corp'],
-  counterStore: new MemoryFixedWindowCounterStore(),
-  eventStore: new LocalStorageRiskEventStore()
-});
-
-const report = await sentinel.score({
-  headers: {
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36',
-    'authorization': 'Bearer sv1.ey...sig'
+const sentinel = new Sentinel({
+  targetMode: 'HUMANS_ONLY',
+  tokenVerifier: {
+    expectedAudience: 'https://my-app.com',
+    secretKey: process.env.SENTINEL_SECRET_KEY,
   },
-  signals
 });
 
-console.log(report);
+const report = await sentinel.score(request);
+console.log(`Action: ${report.action}, Score: ${report.score}`);
 ```
 
 ---
 
-## 🧪 Comprehensive Test Suite & Results (86 / 86 Release Checks)
+## License
 
-Execute the full fail-closed verification pipeline:
-```bash
-npm run build && npm run test:types && npm run test:unit && npx playwright test
-node scripts/generate_test_report.js
-```
-
-Full details available in [TEST_SUITE_AND_RESULTS.md](reports/TEST_SUITE_AND_RESULTS.md).
+Apache-2.0. Copyright (c) 2026 uno-km (AMEVA Foundation).

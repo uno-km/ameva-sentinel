@@ -19,6 +19,8 @@ export interface EvaluateOptions {
   policy?: SentinelPolicy;
   traceId?: string;
   enforcementMode?: EnforcementMode;
+  timezone?: string;
+  locale?: string;
 }
 
 /**
@@ -180,6 +182,38 @@ function evaluateWithTrust(
     }
   }
 
+  const evaluatedDate = new Date();
+  let resolvedTz = 'UTC';
+  try {
+    if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+      resolvedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    }
+  } catch {}
+
+  const activeTz = (typeof optionsOrPolicy === 'object' && 'timezone' in optionsOrPolicy && optionsOrPolicy.timezone)
+    ? optionsOrPolicy.timezone
+    : (signals.timezone as string || resolvedTz);
+
+  const activeLocale = (typeof optionsOrPolicy === 'object' && 'locale' in optionsOrPolicy && optionsOrPolicy.locale)
+    ? optionsOrPolicy.locale
+    : (signals.locale as string || 'en-US');
+
+  let formattedEvaluatedAt: string | undefined;
+  try {
+    formattedEvaluatedAt = evaluatedDate.toLocaleString(activeLocale, {
+      timeZone: activeTz && activeTz !== 'local' ? activeTz : undefined,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  } catch {
+    formattedEvaluatedAt = evaluatedDate.toLocaleString();
+  }
+
   return {
     traceId: currentTraceId,
     score: finalScore,
@@ -196,7 +230,11 @@ function evaluateWithTrust(
     enforcementMode,
     policyVersion: policy.version,
     evidence,
-    evaluatedAt: new Date().toISOString(),
+    evaluatedAt: evaluatedDate.toISOString(),
+    timezone: activeTz,
+    timezoneOffset: evaluatedDate.getTimezoneOffset(),
+    locale: activeLocale,
+    formattedEvaluatedAt,
     signals: safeSignals
   };
 }

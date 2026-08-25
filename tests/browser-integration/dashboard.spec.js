@@ -37,12 +37,14 @@ test.describe('AMEVA Sentinel Real-Browser Integration', () => {
       await dashboard.goto('/packages/dashboard/index.html');
 
       const before = Number(await dashboard.locator('[data-testid="event-count"]').textContent());
+      const crawlerBefore = Number(await dashboard.locator('#triage-crawler-total').textContent());
 
-      // Generate event on producer tab
-      await producer.getByRole('button', { name: /simulate headless bot/i }).click();
+      // Generate event on producer tab (Playwright Stealth simulation)
+      await producer.getByRole('button', { name: /sim playwright stealth|simulate headless bot/i }).click();
 
       // Verify dashboard tab updates count dynamically without reload
       await expect(dashboard.locator('[data-testid="event-count"]')).toHaveText(String(before + 1));
+      await expect(dashboard.locator('#triage-crawler-total')).toHaveText(String(crawlerBefore + 1));
     } finally {
       await producer.close().catch(() => {});
       await dashboard.close().catch(() => {});

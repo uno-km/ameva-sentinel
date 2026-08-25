@@ -1,17 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>if(location.pathname.match(/\/(lib|sdk)\/[^\/]+$/)){location.replace(location.pathname+'/'+location.search+location.hash);}</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quickstart & Execution Recipes | AMEVA-Sentinel</title>
-  <meta name="description" content="AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores with transparent evidence logging.">
+  <meta name="description" content="Delivers zero-data privacy protection with deterministic 0~100 threat scoring computed entirely on the client, verified across major browser engines with zero external telemetry leakage.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="assets/style.css">
   <script src="assets/i18n.js" defer></script>
   <script src="assets/i18n-translations.js" defer></script>
-    <link rel="stylesheet" href="/shared/style.css">
-    <script src="/shared/common.js" defer></script>
 </head>
 <body>
   <header>
@@ -20,10 +17,10 @@
       <h1 data-i18n="common.brand">AMEVA-Sentinel</h1>
     </a>
     <div class="header-controls">
-      <span class="release-tag" data-i18n="common.releaseTag">v0.6.0-alpha.1 (Target Discrimination & Trust Boundary Alpha)</span>
+      <span class="release-tag" data-i18n="common.releaseTag">v1.0.0 (Stable Release)</span>
       <div class="lang-selector-wrapper"></div>
       
-      <a href="https://www.npmjs.com/package/@ameva/sentinel" target="_blank" class="header-btn npm-btn" data-i18n="common.npmBtn">npm (Node.js)</a>
+      <a href="https://www.npmjs.com/package/ameva-sentinel" target="_blank" class="header-btn npm-btn" data-i18n="common.npmBtn">npm (Node.js)</a>
       <a href="https://github.com/uno-km/ameva-sentinel" target="_blank" class="header-btn primary" data-i18n="common.githubBtn">GitHub</a>
     </div>
   </header>
@@ -43,20 +40,21 @@
       <li><a href="advanced-parameters.html" data-i18n="common.nav.advancedParams">Advanced Parameters</a></li>
       <li><a href="versions.html" data-i18n="common.nav.versions">Version Archive</a></li>
     </ul>
-                <h3 data-i18n="common.nav.ecosystem">AMEVA Ecosystem</h3>
-            <ul>
-                <li><a href="/sdk/sentinel/">AMEVA Sentinel (Security SDK)</a></li>
-                <li><a href="/lib/forge/">AMEVA-Forge (WebGPU Autograd)</a></li>
-                <li><a href="/lib/playwright/">Termux-Playwright (Automation)</a></li>
-                <li><a href="/lib/stt/">Termux-STT (Voice STT)</a></li>
-                <li><a href="/lib/diffusion/">Termux-Diffusion (Image AI)</a></li>
-                <li><a href="/lib/train/">Termux-Train (LoRA Engine)</a></li>
-                <li><a href="/app/workstation/">AMEVA Workstation (Web App)</a></li>
-                <li><a href="/foundation/">AMEVA Foundation</a></li>
-                <li><a href="/index.html">Founder Digital CV</a></li>
-            </ul>
-
-            <h3 data-i18n="common.nav.aiSpecs">AI Agent Protocols</h3>
+    <h3 data-i18n="common.nav.ecosystem">AMEVA Ecosystem</h3>
+    <ul>
+      <li><a href="/lib/mcp/">AMEVA-MCP-Hub (Polyglot WASM)</a></li>
+      <li><a href="/lib/sentinel/" class="active">AMEVA Sentinel (Security SDK)</a></li>
+      <li><a href="/lib/forge/">AMEVA-Forge (WebGPU Autograd)</a></li>
+      <li><a href="/lib/bitnet/">Termux-BitNet (1.58-bit LLM)</a></li>
+      <li><a href="/lib/playwright/">Termux-Playwright (Automation)</a></li>
+      <li><a href="/lib/diffusion/">Termux-Diffusion (Image AI)</a></li>
+      <li><a href="/lib/stt/">Termux-STT (Voice STT)</a></li>
+      <li><a href="/lib/train/">Termux-Train (LoRA Engine)</a></li>
+      <li><a href="https://ameva-workstation-web-core.vercel.app/" target="_blank">AMEVA Workstation (Web App)</a></li>
+      <li><a href="/foundation/">AMEVA Foundation</a></li>
+      <li><a href="/">Founder Digital CV</a></li>
+    </ul>
+    <h3 data-i18n="common.nav.aiSpecs">AI Agent Protocols</h3>
     <ul>
       <li><a href="llms.txt" target="_blank">llms.txt (AI Fast Context)</a></li>
       <li><a href="llms-full.txt" target="_blank">llms-full.txt (Full Spec)</a></li>
@@ -69,38 +67,14 @@
       <h2>Quickstart & Execution Recipes</h2>
       <p class="subtitle">Standard usage patterns and rapid prototyping code</p>
       <h3>Basic Execution Recipe</h3>
-         <pre><code>import { createBrowserTelemetry } from '@ameva/sentinel-browser';
-import { createSentinel, MemoryFixedWindowCounterStore, LocalStorageRiskEventStore } from '@ameva/sentinel';
-
-// 1. Collect privacy-safe derived interaction signals
-const telemetry = createBrowserTelemetry({ autoStart: true });
-const signals = telemetry.snapshot();
-
-// 2. Initialize Sentinel Shadow-mode instance
-const sentinel = createSentinel({
-  mode: 'shadow',
-  counterStore: new MemoryFixedWindowCounterStore(),
-  eventStore: new LocalStorageRiskEventStore()
-});
-
-// 3. Evaluate and inspect transparent risk report
-const report = await sentinel.score({ signals });
-console.log(`Trace ID: ${report.traceId}, Score: ${report.score}, Action: ${report.action}`);
+         <pre><code># Sentinel is a Browser & Node.js Web Observability SDK.
+# For Python backends, verify JWT tokens signed by Sentinel client:
+import jwt
+claims = jwt.decode(sentinel_token, secret_key, algorithms=["HS256"])
+print(f"Verified Client Risk Score: {claims['risk_score']}")
 </code></pre>
-         <h3>Recipe 2: Custom Policy-as-Code with Weighted Rules</h3>
-         <pre><code>import { createSentinel, createPolicy, rules } from '@ameva/sentinel';
-
-const strictPolicy = createPolicy({
-  rules: [
-    rules.webdriver({ weight: 35 }),
-    rules.burst({ weight: 40, threshold: 15 }),
-    rules.trustedInputAbsent({ weight: 25, minDurationMs: 3000 })
-  ],
-  thresholds: { deny: 70, appVerification: 45, rateLimit: 25 }
-});
-
-const sentinel = createSentinel({ policy: strictPolicy, mode: 'shadow' });
-const report = await sentinel.score({ signals });</code></pre>
+         <h3>Production Asynchronous Batching</h3>
+         <p>Utilize weakref pooling and zero-copy streaming buffers for continuous pipelines.</p>
     </main>
   </div>
 

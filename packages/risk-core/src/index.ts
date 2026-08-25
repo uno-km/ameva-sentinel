@@ -34,3 +34,4 @@ export {
 
 
 export * from './snapshot-cache.js';
+export * from './geo-delivery.js';

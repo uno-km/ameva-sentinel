@@ -50,6 +50,8 @@ export type RedirectDestinationId =
 export interface BotClassificationResult {
   isBotLikely: boolean;
   category: BotCategory;
+  triageCategory?: TriageCategory;
+  vendorGroup?: string;
   claimedName?: string;
   identityState: BotIdentityState;
   heuristicConfidence: number; // 0.00 ~ 1.00 (Signal Strength Index)
@@ -125,6 +127,38 @@ export interface SanitizedEvidence {
   message: string;
 }
 
+export type TriageCategory = 'HUMAN' | 'AI_AGENT' | 'CRAWLER_TOOL';
+
+export interface TriageAnalyticsBreakdown {
+  human: {
+    total: number;
+    softwareEngineer: number;
+    powerUser: number;
+    desktopStandard: number;
+    mobileCasual: number;
+  };
+  aiAgent: {
+    total: number;
+    openAi: number;
+    anthropic: number;
+    google: number;
+    perplexity: number;
+    byteDance: number;
+    commonCrawl: number;
+    cohere: number;
+    otherAi: number;
+    byVendor: Record<string, number>;
+  };
+  crawlerTool: {
+    total: number;
+    searchEngine: number;
+    headlessDriver: number;
+    cliTool: number;
+    otherCrawler: number;
+    byTool: Record<string, number>;
+  };
+}
+
 /**
  * Untrusted raw input telemetry signals received from client or HTTP request.
  * Contains ZERO raw verifiedBot trust flags.
@@ -139,6 +173,11 @@ export interface UntrustedTelemetrySignals {
   burstCount10s?: number;
   touchMismatch?: boolean;
   suspiciousUA?: boolean;
+  isHeadlessRenderer?: boolean;
+  headlessEvasionsDetected?: boolean;
+  httpMissingHeaders?: boolean;
+  webglVendor?: string;
+  webglRenderer?: string;
   claimedBot?: string;
   userAgent?: string;
   token?: string;
@@ -172,6 +211,8 @@ export interface ForensicFootprint {
   country?: string;
   city?: string;
   ipAddress?: string;
+  triageCategory?: TriageCategory;
+  vendorGroup?: string;
   capturedAt?: string;
   [key: string]: unknown;
 }
@@ -183,6 +224,7 @@ export type VisitorPersona =
   | 'POWER_USER'
   | 'MOBILE_CASUAL'
   | 'DESKTOP_STANDARD'
+  | 'DATACENTER_PROXY'
   | 'ANOMALOUS_PROBE';
 
 export interface HeuristicVerdict {
@@ -220,6 +262,8 @@ export interface PathFlowMatrix {
  */
 export interface TelemetrySignals extends UntrustedTelemetrySignals {
   botCategory?: BotCategory;
+  triageCategory?: TriageCategory;
+  vendorGroup?: string;
 }
 
 export interface SentinelRiskReport {
@@ -242,6 +286,10 @@ export interface SentinelRiskReport {
   policyVersion: string;
   evidence: EvidenceItem[];
   evaluatedAt: string;
+  timezone?: string;
+  timezoneOffset?: number;
+  locale?: string;
+  formattedEvaluatedAt?: string;
   signals?: TelemetrySignals;
 }
 
@@ -412,6 +460,54 @@ export interface AsyncRingBufferOptions {
 
 export interface CompositeSinkOptions {
   emitTimeoutMs?: number; // Default 5000ms
+}
+
+export interface GeoDeliveryConfig {
+  enabled?: boolean;
+  defaultPayload?: string;
+  routes?: Record<string, string>;
+  authorityHeader?: string;
+  estimatedHtmlBytes?: number; // Default 180000 (180KB)
+}
+
+export interface GeoDeliveryResult {
+  shouldDeliver: boolean;
+  botName: string;
+  botVendor: string;
+  triageCategory: TriageCategory;
+  requestedPath: string;
+  contentType: string;
+  payload: string;
+  originalBytes: number;
+  servedBytes: number;
+  savedBytes: number;
+  savingsRatio: number; // e.g. 97.6 (%)
+  deliveredAt: string;
+}
+
+export interface GeoDeliveryLogRecord {
+  id?: number | string;
+  botName: string;
+  botVendor: string;
+  requestedPath: string;
+  servedFormat: string;
+  bytesServed: number;
+  bytesSaved: number;
+  savingsRatio: number;
+  ipAddress: string;
+  country: string;
+  city: string;
+  deliveredAt: string;
+}
+
+export interface GeoAnalyticsSummary {
+  totalDeliveries: number;
+  totalBytesServed: number;
+  totalBytesSaved: number;
+  averageSavingsRatio: number;
+  topAiPaths: { path: string; count: number; savedBytes: number }[];
+  deliveriesByVendor: Record<string, number>;
+  recentDeliveries: GeoDeliveryLogRecord[];
 }
 
 export function createTraceId(): string {

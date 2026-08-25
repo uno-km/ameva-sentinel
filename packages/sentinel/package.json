@@ -1,6 +1,6 @@
 {
   "name": "@ameva/sentinel",
-  "version": "0.7.0-alpha.1",
+  "version": "0.7.0-alpha.2",
   "description": "Privacy-first Security Observability Layer for Web Applications",
   "type": "module",
   "main": "./dist/index.js",

@@ -34,10 +34,15 @@ import {
   PathFlowAggregator,
   SnapshotCache,
   SingleflightCoalescer,
-  maskIpAddress
+  maskIpAddress,
+  GeoDeliveryEngine
 } from '@ameva/sentinel-risk-core';
 
 import type {
+  GeoDeliveryConfig,
+  GeoDeliveryResult,
+  GeoDeliveryLogRecord,
+  GeoAnalyticsSummary,
   SentinelRiskReport,
   TelemetrySignals,
   UntrustedTelemetrySignals,
@@ -75,7 +80,9 @@ import type {
   HeuristicVerdict,
   PathFlowNode,
   PathFlowLink,
-  PathFlowMatrix
+  PathFlowMatrix,
+  TriageCategory,
+  TriageAnalyticsBreakdown
 } from '@ameva/sentinel-risk-core';
 
 export {
@@ -152,7 +159,9 @@ export type {
   HeuristicVerdict,
   PathFlowNode,
   PathFlowLink,
-  PathFlowMatrix
+  PathFlowMatrix,
+  TriageCategory,
+  TriageAnalyticsBreakdown
 };
 
 export type StateFailureMode = 'FAIL_OPEN' | 'FAIL_CLOSED' | 'OBSERVE_ONLY';
@@ -174,6 +183,9 @@ export interface SentinelOptions {
   stateFailureMode?: StateFailureMode;
   onOperationalError?: (err: Error, context: string) => void;
   eventSink?: EventSink;
+  geo?: GeoDeliveryConfig;
+  timezone?: string;
+  locale?: string;
 }
 
 export class Sentinel {
@@ -194,6 +206,9 @@ export class Sentinel {
   private allowedIssuers?: string[];
   private stateFailureMode: StateFailureMode;
   private onOperationalError?: (err: Error, context: string) => void;
+  public geoEngine: GeoDeliveryEngine;
+  private timezone?: string;
+  private locale?: string;
 
   constructor(options: SentinelOptions = {}) {
     this.policy = options.policy || defaultPolicy;
@@ -211,6 +226,9 @@ export class Sentinel {
     this.onOperationalError = options.onOperationalError;
     this.allowedRedirectHosts = options.allowedRedirectHosts;
     this.allowRedirectSubdomains = options.allowRedirectSubdomains ?? true;
+    this.geoEngine = new GeoDeliveryEngine(options.geo);
+    this.timezone = options.timezone;
+    this.locale = options.locale;
 
     // Fail-fast constructor validation for VERIFIED_PARTNERS_ONLY
     if (this.policy.botPolicy?.targetMode === 'VERIFIED_PARTNERS_ONLY') {
@@ -280,8 +298,25 @@ export class Sentinel {
 
     const report = evaluateVerified(enrichedSignals, verificationOutcome.context, {
       policy: this.policy,
-      enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW'
+      enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW',
+      timezone: this.timezone,
+      locale: this.locale
     });
+
+    // Synthesize server-side footprint even for pure HTTP non-JS requests
+    const footprint = this.synthesizeFootprint(report, req);
+    if (!report.signals) report.signals = enrichedSignals;
+    report.signals.triageCategory = footprint.triageCategory;
+    report.signals.vendorGroup = footprint.vendorGroup;
+    report.signals.customSignals = {
+      ...(report.signals.customSignals || {}),
+      webglRenderer: footprint.webglRenderer,
+      webglVendor: footprint.webglVendor,
+      country: footprint.country,
+      city: footprint.city,
+      totalVisitCount: footprint.totalVisitCount,
+      pastPathsHistory: footprint.pastPathsHistory
+    };
 
     // Propagate exact verification outcome
     if (verificationOutcome.state === 'FAILED') {
@@ -450,6 +485,34 @@ export class Sentinel {
         ? signalInput.userAgent
         : ua || undefined;
 
+    const isHeadlessRenderer =
+      signalInput.isHeadlessRenderer === true ||
+      body?.is_headless_renderer === true;
+
+    const headlessEvasionsDetected =
+      signalInput.headlessEvasionsDetected === true ||
+      body?.headless_evasions_detected === true;
+
+    const webglRenderer =
+      typeof signalInput.webglRenderer === 'string'
+        ? signalInput.webglRenderer
+        : body?.webgl_renderer || undefined;
+
+    const webglVendor =
+      typeof signalInput.webglVendor === 'string'
+        ? signalInput.webglVendor
+        : body?.webgl_vendor || undefined;
+
+    // Detect missing standard browser headers when User-Agent claims to be a modern desktop browser
+    const isBrowserUA = /Mozilla\/5\.0/i.test(ua) && /Chrome|Safari|Firefox|Edge|Edg/i.test(ua) && !/bot|crawler|spider|scraper|HeadlessChrome/i.test(ua);
+    const isChromeLike = /Chrome\/\d+/i.test(ua) && !/bot|crawler|spider|scraper|HeadlessChrome/i.test(ua);
+    const hasSecChUa = Boolean(getHeader('sec-ch-ua') || getHeader('sec-ch-ua-mobile') || getHeader('sec-ch-ua-platform'));
+    const hasSecFetchDest = Boolean(getHeader('sec-fetch-dest'));
+    const acceptLang = getHeader('accept-language');
+    const isFakeAcceptLang = !acceptLang || acceptLang === '*';
+
+    const isHttpMissingHeaders = isChromeLike ? (!hasSecChUa || isFakeAcceptLang) : (isBrowserUA && isFakeAcceptLang);
+
     const claimedBot =
       typeof signalInput.claimedBot === 'string'
         ? signalInput.claimedBot
@@ -469,6 +532,11 @@ export class Sentinel {
         isTrustedEventsCount,
         touchMismatch: isTouchMismatch,
         suspiciousUA: isSuspiciousUA,
+        isHeadlessRenderer,
+        headlessEvasionsDetected,
+        httpMissingHeaders: isHttpMissingHeaders,
+        webglRenderer,
+        webglVendor,
         userAgent,
         claimedBot,
         tokenPresented: Boolean(token),
@@ -521,6 +589,31 @@ export class Sentinel {
   }
 
   /**
+   * Synthesize a server-side Forensic Footprint for requests even without client JavaScript.
+   */
+  synthesizeFootprint(report: SentinelRiskReport, req?: any): ForensicFootprint {
+    const sig = report.signals || {};
+    const ip = req?.ip || req?.headers?.['x-forwarded-for'] || req?.headers?.['x-real-ip'] || '127.0.0.1';
+    const cleanIp = String(ip).split(',')[0].trim();
+    const maskedIp = this.maskIpAddress(cleanIp);
+    const visitorId = req?.sessionId || req?.testClientId || `anon_${maskedIp.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    return {
+      visitorId,
+      ipAddress: maskedIp,
+      webglRenderer: sig.webglRenderer || (sig.telemetryObserved ? 'unknown' : 'server-http-client'),
+      webglVendor: sig.webglVendor || (sig.telemetryObserved ? 'unknown' : 'server-http-client'),
+      country: (req?.headers?.['cf-ipcountry'] as string) || (req?.headers?.['x-country-code'] as string) || 'GLOBAL',
+      city: (req?.headers?.['cf-ipcity'] as string) || 'Edge',
+      totalVisitCount: Number(sig.totalVisitCount || 1),
+      pastPathsHistory: typeof req?.url === 'string' ? req.url : (sig.pastPathsHistory || '/'),
+      triageCategory: report.classification?.triageCategory || 'HUMAN',
+      vendorGroup: report.classification?.vendorGroup || 'HumanUser',
+      capturedAt: report.evaluatedAt
+    };
+  }
+
+  /**
    * Evaluate a single forensic footprint and generate natural language persona verdict.
    */
   profileFootprint(footprint: ForensicFootprint): HeuristicVerdict {
@@ -542,6 +635,13 @@ export class Sentinel {
   }
 
   /**
+   * Evaluates incoming request and negotiates optimized Markdown for AI Agents (GEO).
+   */
+  resolveGeoPayload(req: any): GeoDeliveryResult {
+    return this.geoEngine.resolveGeoPayload(req);
+  }
+
+  /**
    * Cached headless forensic analytics with in-memory SWR.
    */
   async getForensicAnalyticsCached(fetcher: () => Promise<ForensicAnalyticsReport>, cacheKey: string = 'global_analytics'): Promise<ForensicAnalyticsReport> {
@@ -550,7 +650,7 @@ export class Sentinel {
 
   /**
    * Headless Forensic Analytics Engine: transforms raw footprints and risk events into
-   * executive persona verdicts, transition flow matrices, and overview KPI stats.
+   * executive persona verdicts, transition flow matrices, 3-category triage breakdowns, and overview KPI stats.
    */
   getForensicAnalytics(input: ForensicAnalyticsInput): ForensicAnalyticsReport {
     const rawFootprints: ForensicFootprint[] = [...(input.footprints || [])];
@@ -560,17 +660,20 @@ export class Sentinel {
       for (const ev of input.events) {
         if (!ev) continue;
         const sig = ev.signals || {};
+        const classification = ev.classification || {};
         rawFootprints.push({
           visitorId: ev.sessionId || ev.traceId || 'anon_visitor',
-          webglRenderer: (sig.customSignals?.webglRenderer as string) || (sig.customSignals?.gpuRenderer as string) || 'unknown',
+          webglRenderer: (sig.webglRenderer as string) || (sig.customSignals?.webglRenderer as string) || (sig.customSignals?.gpuRenderer as string) || 'server-http-client',
           installedFonts: (sig.customSignals?.installedFonts as string) || '',
           country: (sig.customSignals?.country as string) || 'GLOBAL',
           city: (sig.customSignals?.city as string) || 'Edge',
           totalVisitCount: Number(sig.totalVisitCount || sig.customSignals?.totalVisitCount || 1),
-          pastPathsHistory: (sig.pastPathsHistory as string) || (sig.customSignals?.pastPathsHistory as string) || '',
+          pastPathsHistory: (sig.pastPathsHistory as string) || (sig.customSignals?.pastPathsHistory as string) || '/',
           isCharging: Boolean(sig.customSignals?.isCharging),
           screenHz: Number(sig.customSignals?.screenHz || 60),
-          capturedAt: ev.timestamp ? new Date(ev.timestamp).toISOString() : new Date().toISOString()
+          triageCategory: classification.triageCategory || (classification.category === 'AI_AGENT' ? 'AI_AGENT' : classification.category === 'AUTOMATED_TOOL' || classification.category === 'SEARCH_ENGINE' ? 'CRAWLER_TOOL' : 'HUMAN'),
+          vendorGroup: classification.vendorGroup || classification.claimedName || 'HumanUser',
+          capturedAt: ev.timestamp ? new Date(ev.timestamp).toISOString() : (ev.evaluatedAt || new Date().toISOString())
         });
       }
     }
@@ -583,19 +686,81 @@ export class Sentinel {
     const verdicts: HeuristicVerdict[] = [];
     const pathStrings: string[] = [];
 
+    const triageBreakdown: TriageAnalyticsBreakdown = {
+      human: {
+        total: 0,
+        softwareEngineer: 0,
+        powerUser: 0,
+        desktopStandard: 0,
+        mobileCasual: 0
+      },
+      aiAgent: {
+        total: 0,
+        openAi: 0,
+        anthropic: 0,
+        google: 0,
+        perplexity: 0,
+        byteDance: 0,
+        commonCrawl: 0,
+        cohere: 0,
+        otherAi: 0,
+        byVendor: {}
+      },
+      crawlerTool: {
+        total: 0,
+        searchEngine: 0,
+        headlessDriver: 0,
+        cliTool: 0,
+        otherCrawler: 0,
+        byTool: {}
+      }
+    };
+
     for (const fp of rawFootprints) {
       uniqueVisitorIds.add(fp.visitorId);
       const verdict = HeuristicProfileEngine.profileSession(fp);
       verdicts.push(verdict);
 
-      if (verdict.persona === 'CLOUD_AUTOMATION_BOT' || verdict.persona === 'HEADLESS_SCRAPER') {
+      const triageCat: TriageCategory = fp.triageCategory || (verdict.persona === 'CLOUD_AUTOMATION_BOT' || verdict.persona === 'HEADLESS_SCRAPER' ? 'CRAWLER_TOOL' : 'HUMAN');
+      const vendor = fp.vendorGroup || 'Unknown';
+
+      if (triageCat === 'HUMAN') {
+        triageBreakdown.human.total++;
+        if (verdict.persona === 'SOFTWARE_ENGINEER') {
+          triageBreakdown.human.softwareEngineer++;
+          engineerCount++;
+        } else if (verdict.persona === 'POWER_USER') {
+          triageBreakdown.human.powerUser++;
+          powerUserCount++;
+        } else if (verdict.persona === 'MOBILE_CASUAL') {
+          triageBreakdown.human.mobileCasual++;
+          standardCount++;
+        } else {
+          triageBreakdown.human.desktopStandard++;
+          standardCount++;
+        }
+      } else if (triageCat === 'AI_AGENT') {
+        triageBreakdown.aiAgent.total++;
         botCount++;
-      } else if (verdict.persona === 'SOFTWARE_ENGINEER') {
-        engineerCount++;
-      } else if (verdict.persona === 'POWER_USER') {
-        powerUserCount++;
+        triageBreakdown.aiAgent.byVendor[vendor] = (triageBreakdown.aiAgent.byVendor[vendor] || 0) + 1;
+        const vLower = vendor.toLowerCase();
+        if (vLower.includes('openai') || vLower.includes('gpt')) triageBreakdown.aiAgent.openAi++;
+        else if (vLower.includes('anthropic') || vLower.includes('claude')) triageBreakdown.aiAgent.anthropic++;
+        else if (vLower.includes('google')) triageBreakdown.aiAgent.google++;
+        else if (vLower.includes('perplexity')) triageBreakdown.aiAgent.perplexity++;
+        else if (vLower.includes('bytedance') || vLower.includes('bytespider')) triageBreakdown.aiAgent.byteDance++;
+        else if (vLower.includes('commoncrawl') || vLower.includes('ccbot')) triageBreakdown.aiAgent.commonCrawl++;
+        else if (vLower.includes('cohere')) triageBreakdown.aiAgent.cohere++;
+        else triageBreakdown.aiAgent.otherAi++;
       } else {
-        standardCount++;
+        triageBreakdown.crawlerTool.total++;
+        botCount++;
+        triageBreakdown.crawlerTool.byTool[vendor] = (triageBreakdown.crawlerTool.byTool[vendor] || 0) + 1;
+        const vLower = vendor.toLowerCase();
+        if (vLower.includes('searchengine') || vLower.includes('googlebot') || vLower.includes('bingbot')) triageBreakdown.crawlerTool.searchEngine++;
+        else if (vLower.includes('headlessdriver') || vLower.includes('playwright') || vLower.includes('puppeteer')) triageBreakdown.crawlerTool.headlessDriver++;
+        else if (vLower.includes('clitool') || vLower.includes('curl') || vLower.includes('python')) triageBreakdown.crawlerTool.cliTool++;
+        else triageBreakdown.crawlerTool.otherCrawler++;
       }
 
       if (fp.pastPathsHistory) {
@@ -604,6 +769,7 @@ export class Sentinel {
     }
 
     const flowMatrix = PathFlowAggregator.aggregateFlows(pathStrings);
+    const geoDeliveryStats = GeoDeliveryEngine.aggregateGeoAnalytics(input.geoLogs || []);
 
     return {
       overview: {
@@ -614,6 +780,8 @@ export class Sentinel {
         powerUserCount,
         standardCount
       },
+      triageBreakdown,
+      geoDeliveryStats,
       verdicts,
       flowMatrix,
       generatedAt: new Date().toISOString()
@@ -632,6 +800,7 @@ export class Sentinel {
 export interface ForensicAnalyticsInput {
   footprints?: ForensicFootprint[];
   events?: (StoredRiskEvent | any)[];
+  geoLogs?: GeoDeliveryLogRecord[];
   topPathsCap?: number;
 }
 
@@ -644,6 +813,8 @@ export interface ForensicAnalyticsReport {
     powerUserCount: number;
     standardCount: number;
   };
+  triageBreakdown?: TriageAnalyticsBreakdown;
+  geoDeliveryStats?: GeoAnalyticsSummary;
   verdicts: HeuristicVerdict[];
   flowMatrix: PathFlowMatrix;
   generatedAt: string;

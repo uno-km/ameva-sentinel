@@ -16,6 +16,8 @@ export interface BrowserTelemetryOptions {
   maxEventsCap?: number;
   pointerSampleIntervalMs?: number;
   autoStart?: boolean;
+  timezone?: string;
+  locale?: string;
 }
 
 export interface BrowserTelemetrySnapshot {
@@ -29,12 +31,202 @@ export interface BrowserTelemetrySnapshot {
   keyboardEventCount: number;
   touchMismatch: boolean;
   suspiciousUA: boolean;
+  isHeadlessRenderer: boolean;
+  headlessEvasionsDetected: boolean;
+  webglVendor: string;
+  webglRenderer: string;
   usedHeapMb: number;
   totalHeapMb: number;
   heapLimitMb: number;
   totalVisitCount: number;
   pastPathsHistory: string;
   collectedAt: string;
+  timezone: string;
+  timezoneOffset: number;
+  locale: string;
+  formattedCollectedAt: string;
+}
+
+export interface TimezoneFormatOptions {
+  timezone?: string;
+  locale?: string;
+  format?: 'full' | 'time' | 'date' | 'iso' | 'relative';
+}
+
+/**
+ * High-precision deterministic timezone formatter.
+ * Supports IANA timezones ('Asia/Seoul', 'UTC', 'America/New_York', etc.), 'local', and RFC 3339.
+ */
+export function formatTimestamp(
+  dateInput: Date | string | number,
+  options: TimezoneFormatOptions = {}
+): string {
+  const date = typeof dateInput === 'object' ? dateInput : new Date(dateInput);
+  if (isNaN(date.getTime())) return '--';
+
+  const tz = options.timezone && options.timezone !== 'local' ? options.timezone : undefined;
+  const loc = options.locale || (typeof navigator !== 'undefined' ? navigator.language : 'en-US');
+  const fmt = options.format || 'full';
+
+  if (fmt === 'iso') return date.toISOString();
+
+  if (fmt === 'relative') {
+    const sec = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+    if (sec < 60) return `${sec}s ago`;
+    if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
+    if (sec < 86400) return `${Math.round(sec / 3600)}h ago`;
+    return `${Math.round(sec / 86400)}d ago`;
+  }
+
+  try {
+    if (fmt === 'time') {
+      return date.toLocaleTimeString(loc, {
+        timeZone: tz,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    }
+    if (fmt === 'date') {
+      return date.toLocaleDateString(loc, {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    }
+    return date.toLocaleString(loc, {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  } catch {
+    return date.toLocaleString();
+  }
+}
+
+export interface HeadlessDiagnostics {
+  isHeadlessRenderer: boolean;
+  headlessEvasionsDetected: boolean;
+  webglVendor: string;
+  webglRenderer: string;
+  evasionReasons: string[];
+}
+
+/**
+ * Deep Browser Headless & Stealth Evasions Detection Engine.
+ * Extracts WebGL hardware acceleration profile and validates runtime integrity.
+ */
+export function detectHeadlessEvasions(): HeadlessDiagnostics {
+  const reasons: string[] = [];
+  let isHeadlessRenderer = false;
+  let headlessEvasionsDetected = false;
+  let webglVendor = 'unknown';
+  let webglRenderer = 'unknown';
+
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return {
+      isHeadlessRenderer: false,
+      headlessEvasionsDetected: false,
+      webglVendor: 'server-runtime',
+      webglRenderer: 'server-runtime',
+      evasionReasons: []
+    };
+  }
+
+  // 1. WebGL Software / Virtual GPU Renderer Inspection
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (gl) {
+      const debugInfo = (gl as any).getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        webglVendor = (gl as any).getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || 'unknown';
+        webglRenderer = (gl as any).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'unknown';
+      } else {
+        webglVendor = (gl as any).getParameter((gl as any).VENDOR) || 'unknown';
+        webglRenderer = (gl as any).getParameter((gl as any).RENDERER) || 'unknown';
+      }
+
+      const lowerRenderer = webglRenderer.toLowerCase();
+      if (
+        lowerRenderer.includes('swiftshader') ||
+        lowerRenderer.includes('llvmpipe') ||
+        lowerRenderer.includes('softpipe') ||
+        lowerRenderer.includes('virtualbox') ||
+        lowerRenderer.includes('vmware') ||
+        lowerRenderer.includes('mesa offscreen')
+      ) {
+        isHeadlessRenderer = true;
+        reasons.push(`Virtual software WebGL renderer detected (${webglRenderer})`);
+      }
+    } else {
+      isHeadlessRenderer = true;
+      reasons.push('WebGL context initialization failed or disabled');
+    }
+  } catch (e) {
+    isHeadlessRenderer = true;
+    reasons.push('WebGL inspection threw exception');
+  }
+
+  // 2. Navigator Plugins Array Integrity Check
+  try {
+    const nav = navigator as any;
+    const isDesktop = !/Android|iPhone|iPad|iPod/i.test(nav.userAgent || '');
+    if (isDesktop && nav.plugins && nav.plugins.length === 0) {
+      headlessEvasionsDetected = true;
+      reasons.push('Desktop browser with empty navigator.plugins (Headless signature)');
+    }
+  } catch (e) {}
+
+  // 3. Navigator Languages Array Check
+  try {
+    const nav = navigator as any;
+    if (!nav.languages || (Array.isArray(nav.languages) && nav.languages.length === 0)) {
+      headlessEvasionsDetected = true;
+      reasons.push('navigator.languages missing or empty');
+    }
+  } catch (e) {}
+
+  // 4. Chrome Runtime Object Integrity (When UA claims Chrome)
+  try {
+    const nav = navigator as any;
+    const isChromeUA = /Chrome\//i.test(nav.userAgent || '') && !/Edge|Edg|OPR/i.test(nav.userAgent || '');
+    const hasChromeObj = typeof (window as any).chrome !== 'undefined';
+    if (isChromeUA && !hasChromeObj) {
+      headlessEvasionsDetected = true;
+      reasons.push('Chrome UA claiming browser lacks window.chrome object');
+    }
+  } catch (e) {}
+
+  // 5. Notification Permission State Mismatch
+  try {
+    if (typeof Notification !== 'undefined' && (Notification as any).permission === 'denied') {
+      // In default headless chrome, notification is denied by default without prompt
+      const nav = navigator as any;
+      if (nav.permissions && typeof nav.permissions.query === 'function') {
+        // Asynchronous query state check can be cached or noted
+      }
+    }
+  } catch (e) {}
+
+  if (isHeadlessRenderer || reasons.length > 0) {
+    headlessEvasionsDetected = true;
+  }
+
+  return {
+    isHeadlessRenderer,
+    headlessEvasionsDetected,
+    webglVendor,
+    webglRenderer,
+    evasionReasons: reasons
+  };
 }
 
 export interface HeapMemorySnapshot {
@@ -150,6 +342,7 @@ export class BrowserTelemetryCollector {
   private samplingWindowMs: number;
   private lastPointerSampleAt = 0;
   private abortController: AbortController | null = null;
+  private options: BrowserTelemetryOptions;
 
   // Interaction Counters
   private trustedEvents = 0;
@@ -158,6 +351,7 @@ export class BrowserTelemetryCollector {
   private keyboardEvents = 0;
 
   constructor(options: BrowserTelemetryOptions = {}) {
+    this.options = options;
     this.maxEventsCap = options.maxEventsCap ?? 500;
     this.pointerIntervalMs = options.pointerSampleIntervalMs ?? 100;
     this.samplingWindowMs = options.samplingWindowMs ?? 5000;
@@ -216,6 +410,7 @@ export class BrowserTelemetryCollector {
   snapshot(): BrowserTelemetrySnapshot {
     const isBrowser = typeof window !== 'undefined' && typeof navigator !== 'undefined';
     if (!isBrowser) {
+      const now = new Date();
       return {
         telemetryObserved: false,
         sampleComplete: false,
@@ -227,12 +422,20 @@ export class BrowserTelemetryCollector {
         keyboardEventCount: 0,
         touchMismatch: false,
         suspiciousUA: false,
+        isHeadlessRenderer: false,
+        headlessEvasionsDetected: false,
+        webglVendor: 'server-runtime',
+        webglRenderer: 'server-runtime',
         usedHeapMb: 0,
         totalHeapMb: 0,
         heapLimitMb: 0,
         totalVisitCount: 1,
         pastPathsHistory: '/',
-        collectedAt: new Date().toISOString()
+        collectedAt: now.toISOString(),
+        timezone: this.options.timezone || 'UTC',
+        timezoneOffset: 0,
+        locale: this.options.locale || 'en-US',
+        formattedCollectedAt: formatTimestamp(now, { timezone: this.options.timezone, locale: this.options.locale })
       };
     }
 
@@ -245,6 +448,15 @@ export class BrowserTelemetryCollector {
     const isSuspiciousUA = !nav.userAgent || /HeadlessChrome|PhantomJS|Selenium|Playwright|curl|wget|python-requests/i.test(nav.userAgent);
     const heap = getHeapMemoryUsage();
     const soul = getSoulHistory();
+    const headless = detectHeadlessEvasions();
+
+    const now = new Date();
+    let detectedTz = 'UTC';
+    try {
+      detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {}
+    const activeTz = this.options.timezone && this.options.timezone !== 'local' ? this.options.timezone : detectedTz;
+    const activeLocale = this.options.locale || nav.language || 'en-US';
 
     return {
       telemetryObserved: this.isListening,
@@ -257,12 +469,20 @@ export class BrowserTelemetryCollector {
       keyboardEventCount: this.keyboardEvents,
       touchMismatch: isTouchMismatch,
       suspiciousUA: isSuspiciousUA,
+      isHeadlessRenderer: headless.isHeadlessRenderer,
+      headlessEvasionsDetected: headless.headlessEvasionsDetected,
+      webglVendor: headless.webglVendor,
+      webglRenderer: headless.webglRenderer,
       usedHeapMb: heap.usedHeapMb,
       totalHeapMb: heap.totalHeapMb,
       heapLimitMb: heap.heapLimitMb,
       totalVisitCount: soul.totalVisitCount,
       pastPathsHistory: soul.pastPathsHistory,
-      collectedAt: new Date().toISOString()
+      collectedAt: now.toISOString(),
+      timezone: activeTz,
+      timezoneOffset: now.getTimezoneOffset(),
+      locale: activeLocale,
+      formattedCollectedAt: formatTimestamp(now, { timezone: activeTz, locale: activeLocale })
     };
   }
 

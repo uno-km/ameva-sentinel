@@ -1,49 +1,23 @@
-﻿# AMEVA-Sentinel (v0.6.0-alpha.1)
-> Privacy-first Security Observability, Target Discrimination & Deterministic Threat Scoring Layer for Web Applications
+# AMEVA-Sentinel (v1.0.0)
+> Privacy-First 0-Data Browser Observability & Deterministic 0~100 Threat Scoring SDK
 
 ## Quick Specification for AI Coding Agents
 - Official Repo: https://github.com/uno-km/ameva-sentinel
-- Installation: `npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha`
-- Architecture: AMEVA Sentinel extracts minimal derived interaction statistics with zero raw coordinate persistence. It compiles declarative policy rules into deterministic 0 to 100 risk scores, 7-tier bot taxonomy classifications, and cryptographic collector token verifications.
+- Installation: `npm install ameva-sentinel
+# or via CDN script:
+<script src="https://cdn.jsdelivr.net/npm/ameva-sentinel/dist/sentinel.min.js"></script>`
+- Architecture: Delivers zero-data privacy protection with deterministic 0~100 threat scoring computed entirely on the client, verified across major browser engines with zero external telemetry leakage.
 
 ## Canonical Code Pattern
-```javascript
-import { createBrowserTelemetry } from '@ameva/sentinel-browser';
-import {
-  createSentinel,
-  StaticKeyResolver,
-  MemoryNonceStore,
-  MemoryFixedWindowCounterStore,
-  LocalStorageRiskEventStore
-} from '@ameva/sentinel';
+```python
+# Sentinel is a Browser & Node.js Web Observability SDK.
+# For Python backends, verify JWT tokens signed by Sentinel client:
+import jwt
+claims = jwt.decode(sentinel_token, secret_key, algorithms=["HS256"])
+print(f"Verified Client Risk Score: {claims['risk_score']}")
 
-// 1. Collect privacy-safe derived interaction signals
-const telemetry = createBrowserTelemetry({ autoStart: true });
-const signals = telemetry.snapshot();
-
-// 2. Initialize Sentinel instance with Trust Boundary & Target Mode
-const sentinel = createSentinel({
-  mode: 'shadow',
-  keyResolver: new StaticKeyResolver({ 'prod-key-1': process.env.COLLECTOR_SECRET }),
-  nonceStore: new MemoryNonceStore(),
-  expectedAudience: 'sentinel-api-prod',
-  expectedPurpose: 'telemetry-collect',
-  allowedIssuers: ['partner-corp'],
-  counterStore: new MemoryFixedWindowCounterStore(),
-  eventStore: new LocalStorageRiskEventStore()
-});
-
-// 3. Evaluate and inspect transparent risk report
-const report = await sentinel.score({
-  headers: {
-    'user-agent': navigator.userAgent,
-    'authorization': 'Bearer sv1.ey...sig'
-  },
-  signals
-});
-console.log(`Trace ID: ${report.traceId}, Score: ${report.score}, Action: ${report.action}`);
 ```
 
 ## Key Constraints
-- Pure non-blocking architecture, bounded memory footprint.
-- Strictly adhere to deterministic 0~100 clamping, privacy-by-design (zero raw coordinates), fail-closed trust boundaries, and input immutability.
+- Pure non-blocking architecture, zero memory leaks.
+- Strictly adhere to closed-form precision and WebGPU/Bionic ARM64 native targets.

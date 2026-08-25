@@ -66,7 +66,7 @@ it('shadow mode never enforces a denial action directly (returns OBSERVE with re
 
   // Shadow Mode (Default)
   const shadowReport = evaluate(highRiskSignals, { enforcementMode: 'SHADOW' });
-  assert.strictEqual(shadowReport.score, 90);
+  assert.strictEqual(shadowReport.score, 100);
   assert.strictEqual(shadowReport.action, SentinelAction.OBSERVE, 'In Shadow Mode, action must remain OBSERVE');
   assert.strictEqual(shadowReport.recommendedAction, SentinelAction.TEMPORARY_DENY, 'Recommended action should be TEMPORARY_DENY');
   assert.strictEqual(shadowReport.enforcementMode, 'SHADOW');
@@ -118,7 +118,7 @@ it('evaluation does not mutate top-level input properties', () => {
   const report = evaluate(rawSignals);
   assert.strictEqual(rawSignals.customKey, 'original_val');
   assert.deepStrictEqual(nested, { marker: 'original' });
-  assert.strictEqual(report.score, 55);
+  assert.strictEqual(report.score, 90);
 });
 
 // 6. Robustness against Malformed Inputs (Never Throws)
