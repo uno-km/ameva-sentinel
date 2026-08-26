@@ -4,14 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ameva-sentinel"
-version = "2.1.0"
-description = "Shadow-First Automation Risk Observation & Multi-Axis Threat Telemetry Layer for Python (FastAPI, Flask, Django)"
+version = "2.1.1"
+description = "Shadow-First Automation Risk Observation & Multi-Axis Threat Telemetry Layer for Python (FastAPI, Flask, Django, Starlette)"
 readme = "README.md"
-authors = [{ name = "AMEVA Foundation", email = "zhfldk014745@naver.com" }]
+authors = [{ name = "AMEVA Open-Source Foundation (AOSF)", email = "zhfldk014745@naver.com" }]
 license = { text = "Apache-2.0" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -19,17 +21,28 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
     "Topic :: Security",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 keywords = [
     "security",
+    "sentinel",
     "bot-detection",
     "threat-telemetry",
     "cloudflare-workers",
+    "vercel-edge",
+    "fastly",
     "fastapi",
     "flask",
-    "privacy-first"
+    "django",
+    "starlette",
+    "privacy-first",
+    "zero-data",
+    "fail-open"
 ]
 requires-python = ">=3.8"
 dependencies = []
@@ -38,13 +51,14 @@ dependencies = []
 fastapi = ["fastapi>=0.68.0", "starlette>=0.14.0"]
 flask = ["flask>=2.0.0"]
 all = ["fastapi>=0.68.0", "starlette>=0.14.0", "flask>=2.0.0"]
-test = ["pytest>=7.0.0"]
+test = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0"]
 
 [project.urls]
-Homepage = "https://uno-km.vercel.app/sentinel/"
+Homepage = "https://uno-km.vercel.app/lib/sentinel/"
 Documentation = "https://uno-km.vercel.app/lib/sentinel/"
 Repository = "https://github.com/uno-km/ameva-sentinel"
 Issues = "https://github.com/uno-km/ameva-sentinel/issues"
+Changelog = "https://uno-km.vercel.app/lib/sentinel/versions"
 
 [tool.setuptools.packages.find]
 where = ["."]
