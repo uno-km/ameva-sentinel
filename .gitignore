@@ -79,3 +79,6 @@ Thumbs.db
 scratch/
 tmp/
 temp/
+ALL_SOURCE_CODE.md
+scripts/codes/[0-9]*_export.*
+scripts/codes/[0-9]*_test_report.*

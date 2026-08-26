@@ -1,12 +1,14 @@
-# 🚀 AMEVA Sentinel v0.5.0-alpha.1 Release & Registry Verification Document
+# 🚀 [ARCHIVED] AMEVA Sentinel v0.5.0-alpha.1 Release & Registry Verification Document
 
-> **Release Version**: `0.5.0-alpha.1`  
+> **Archive Notice**: Historical release verification document for legacy `v0.5.0-alpha.1` (Date: `2026-08-21`). For current `v2.2.0-alpha.1` dual-runtime verification and audit scorecards, refer to [`reports/TEST_SUITE_AND_RESULTS.md`](../reports/TEST_SUITE_AND_RESULTS.md).
+> 
+> **Release Version**: `0.5.0-alpha.1 (Historical Archive)`  
 > **Git Release Tag**: [`v0.5.0-alpha.1`](https://github.com/uno-km/ameva-sentinel/releases/tag/v0.5.0-alpha.1)  
 > **Tag Object SHA**: `ebdbd0313fa18fb2e5ff98254cd195d61c35adc6`  
 > **Release Target Peeled Commit SHA (`refs/tags/v0.5.0-alpha.1^{}`)**: `c03ae6319f3684d6e2b753880dacd1c8e87b1735`  
 > **Repository**: [https://github.com/uno-km/ameva-sentinel.git](https://github.com/uno-km/ameva-sentinel.git)  
-> **npm Registry Status**: 🟢 **100% PUBLISHED & VERIFIED**  
 > **Verification Date**: `2026-08-21`
+
 
 ---
 

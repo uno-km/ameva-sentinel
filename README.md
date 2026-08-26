@@ -1,138 +1,120 @@
 # 🛡️ AMEVA Sentinel
 
-> **Privacy-first Security Observability Layer for Web Applications**  
-> *AMEVA Sentinel v0.5.0-alpha.1 — Deterministic 0-100 Risk Engine & Policy-as-Code*
+> **Privacy-first Security Observability and Multi-Axis Cost Guard Layer for Web Applications**  
+> *AMEVA Sentinel v2.2.0-alpha.1 — Deterministic Policy Guardrails, Dual-Runtime SDKs & Hierarchical Cost Controls*
 
-[![Official Documentation](https://img.shields.io/badge/docs-uno--km.vercel.app%2Fsentinel-004499?style=flat-square&logo=vercel)](https://uno-km.vercel.app/sentinel/)
+[![Official Documentation](https://img.shields.io/badge/docs-uno--km.github.io%2Fameva--sentinel-004499?style=flat-square&logo=github)](https://uno-km.github.io/ameva-sentinel/)
 [![npm package](https://img.shields.io/npm/v/@ameva/sentinel/alpha?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/@ameva/sentinel)
+[![PyPI package](https://img.shields.io/pypi/v/ameva-sentinel?style=flat-square&color=3775a9&logo=pypi)](https://pypi.org/project/ameva-sentinel/)
 [![Open Collective](https://img.shields.io/badge/Open_Collective-AOSF_Fund-004499?style=flat&logo=opencollective)](https://opencollective.com/ameva-fund)
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub_Sponsors-uno--km-ea4aaa?style=flat&logo=githubsponsors)](https://github.com/sponsors/uno-km)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)](LICENSE)
-[![Release Gates](https://img.shields.io/badge/release%20gates-29%2F29%20passing%20(28%20tests%20%2B%201%20type%20gate)-16a34a?style=flat-square)](https://uno-km.vercel.app/sentinel/benchmarks.html)
-[![Privacy](https://img.shields.io/badge/privacy-zero%20raw%20coordinates-10b981?style=flat-square)](https://uno-km.vercel.app/sentinel/)
 [![Foundation](https://img.shields.io/badge/AOSF-Tier%201%20TLP-f59e0b?style=flat-square)](https://uno-km.vercel.app/docs/foundation/)
 
 > [!NOTE]
-> **Pre-release Notice**: The current release is an alpha prototype intended for local/shadow mode testing. Install explicitly with `npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha`.  
-> Complete interactive documentation & API reference: [https://uno-km.vercel.app/sentinel/](https://uno-km.vercel.app/sentinel/)
+> **Pre-release Notice**: The current release is an alpha prototype intended for shadow mode evaluation and early testing.
+> - **TypeScript / Node.js**: `npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha @ameva/sentinel-store-redis@alpha`
+> - **Python (3.9+)**: `pip install "ameva-sentinel[all]"`
+> Complete interactive documentation & API reference: [https://uno-km.github.io/ameva-sentinel/](https://uno-km.github.io/ameva-sentinel/)
 
 ---
 
 ## 🎯 Canonical Mission
 
-> **"웹 서비스에 들어오는 트래픽을 관측하고, 측정하고, 설명하고, 점수화한다."**  
-> *(Observe, Measure, Explain, and Score incoming web traffic with privacy-by-design.)*
+> **"웹 서비스에 들어오는 트래픽과 컴퓨팅 비용을 관측하고, 측정하고, 설명하고, 통제한다."**  
+> *(Observe, Measure, Explain, and Guard incoming web traffic and backend execution budgets with privacy-by-design.)*
 
 ---
 
-## 🏗️ Architecture & Single Source of Truth
+## 🏗️ Dual-Runtime Architecture
 
 ```text
-[Browser Interaction]
-       │
-       ▼
-[@ameva/sentinel-browser] ──► Software-observed signals (isTrusted count, duration, webdriver flag)
-       │                      (Throttled 100ms pointermove, discrete click/touch unthrottled)
-       ▼
-[sentinel.score(request)] ──► Session-scoped fixed-window counter + Policy-as-Code evaluation
-       │                      (Deterministic 0~100 clamp, crypto.randomUUID trace IDs with fallback)
-       ▼
-[StoredRiskEventV1] ───────► Strict schema validation (zero raw cookies/auth/headers/PII)
-       │
-       ▼
-[Shadow Mode Dashboard] ───► Single Risk Core engine import (DOM API & textContent rendering)
+[Client / Edge Layer]
+  │  ├── [@ameva/sentinel-browser] (Derived interaction telemetry, zero raw coordinates)
+  │  └── Cloudflare / Fastly / AWS CloudFront Provider Normalizers
+  ▼
+[Security Evaluator Layer] (TypeScript & Python Dual Runtime)
+  │  ├── SentinelCostGuardEvaluator (Unified shadow-mode and enforcement evaluation)
+  │  ├── RequestShapeGuard & ResponseBudgetGuard (Bounded payload and row validation)
+  │  └── BoundedThreatAggregator (Bounded in-memory LRU threat aggregator)
+  ▼
+[Storage & Distributed State]
+  │  ├── LocalEmergencyBudgetStore (In-memory token bucket with dynamic clamp fallback)
+  │  └── RedisTokenBucketStore & RedisThreatAggregator (Distributed hierarchical token bucket)
+  ▼
+[Framework Adapters & Integrations]
+     ├── Express, Fastify, Next.js (TypeScript)
+     └── FastAPI, Starlette, Flask, SQLAlchemy (Python)
 ```
 
 ---
 
-## 📦 10-Second Quickstart
+## 📦 Quickstart
 
-### 1. Installation
+### 1. TypeScript / Node.js Installation
 ```bash
-npm install @ameva/sentinel@alpha @ameva/sentinel-browser@alpha @ameva/sentinel-risk-core@alpha
+npm install @ameva/sentinel@alpha @ameva/sentinel-risk-core@alpha @ameva/sentinel-store-redis@alpha
 ```
 
-### 2. Client Browser Telemetry (`@ameva/sentinel-browser`)
-```javascript
-import { createBrowserTelemetry } from '@ameva/sentinel-browser';
+```typescript
+import { SentinelCostGuardEvaluator } from '@ameva/sentinel-risk-core';
+import { RedisTokenBucketStore } from '@ameva/sentinel-store-redis';
 
-const telemetry = createBrowserTelemetry({ autoStart: true });
-const signals = telemetry.snapshot();
-```
-
-### 3. Risk Evaluation & Storage (`@ameva/sentinel`)
-```javascript
-import {
-  createSentinel,
-  MemoryFixedWindowCounterStore,
-  LocalStorageRiskEventStore
-} from '@ameva/sentinel';
-
-const sentinel = createSentinel({
-  mode: 'shadow',
-  counterStore: new MemoryFixedWindowCounterStore(),
-  eventStore: new LocalStorageRiskEventStore()
+const evaluator = new SentinelCostGuardEvaluator({
+  budgetStore: new RedisTokenBucketStore({ redisClient }),
+  enforceByDefault: true
 });
 
-const report = await sentinel.score({ signals });
+const decision = await evaluator.evaluate({
+  method: 'GET',
+  path: '/api/v1/chart',
+  pageSize: 25,
+  principal: {
+    authenticated: true,
+    tenantId: 'tenant-acme',
+    apiKeyId: 'ak-live-123'
+  }
+});
+```
 
-console.log(report);
-/* Output:
-{
-  "traceId": "trc_8fdc1a92e4b34455",
-  "score": 75,
-  "evidenceConfidence": 0.82,
-  "action": "OBSERVE",
-  "recommendedAction": "REQUIRE_APP_VERIFICATION",
-  "enforcementMode": "SHADOW",
-  "policyVersion": "2026-08-21.1",
-  "evidence": [
-    {
-      "rule": "automation.webdriver",
-      "score": 25,
-      "attributes": { "observed": true, "property": "navigator.webdriver" },
-      "message": "navigator.webdriver automation flag is active"
-    }
-  ]
-}
-*/
+### 2. Python SDK Installation
+```bash
+pip install "ameva-sentinel[redis,fastapi]"
+```
+
+```python
+from ameva_sentinel import SentinelCostGuardEvaluator, RequestCostContext, VerifiedPrincipal
+
+evaluator = SentinelCostGuardEvaluator(enforce_by_default=True)
+ctx = RequestCostContext(
+    method="GET",
+    path="/api/v1/chart",
+    page_size=25,
+    principal=VerifiedPrincipal(
+        authenticated=True,
+        tenant_id="tenant-acme",
+        api_key_id="ak-live-123",
+    ),
+)
+decision = evaluator.evaluate_sync(ctx)
 ```
 
 ---
 
-## 🔬 Product Scope & Current Status (v0.5.0-alpha.1)
+## 🔬 Product Scope & Quality Status (v2.2.0-alpha.1)
 
-- **Browser-Local Prototype**: Current events are stored in the browser's `LocalStorage`. Centralized multi-tenant aggregation will be supported via Server Collector API in v0.6.
-- **CounterStore**: `MemoryFixedWindowCounterStore` is intended for local testing and single-instance Node runtimes. Serverless/distributed edge deployments will utilize Redis adapters.
-- **Software-Observed Signals**: Interaction metrics (`isTrusted`, `webdriver`) represent browser-reported software signals, not cryptographically authenticated hardware biometric proofs.
-- **Token Verification**: In v0.5, client tokens are marked `tokenPresented: true, tokenVerified: false`. Cryptographic HMAC signature verification will be enforced in the server-side Collector (v0.6).
-- **Security Design**: Stored event fields are rendered through DOM APIs and `textContent`, eliminating DOM XSS injection sinks.
-
----
-
-## ✅ Completed in v0.5.0-alpha.1
-
-- **TypeScript Single Source of Truth**: Mechanically compiled `dist/index.js` and `dist/*.d.ts` across all packages.
-- **29 Automated Release Quality Gates (100% PASS)**: 28 automated behavioral tests (19 Node unit + 9 Playwright cross-browser) + 1 comprehensive TypeScript Consumer API Contract gate.
-- **Linux CI Release Gate**: Ubuntu, Node.js 22 LTS, Playwright cross-browser verification, and workspace package dry-run validation.
-- **Cross-Browser Verification**: Reload persistence recovery, real-time multi-tab synchronization, and listener disposal verification.
-- **Deep Schema Validation**: `isStoredRiskEventV1` runtime guards with negative boundary & primitive attribute attack prevention.
-- **Public npm Registry Release**: `@ameva/sentinel-risk-core`, `@ameva/sentinel-browser`, `@ameva/sentinel` published under `@alpha` dist-tag.
-- **Clean-Room Consumer Verification**: Standalone installation from `https://registry.npmjs.org` verified with 100% pass.
-
----
-
-## 🗺️ Next Roadmap (v0.6.0 Milestone)
-
-1. **Server Collector API**: Central `/api/v1/sentinel/collect` endpoint with short-lived client tokens and server-side verification.
-2. **Cryptographic Signatures & Freshness**: Constant-time HMAC-SHA256 signature verification, timestamp freshness, and nonce replay defense.
-3. **Distributed State Adapters**: `RedisCounterStore` and `PostgresRiskEventStore`.
+- **Dual-Runtime Parity**: Complete functional parity across TypeScript and Python runtimes with shared canonical JSON schema validation.
+- **Unverified Identity Isolation**: Unauthenticated principals strictly isolate tenant and credential namespaces.
+- **Dynamic Emergency Capacity Clamping**: Under Redis outage or fail-open fallback, emergency in-memory stores clamp balances dynamically without leaking previous high-tier token allocations.
+- **Multi-Fixture Conformance Corpus**: Validated against shared conformance fixtures with SHA-256 policy checksum verification.
+- **Automated CI Quality Gates**: Enforced via dual-job Node.js and Python GitHub Actions pipelines.
 
 ---
 
 ## 📄 License
 
 Apache-2.0 © 2026 AMEVA Open Source Ecosystem.
+
 
 
 ---

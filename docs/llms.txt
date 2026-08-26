@@ -1,5 +1,6 @@
-﻿# AMEVA-Sentinel (v0.5.0-alpha.1)
-> Privacy-first Security Observability and Deterministic Threat Scoring Layer for Web Applications
+# AMEVA-Sentinel (v2.2.0-alpha.1 / 2.2.0a1)
+> Privacy-first Security Observability, Dual-Runtime Parity and Deterministic Threat Scoring Layer for Web Applications
+
 
 ## Quick Specification for AI Coding Agents
 - Official Repo: https://github.com/uno-km/ameva-sentinel

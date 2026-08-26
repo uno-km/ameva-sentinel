@@ -1,0 +1,17 @@
+{
+  "schema_version": "2.0",
+  "policy_version": "v1.0.0",
+  "defaults": {
+    "cost": 10,
+    "authentication": "optional",
+    "page_size_default": 25,
+    "page_size_max": 50,
+    "query_timeout_ms": 2000,
+    "lock_timeout_ms": 500,
+    "max_data_points": 5000,
+    "max_request_body_bytes": 1048576,
+    "max_response_bytes": 1048576,
+    "failure_mode": "allow_with_emergency_cap",
+    "shadow_mode": true
+  }
+}

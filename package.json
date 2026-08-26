@@ -1,6 +1,6 @@
 {
   "name": "ameva-sentinel-monorepo",
-  "version": "0.5.0-alpha.1",
+  "version": "2.2.0-alpha.1",
   "description": "Privacy-first Security Observability Layer for Web Applications",
   "private": true,
   "type": "module",
@@ -14,17 +14,22 @@
     "build": "npm run --workspaces build",
     "serve:test": "npx --no-install http-server . -p 4173 -c-1",
     "test:types": "tsc --noEmit tests/typecheck.ts --target es2022 --module NodeNext --moduleResolution NodeNext",
-    "test:unit": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js",
+    "test:cost-guard": "node tests/cost-guard.test.js",
+    "test:redis": "node tests/integration/redis-token-bucket.integration.test.js",
+    "test:integration": "npm run test:redis",
+    "test:python": "python -m pytest packages/sentinel-py/tests",
+    "test:unit": "node tests/engine.test.js && node tests/sentinel.test.js && node tests/store.test.js && node tests/browser.test.js && node tests/cost-guard.test.js",
     "test": "npm run build && npm run test:types && npm run test:unit",
     "test:e2e": "npm run build && playwright test",
-    "test:all": "npm run build && npm run test:types && npm run test:unit && playwright test",
+    "test:all": "npm run build && npm run test:types && npm run test:unit && npm run test:redis && playwright test",
     "test:report": "node scripts/generate_test_report.js",
     "verify": "npm run build && npm run test:types && npm run test:unit && playwright test",
-    "export": "py scripts/export_source_code.py"
+    "export": "python scripts/export_source_code.py"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.1",
     "http-server": "^14.1.1",
+    "ioredis": "^5.11.1",
     "tsup": "^8.5.1",
     "typescript": "^5.7.3"
   },

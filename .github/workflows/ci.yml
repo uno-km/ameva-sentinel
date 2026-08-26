@@ -7,19 +7,31 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: sentinel-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  verify:
-    name: Verify & Cross-Browser E2E Gate (Ubuntu Linux)
+  node-verify:
+    name: Node.js Quality & E2E Gate (Node ${{ matrix.node-version }} on Ubuntu)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
+
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js (v22 LTS)
+      - name: Setup Node.js (${{ matrix.node-version }})
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
       - name: Install Clean Dependencies (npm ci)
@@ -28,11 +40,41 @@ jobs:
       - name: Install Playwright Browsers with OS Dependencies
         run: npx playwright install --with-deps chromium firefox webkit
 
-      - name: Run Full Quality Gate (Build + 19 Node Tests + 9 Cross-Browser E2E)
+      - name: Run Node Quality Gate (Build + Types + Unit + Cost-Guard + E2E)
         run: npm run verify
 
       - name: Verify Monorepo Workspace Distribution Packages (npm pack --dry-run)
         run: |
           npm pack --dry-run --workspace @ameva/sentinel-risk-core
           npm pack --dry-run --workspace @ameva/sentinel-browser
+          npm pack --dry-run --workspace @ameva/sentinel-store-redis
           npm pack --dry-run --workspace @ameva/sentinel
+
+  python-verify:
+    name: Python Multi-Axis Guard Gate (Python ${{ matrix.python-version }} on Ubuntu)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python (${{ matrix.python-version }})
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install Package with All & Test Extras
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "packages/sentinel-py[all,test]"
+
+      - name: Run Python Pytest Test Suite
+        run: python -m pytest packages/sentinel-py/tests
+
+

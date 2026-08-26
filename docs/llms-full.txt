@@ -1,5 +1,6 @@
-﻿# AMEVA-Sentinel Full Technical Specification (v0.5.0-alpha.1)
+# AMEVA-Sentinel Full Technical Specification (v2.2.0-alpha.1 / 2.2.0a1)
 Official Documentation & Deep Architecture Reference for Autonomous AI Agents.
+
 
 ## 1. System Overview
 Privacy-first Security Observability and Deterministic Threat Scoring Layer for Web Applications.

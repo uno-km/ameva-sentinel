@@ -1,0 +1,45 @@
+{
+  "name": "@ameva/sentinel-store-redis",
+  "version": "2.2.0-alpha.1",
+  "description": "Distributed Multi-Key Hierarchical Token Bucket and Threat Aggregator Redis Store for AMEVA Sentinel",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022,dom --emitDeclarationOnly --declaration --outDir dist src/index.ts"
+  },
+  "dependencies": {
+    "@ameva/sentinel-risk-core": "^2.2.0-alpha.1"
+  },
+  "peerDependencies": {
+    "ioredis": "^5.4.0",
+    "redis": "^4.6.0"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    },
+    "redis": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "redis",
+    "rate-limit",
+    "token-bucket",
+    "cost-guard",
+    "security"
+  ],
+  "license": "Apache-2.0"
+}

@@ -4,7 +4,7 @@ if (window.i18nManager) {
   "en": {
     "common": {
       "brand": "AMEVA-Sentinel",
-      "releaseTag": "v0.5.0-alpha.1 (Shadow Mode Alpha)",
+      "releaseTag": "v2.2.0-alpha.1 (Dual-Runtime Alpha)",
       "pypiBtn": "PyPI (pip)",
       "npmBtn": "npm (Node.js)",
       "githubBtn": "GitHub",
@@ -64,7 +64,7 @@ if (window.i18nManager) {
   "ko": {
     "common": {
       "brand": "AMEVA-Sentinel",
-      "releaseTag": "v0.5.0-alpha.1 (Shadow Mode Alpha)",
+      "releaseTag": "v2.2.0-alpha.1 (Dual-Runtime Alpha)",
       "pypiBtn": "PyPI 패키지",
       "npmBtn": "npm 패키지",
       "githubBtn": "GitHub 저장소",
@@ -124,7 +124,7 @@ if (window.i18nManager) {
   "ja": {
     "common": {
       "brand": "AMEVA-Sentinel",
-      "releaseTag": "v0.5.0-alpha.1 (Shadow Mode Alpha)",
+      "releaseTag": "v2.2.0-alpha.1 (Dual-Runtime Alpha)",
       "pypiBtn": "PyPIパッケージ",
       "npmBtn": "npmパッケージ",
       "githubBtn": "GitHub",
@@ -166,7 +166,7 @@ if (window.i18nManager) {
   "zh": {
     "common": {
       "brand": "AMEVA-Sentinel",
-      "releaseTag": "v0.5.0-alpha.1 (Shadow Mode Alpha)",
+      "releaseTag": "v2.2.0-alpha.1 (Dual-Runtime Alpha)",
       "pypiBtn": "PyPI (pip)",
       "npmBtn": "npm (Node.js)",
       "githubBtn": "GitHub",
@@ -208,7 +208,7 @@ if (window.i18nManager) {
   "es": {
     "common": {
       "brand": "AMEVA-Sentinel",
-      "releaseTag": "v0.5.0-alpha.1 (Shadow Mode Alpha)",
+      "releaseTag": "v2.2.0-alpha.1 (Dual-Runtime Alpha)",
       "pypiBtn": "PyPI (pip)",
       "npmBtn": "npm (Node.js)",
       "githubBtn": "GitHub",
@@ -250,7 +250,7 @@ if (window.i18nManager) {
   "de": {
     "common": {
       "brand": "AMEVA-Sentinel",
-      "releaseTag": "v0.5.0-alpha.1 (Shadow Mode Alpha)",
+      "releaseTag": "v2.2.0-alpha.1 (Dual-Runtime Alpha)",
       "pypiBtn": "PyPI (pip)",
       "npmBtn": "npm (Node.js)",
       "githubBtn": "GitHub",

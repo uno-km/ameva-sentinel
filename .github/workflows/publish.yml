@@ -96,6 +96,26 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Publish @ameva/sentinel-store-redis
+        run: |
+          DIST_TAG="${{ steps.tag_eval.outputs.DIST_TAG }}"
+          VERSION=$(node -p "require('./packages/store-redis/package.json').version")
+          if npm view "@ameva/sentinel-store-redis@$VERSION" version >/dev/null 2>&1; then
+            echo "Version $VERSION already exists. Ensuring dist-tag $DIST_TAG..."
+            npm dist-tag add "@ameva/sentinel-store-redis@$VERSION" "$DIST_TAG" || true
+          else
+            npm publish --workspace @ameva/sentinel-store-redis --access public --tag "$DIST_TAG"
+          fi
+          if [ "$DIST_TAG" != "latest" ]; then
+            CURRENT_LATEST=$(npm view @ameva/sentinel-store-redis dist-tags.latest 2>/dev/null || true)
+            if [ "$CURRENT_LATEST" = "$VERSION" ]; then
+              echo "Removing premature latest dist-tag for pre-release $VERSION..."
+              npm dist-tag rm "@ameva/sentinel-store-redis" latest || true
+            fi
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish @ameva/sentinel
         run: |
           DIST_TAG="${{ steps.tag_eval.outputs.DIST_TAG }}"
@@ -145,7 +165,7 @@ jobs:
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
           echo "@uno-km:registry=https://npm.pkg.github.com" >> ~/.npmrc
 
-          for pkg_dir in packages/risk-core packages/browser-sdk packages/sentinel; do
+          for pkg_dir in packages/risk-core packages/browser-sdk packages/store-redis packages/sentinel; do
             if [ -d "$pkg_dir" ]; then
               echo "Publishing $pkg_dir to GitHub Packages..."
               node -e '
@@ -162,3 +182,4 @@ jobs:
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

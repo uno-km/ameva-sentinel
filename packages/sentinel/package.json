@@ -1,6 +1,6 @@
 {
   "name": "@ameva/sentinel",
-  "version": "0.5.0-alpha.1",
+  "version": "2.2.0-alpha.1",
   "description": "Privacy-first Security Observability Layer for Web Applications",
   "type": "module",
   "main": "./dist/index.js",
@@ -9,6 +9,22 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./express": {
+      "types": "./dist/adapters/express.d.ts",
+      "import": "./dist/adapters/express.js"
+    },
+    "./fastify": {
+      "types": "./dist/adapters/fastify.d.ts",
+      "import": "./dist/adapters/fastify.js"
+    },
+    "./next": {
+      "types": "./dist/adapters/next.d.ts",
+      "import": "./dist/adapters/next.js"
+    },
+    "./dashboard": {
+      "types": "./dist/adapters/dashboard.d.ts",
+      "import": "./dist/adapters/dashboard.js"
     }
   },
   "files": [
@@ -17,17 +33,18 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022,dom --emitDeclarationOnly --declaration --outDir dist src/index.ts"
+    "build": "tsup src/index.ts src/adapters/express.ts src/adapters/fastify.ts src/adapters/next.ts src/adapters/dashboard.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022,dom --emitDeclarationOnly --declaration --outDir dist src/index.ts src/adapters/express.ts src/adapters/fastify.ts src/adapters/next.ts src/adapters/dashboard.ts"
   },
   "dependencies": {
-    "@ameva/sentinel-risk-core": "^0.5.0-alpha.1"
+    "@ameva/sentinel-risk-core": "^2.2.0-alpha.1"
   },
   "keywords": [
     "security",
     "observability",
     "shadow-mode",
     "bot-defense",
-    "fraud-detection"
+    "fraud-detection",
+    "dashboard"
   ],
   "license": "Apache-2.0"
 }

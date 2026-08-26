@@ -1,8 +1,9 @@
-﻿# 🛡️ AMEVA Sentinel v0.6 Architecture Specification
+# 🛡️ AMEVA Sentinel v2.2 Architecture Specification
 # Data Trust Boundaries & Security Model (Canonical Spec)
 
-> **Document Version**: `1.1.0-RFC`  
-> **Status**: `Approved RFC / SSOT for v0.6.0 Development`  
+> **Document Version**: `2.2.0-RFC`  
+> **Status**: `Approved Specification for v2.2.0-alpha.1 Dual-Runtime Architecture`  
+
 > **Classification**: Security Architecture & Trust Boundary Model  
 > **Author**: AMEVA Core Security Engineering Team
 

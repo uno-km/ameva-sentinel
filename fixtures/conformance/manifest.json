@@ -1,0 +1,50 @@
+{
+  "conformance_version": "1.0",
+  "fixtures": [
+    {
+      "filename": "valid-minimal.json",
+      "expected_valid": true,
+      "checksum_sha256": "4a3a30757ebbc20af10a076e0cd94c9736813df5291f4ea2d826c2a5a6e103f5"
+    },
+    {
+      "filename": "valid-key-order-a.json",
+      "expected_valid": true,
+      "checksum_sha256": "4a3a30757ebbc20af10a076e0cd94c9736813df5291f4ea2d826c2a5a6e103f5"
+    },
+    {
+      "filename": "valid-key-order-b.json",
+      "expected_valid": true,
+      "checksum_sha256": "4a3a30757ebbc20af10a076e0cd94c9736813df5291f4ea2d826c2a5a6e103f5"
+    },
+    {
+      "filename": "invalid-negative.json",
+      "expected_valid": false,
+      "reason": "negative cost"
+    },
+    {
+      "filename": "invalid-unknown-field.json",
+      "expected_valid": false,
+      "reason": "unknown field in defaults"
+    },
+    {
+      "filename": "invalid-bool-as-int.json",
+      "expected_valid": false,
+      "reason": "boolean instead of integer"
+    },
+    {
+      "filename": "invalid-page-size-bounds.json",
+      "expected_valid": false,
+      "reason": "page_size_default exceeds page_size_max"
+    },
+    {
+      "filename": "invalid-schema-version.json",
+      "expected_valid": false,
+      "reason": "unsupported schema version"
+    },
+    {
+      "filename": "invalid-cost-float.json",
+      "expected_valid": false,
+      "reason": "float cost value"
+    }
+  ]
+}
