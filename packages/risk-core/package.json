@@ -1,7 +1,7 @@
 {
   "name": "@ameva/sentinel-risk-core",
-  "version": "0.7.0-alpha.1",
-  "description": "Deterministic rule evaluation engine and policy compiler for AMEVA Sentinel",
+  "version": "2.1.0",
+  "description": "Provider-neutral heuristic risk engine, multi-axis actor claim evaluation, and trust boundary enforcement compiler.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

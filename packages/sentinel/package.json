@@ -1,7 +1,7 @@
 {
   "name": "@ameva/sentinel",
-  "version": "0.7.0-alpha.2",
-  "description": "Privacy-first Security Observability Layer for Web Applications",
+  "version": "2.1.0",
+  "description": "Shadow-First Automation Risk Observation & Multi-Axis Threat Telemetry Layer for Web Applications with Multi-CDN Edge Adapters.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

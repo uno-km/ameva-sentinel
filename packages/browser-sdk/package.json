@@ -1,7 +1,7 @@
 {
   "name": "@ameva/sentinel-browser",
-  "version": "0.7.0-alpha.1",
-  "description": "Privacy-first client-side interaction and environment telemetry collector",
+  "version": "2.1.0",
+  "description": "Zero-raw-coordinate, privacy-first client telemetry SDK for interaction and execution environment risk evaluation.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
