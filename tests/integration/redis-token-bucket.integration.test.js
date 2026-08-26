@@ -349,13 +349,17 @@ async function run() {
     console.log('  ✅ PASS: Invalid inputs strictly rejected without creating or mutating Redis state.');
 
     // =========================================================================
-    // TEST 8: Hard-Fail Verification when Redis is Unreachable (Zero Silent Mock Fallback)
+    // TEST 8: Hard-Fail Verification when Redis is Unreachable (Clean Error Propagation)
     // =========================================================================
-    console.log('  [TEST 8] Testing Hard-Fail on Unreachable Redis (Zero Mock Fallback)...');
+    console.log('  [TEST 8] Testing Hard-Fail on Unreachable Redis (Clean Error Propagation)...');
+    let emittedConnectionError = null;
     const deadRedis = new Redis('redis://127.0.0.1:16399', {
       maxRetriesPerRequest: 0,
       connectTimeout: 500,
       retryStrategy: () => null
+    });
+    deadRedis.on('error', (err) => {
+      emittedConnectionError = err;
     });
     auxiliaryClients.push(deadRedis);
 
@@ -364,16 +368,52 @@ async function run() {
       prefix: TEST_PREFIX
     });
 
-    let threwError = false;
+    let thrownError = null;
     try {
       await deadStore.consume({ cost: 10, routeKey: 'GET:/fail' });
     } catch (err) {
-      threwError = true;
+      thrownError = err;
     }
-    assert.equal(threwError, true, 'Store MUST throw on unreachable Redis rather than silently returning mock success');
-    console.log('  ✅ PASS: Unreachable Redis throws typed connection error for Evaluator emergency handling.');
+    assert.ok(thrownError, 'Store MUST throw on unreachable Redis rather than silently returning mock success');
+    assert.match(
+      String(thrownError?.message ?? thrownError),
+      /ECONNREFUSED|connection|connect/i,
+      'Thrown error must be a connection error'
+    );
+    assert.ok(emittedConnectionError, 'The Redis client must emit a connection error');
+    deadRedis.removeAllListeners();
+    console.log('  ✅ PASS: Unreachable Redis cleanly propagates typed ECONNREFUSED error with zero unhandled events.');
 
-    console.log('\n🎉 ALL 8 REAL REDIS INTEGRATION TESTS PASSED CLEANLY!\n');
+    // =========================================================================
+    // TEST 9: Non-NOSCRIPT Errors Bubble Up Immediately (Zero Eval Fallback / No Double Deduction)
+    // =========================================================================
+    console.log('  [TEST 9] Testing Non-NOSCRIPT Error Isolation (Zero Eval Fallback on Timeout/Generic Error)...');
+    let evalCallCount = 0;
+    const timeoutError = new Error('Command timed out after 2000ms');
+    const mockFailingRedis = {
+      evalsha: async () => {
+        throw timeoutError;
+      },
+      eval: async () => {
+        evalCallCount++;
+        throw new Error('FAIL: eval MUST NOT be called for non-NOSCRIPT errors');
+      }
+    };
+
+    const storeWithFailingRedis = new RedisTokenBucketStore({
+      redis: mockFailingRedis,
+      prefix: TEST_PREFIX
+    });
+
+    await assert.rejects(
+      () => storeWithFailingRedis.consume({ cost: 10, routeKey: 'GET:/api/timeout-test' }),
+      (err) => err === timeoutError,
+      'Store must bubble up original timeout error directly without retrying eval'
+    );
+    assert.equal(evalCallCount, 0, 'eval MUST NEVER be called on non-NOSCRIPT errors to prevent double deductions');
+    console.log('  ✅ PASS: Non-NOSCRIPT errors bubble up immediately with zero eval fallback (No double deduction).');
+
+    console.log('\n🎉 ALL 9 REAL REDIS INTEGRATION & ERROR SAFETY TESTS PASSED CLEANLY!\n');
     process.exitCode = 0;
   } catch (err) {
     console.error('\n❌ REAL REDIS INTEGRATION TEST FAILED:', err);

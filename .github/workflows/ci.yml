@@ -77,4 +77,40 @@ jobs:
       - name: Run Python Pytest Test Suite
         run: python -m pytest packages/sentinel-py/tests
 
+  redis-integration:
+    name: Redis 7 Atomic Quotas & Multi-Client Gate (Node 22 on Ubuntu)
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (22)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Clean Dependencies (npm ci)
+        run: npm ci
+
+      - name: Build Monorepo Workspaces
+        run: npm run build
+
+      - name: Run Real Redis 7 Integration Tests
+        env:
+          REDIS_URL: redis://127.0.0.1:6379
+        run: npm run test:redis
+
+
 
