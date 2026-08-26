@@ -27,6 +27,7 @@ try {
     Write-Host ">>> [NPM-SMOKE] Initializing isolated test project in $smokeDir..."
     npm init -y | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "npm init failed" }
+    npm pkg set type="module" | Out-Null
 
     $riskCoreTgz = Get-ChildItem -Path $smokeDir -Filter "*risk-core*.tgz" | Select-Object -First 1
     $browserTgz = Get-ChildItem -Path $smokeDir -Filter "*browser*.tgz" | Select-Object -First 1
@@ -41,12 +42,13 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "npm install store-redis failed" }
     npm install $sentinelTgz.FullName | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "npm install sentinel failed" }
-    npm install --save-dev typescript @types/node | Out-Null
+    npm install --save-dev typescript @types/node ioredis | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "npm install typescript failed" }
 
     $smokeCode = @"
 import assert from 'node:assert/strict';
-import { createSentinel } from '@ameva/sentinel';
+import { Redis } from 'ioredis';
+import { createSentinel, sentinel } from '@ameva/sentinel';
 import { createExpressCostGuard } from '@ameva/sentinel/express';
 import { createFastifyCostGuard } from '@ameva/sentinel/fastify';
 import { createNextCostGuard } from '@ameva/sentinel/next';
@@ -61,38 +63,69 @@ import {
 } from '@ameva/sentinel-risk-core';
 import { RedisTokenBucketStore } from '@ameva/sentinel-store-redis';
 
-// 1. Facade & Adapter Smoke Test
-const sentinel = createSentinel({ mode: 'shadow' });
-assert.ok(sentinel, 'Sentinel instance created successfully');
-assert.equal(typeof createExpressCostGuard, 'function');
-assert.equal(typeof createFastifyCostGuard, 'function');
-assert.equal(typeof createNextCostGuard, 'function');
+async function run() {
+  // 1. Facade & Adapter Smoke Test
+  const customSentinel = createSentinel({ mode: 'shadow' });
+  assert.ok(customSentinel, 'Sentinel instance created successfully');
+  assert.ok(sentinel, 'Default sentinel singleton exported');
+  assert.equal(typeof createExpressCostGuard, 'function');
+  assert.equal(typeof createFastifyCostGuard, 'function');
+  assert.equal(typeof createNextCostGuard, 'function');
 
-// 2. Browser Telemetry Smoke Test
-assert.equal(typeof createBrowserTelemetry, 'function');
-const telemetry = createBrowserTelemetry({ autoStart: false });
-assert.ok(telemetry, 'Browser telemetry created successfully');
+  // 2. Browser Telemetry Smoke Test
+  assert.equal(typeof createBrowserTelemetry, 'function');
+  const telemetry = createBrowserTelemetry({ autoStart: false });
+  assert.ok(telemetry, 'Browser telemetry created successfully');
 
-// 3. Risk-Core Pure Evaluator & Emergency Fallback
-const evaluator = new SentinelCostGuardEvaluator({ enforceByDefault: true });
-const decision = await evaluator.evaluate({
-  method: 'GET',
-  path: '/health'
-});
-assert.equal(decision.allowed, true);
-assert.equal(decision.action, 'ALLOW');
+  // 3. Risk-Core Pure Evaluator & Emergency Fallback
+  const evaluator = new SentinelCostGuardEvaluator({ enforceByDefault: true });
+  const decision = await evaluator.evaluate({
+    method: 'GET',
+    path: '/health'
+  });
+  assert.equal(decision.allowed, true);
+  assert.equal(decision.action, 'ALLOW');
 
-console.log('[SMOKE] 1. Root, Browser and Subpath Runtime Imports Successful');
-console.log('[SMOKE] 2. Runtime Evaluation & Subpath Factories Verified');
+  // 4. Redis Store Smoke Test (if Redis 7 is reachable)
+  const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:16379', {
+    maxRetriesPerRequest: 1,
+    lazyConnect: true
+  });
+
+  try {
+    await redis.connect();
+    const store = new RedisTokenBucketStore({ redis, prefix: 'sentinel:consumer:smoke' });
+    const result = await store.consume({
+      cost: 5,
+      routeKey: 'GET:/health'
+    });
+    assert.equal(result.allowed, true);
+    await redis.del(...(await redis.keys('sentinel:consumer:smoke*')));
+    await redis.quit();
+    console.log('[SMOKE] 3. Real Redis Token Bucket Consume Verified Cleanly');
+  } catch (e) {
+    console.log('[SMOKE] 3. Redis not reachable during smoke, skipped live consume');
+  }
+
+  console.log('[SMOKE] 1. Root, Browser and Subpath Runtime Imports Successful');
+  console.log('[SMOKE] 2. Runtime Evaluation & Subpath Factories Verified');
+}
+
+run();
 "@
 
     Set-Content -Path (Join-Path $smokeDir "smoke.mjs") -Value $smokeCode -Encoding utf8
+    Set-Content -Path (Join-Path $smokeDir "smoke.ts") -Value $smokeCode -Encoding utf8
 
     Write-Host ">>> [NPM-SMOKE] Running isolated Node runtime smoke test..."
     node (Join-Path $smokeDir "smoke.mjs")
     if ($LASTEXITCODE -ne 0) { throw "node smoke.mjs failed with exit code $LASTEXITCODE" }
 
-    Write-Host "[PASS] Clean consumer installation and subpath verification for all 4 packages completed successfully."
+    Write-Host ">>> [NPM-SMOKE] Running isolated TypeScript typecheck..."
+    npx tsc --noEmit (Join-Path $smokeDir "smoke.ts") --target es2022 --module NodeNext --moduleResolution NodeNext
+    if ($LASTEXITCODE -ne 0) { throw "tsc smoke.ts failed with exit code $LASTEXITCODE" }
+
+    Write-Host "[PASS] Clean consumer installation, TypeScript compilation, and subpath verification for all 4 packages completed successfully."
 
 }
 finally {

@@ -3,6 +3,8 @@ AMEVA-Sentinel Python SDK.
 Privacy-first Automation Risk Observation & Multi-Axis Cost Guardrails.
 """
 
+__version__ = "2.2.0"
+
 from .core.budget_types import (
     RouteCostPolicy,
     RateLimitTier,

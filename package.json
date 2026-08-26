@@ -1,6 +1,6 @@
 {
   "name": "ameva-sentinel-monorepo",
-  "version": "2.2.0-alpha.1",
+  "version": "2.2.0",
   "description": "Privacy-first Security Observability Layer for Web Applications",
   "private": true,
   "type": "module",

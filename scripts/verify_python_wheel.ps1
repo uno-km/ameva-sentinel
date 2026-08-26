@@ -24,8 +24,14 @@ Set-Location (Join-Path $repoRoot "packages\sentinel-py")
 
 try {
     Write-Host ">>> [PY-WHEEL] Building wheel and sdist for ameva-sentinel..."
+    Remove-Item -Recurse -Force (Join-Path $repoRoot "packages\sentinel-py\dist") -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force (Join-Path $repoRoot "packages\sentinel-py\build") -ErrorAction SilentlyContinue
     Invoke-Expression "$PythonCmd -m build ."
     if ($LASTEXITCODE -ne 0) { throw "python -m build failed with exit code $LASTEXITCODE" }
+
+    Write-Host ">>> [PY-WHEEL] Running twine check on built artifacts..."
+    Invoke-Expression "$PythonCmd -m twine check dist/*"
+    if ($LASTEXITCODE -ne 0) { throw "twine check failed with exit code $LASTEXITCODE" }
 
     $distDir = Join-Path $repoRoot "packages\sentinel-py\dist"
     $wheel = Get-ChildItem -Path $distDir -Filter "*.whl" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
@@ -78,7 +84,7 @@ module_path = pathlib.Path(ameva_sentinel.__file__).resolve()
 print(f"[WHEEL-TEST] ameva-sentinel version: {version}")
 print(f"[WHEEL-TEST] ameva_sentinel module path: {module_path}")
 
-assert version == "2.2.0a1", f"Expected version 2.2.0a1, got {version}"
+assert version == "2.2.0", f"Expected version 2.2.0, got {version}"
 assert "site-packages" in str(module_path), f"Module must be loaded from isolated site-packages: {module_path}"
 
 # Check py.typed

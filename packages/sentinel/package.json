@@ -1,6 +1,6 @@
 {
   "name": "@ameva/sentinel",
-  "version": "2.2.0-alpha.1",
+  "version": "2.2.0",
   "description": "Privacy-first Security Observability Layer for Web Applications",
   "type": "module",
   "main": "./dist/index.js",
@@ -36,7 +36,7 @@
     "build": "tsup src/index.ts src/adapters/express.ts src/adapters/fastify.ts src/adapters/next.ts src/adapters/dashboard.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022,dom --emitDeclarationOnly --declaration --outDir dist src/index.ts src/adapters/express.ts src/adapters/fastify.ts src/adapters/next.ts src/adapters/dashboard.ts"
   },
   "dependencies": {
-    "@ameva/sentinel-risk-core": "^2.2.0-alpha.1"
+    "@ameva/sentinel-risk-core": "^2.2.0"
   },
   "keywords": [
     "security",
