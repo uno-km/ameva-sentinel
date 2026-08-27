@@ -417,14 +417,17 @@ export class RedisTokenBucketStore implements BudgetStore {
     if (res[0] === -1) {
       // Idempotency conflict: same requestId called with different parameters
       return {
+        status: 'idempotency-conflict',
+        errorCode: 'IDEMPOTENCY_CONFLICT',
         allowed: false,
         remainingCost: 0,
         retryAfterSeconds: 0,
         degraded: false,
         store: 'redis',
         consistency: 'distributed-atomic',
+        replayed: false,
         reason: 'INVALID_REQUEST'
-      };
+      } as any;
     }
 
     const allowed = res[0] === 1;
@@ -432,14 +435,16 @@ export class RedisTokenBucketStore implements BudgetStore {
     const retryAfterSeconds = Number(res[2]);
 
     return {
+      status: allowed ? 'consumed' : 'exhausted',
       allowed,
       remainingCost: Math.max(0, remainingCost),
       retryAfterSeconds: Math.max(0, retryAfterSeconds),
       degraded: false,
       store: 'redis',
       consistency: 'distributed-atomic',
+      replayed: false,
       reason: allowed ? 'ALLOWED' : 'QUOTA_EXCEEDED'
-    };
+    } as any;
   }
 }
 
