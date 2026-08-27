@@ -9,6 +9,22 @@ from typing import Dict, Tuple
 from .budget_types import BudgetConsumeRequest, BudgetConsumeResult
 
 
+def compute_emergency_capacity(
+    normal_capacity: int,
+    emergency_ratio: float = 0.5,
+    expected_replica_count: int = 1,
+) -> int:
+    if not isinstance(normal_capacity, int) or normal_capacity < 0:
+        raise ValueError("normal_capacity must be a non-negative integer")
+    if not isinstance(emergency_ratio, (int, float)) or emergency_ratio <= 0 or emergency_ratio > 1:
+        raise ValueError("emergency_ratio must be a number > 0 and <= 1")
+    if not isinstance(expected_replica_count, int) or expected_replica_count < 1:
+        raise ValueError("expected_replica_count must be an integer >= 1")
+    if normal_capacity == 0:
+        return 0
+    return max(1, math.floor((normal_capacity * emergency_ratio) / expected_replica_count))
+
+
 class LocalEmergencyBudgetStore:
     def __init__(self, default_capacity: int = 100, default_refill_rate: float = 1.66):
         self.default_capacity = default_capacity
@@ -58,7 +74,10 @@ class LocalEmergencyBudgetStore:
                 allowed=True,
                 remaining_cost=int(tokens),
                 retry_after_seconds=0,
-                degraded=False,
+                degraded=True,
+                store="local-emergency",
+                consistency="process-local",
+                reason="ALLOWED",
             )
         else:
             missing = cost - tokens
@@ -68,7 +87,10 @@ class LocalEmergencyBudgetStore:
                 allowed=False,
                 remaining_cost=int(tokens),
                 retry_after_seconds=retry_after,
-                degraded=False,
+                degraded=True,
+                store="local-emergency",
+                consistency="process-local",
+                reason="QUOTA_EXCEEDED",
             )
 
     async def consume_async(self, request: BudgetConsumeRequest) -> BudgetConsumeResult:

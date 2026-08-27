@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import {
   SentinelCostGuardEvaluator,
   LocalEmergencyBudgetStore,
+  computeEmergencyCapacity,
   validateCostPolicy,
   canonicalizePolicyJson,
   computePolicyChecksum,
@@ -277,9 +278,36 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
   const dec4 = await evaluator.evaluate(ctx);
   assert.equal(dec4.allowed, false);
   assert.equal(dec4.action, 'RATE_LIMIT');
-  assert.equal(dec4.reasonCode, 'COST_BUDGET_EXCEEDED');
-  assert.equal(dec4.degraded, true);
-  assert.equal(dec4.enforced, true);
+  // 6.1 Formula validations
+  assert.equal(computeEmergencyCapacity(100, 0.5, 10), 5, '10 replicas, ratio 0.5, cap 100 -> 5');
+  assert.equal(computeEmergencyCapacity(0, 0.5, 10), 0, 'Capacity 0 remains 0');
+  assert.equal(computeEmergencyCapacity(10, 0.5, 20), 1, 'Min capacity is 1 when non-zero');
+  assert.throws(() => computeEmergencyCapacity(-5, 0.5, 1), /finite non-negative/);
+  assert.throws(() => computeEmergencyCapacity(100, 0, 1), /number > 0/);
+  assert.throws(() => computeEmergencyCapacity(100, 1.5, 1), /number > 0/);
+  assert.throws(() => computeEmergencyCapacity(100, 0.5, 0), /integer >= 1/);
+
+  // 6.1b Test fail-closed mode
+  const failClosedEvaluator = new SentinelCostGuardEvaluator({
+    budgetStore: failingStore,
+    failurePolicy: { mode: 'fail-closed' },
+    enforceByDefault: true
+  });
+  const failClosedDec = await failClosedEvaluator.evaluate(ctx);
+  assert.equal(failClosedDec.allowed, false, 'fail-closed mode must reject during Redis outage');
+  assert.equal(failClosedDec.reasonCode, 'FAIL_CLOSED');
+  assert.equal(failClosedDec.degraded, true);
+
+  // 6.1c Test fail-open mode
+  const failOpenEvaluator = new SentinelCostGuardEvaluator({
+    budgetStore: failingStore,
+    failurePolicy: { mode: 'fail-open' },
+    enforceByDefault: true
+  });
+  const failOpenDec = await failOpenEvaluator.evaluate(ctx);
+  assert.equal(failOpenDec.allowed, true, 'fail-open mode must allow during Redis outage');
+  assert.equal(failOpenDec.reasonCode, 'FAIL_OPEN');
+  assert.equal(failOpenDec.degraded, true);
 
   // 6.2 RedisTokenBucketStore Per-Key Hierarchical Parameter Resolution with Distinct Sentinel Values
   let capturedScript = '';

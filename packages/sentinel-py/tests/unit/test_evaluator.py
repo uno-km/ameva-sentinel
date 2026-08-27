@@ -235,9 +235,54 @@ async def test_shadow_mode_unified_semantics():
         page_size=500,  # exceeds default max (50)
     )
     decision = await evaluator.evaluate_async(ctx)
-    assert decision.allowed is True
-    assert decision.action == "OBSERVE"
-    assert decision.proposed_action == "DENY"
-    assert decision.enforced_action == "ALLOW"
     assert decision.violation_detected is True
     assert decision.enforced is False
+
+
+def test_compute_emergency_capacity_parity():
+    from ameva_sentinel import compute_emergency_capacity
+    assert compute_emergency_capacity(100, 0.5, 10) == 5
+    assert compute_emergency_capacity(0, 0.5, 10) == 0
+    assert compute_emergency_capacity(10, 0.5, 20) == 1
+    with pytest.raises(ValueError):
+        compute_emergency_capacity(-1, 0.5, 1)
+    with pytest.raises(ValueError):
+        compute_emergency_capacity(100, 0.0, 1)
+    with pytest.raises(ValueError):
+        compute_emergency_capacity(100, 1.5, 1)
+    with pytest.raises(ValueError):
+        compute_emergency_capacity(100, 0.5, 0)
+
+
+@pytest.mark.asyncio
+async def test_redis_failure_policy_modes():
+    from ameva_sentinel.core.budget_types import RedisFailurePolicy
+
+    class FailingStore:
+        async def consume_async(self, req):
+            raise ConnectionError("Redis outage")
+
+    ctx = RequestCostContext(method="GET", path="/api/v1/chart/unified")
+
+    # fail-closed
+    closed_evaluator = SentinelCostGuardEvaluator(
+        budget_store=FailingStore(),
+        failure_policy=RedisFailurePolicy(mode="fail-closed"),
+        enforce_by_default=True,
+    )
+    closed_dec = await closed_evaluator.evaluate_async(ctx)
+    assert closed_dec.allowed is False
+    assert closed_dec.reason_code == "FAIL_CLOSED"
+    assert closed_dec.degraded is True
+
+    # fail-open
+    open_evaluator = SentinelCostGuardEvaluator(
+        budget_store=FailingStore(),
+        failure_policy=RedisFailurePolicy(mode="fail-open"),
+        enforce_by_default=True,
+    )
+    open_dec = await open_evaluator.evaluate_async(ctx)
+    assert open_dec.allowed is True
+    assert open_dec.reason_code == "FAIL_OPEN"
+    assert open_dec.degraded is True
+

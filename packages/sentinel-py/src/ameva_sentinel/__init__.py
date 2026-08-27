@@ -31,7 +31,7 @@ from .core.canonical import (
 )
 from .core.policy_registry import CostPolicyRegistry
 from .core.guards import RequestShapeGuard, ResponseBudgetGuard, GuardValidationResult
-from .core.local_store import LocalEmergencyBudgetStore
+from .core.local_store import LocalEmergencyBudgetStore, compute_emergency_capacity
 from .core.redaction import sanitize_threat_event, ALLOWED_EVIDENCE_CODES
 from .core.aggregator import BoundedThreatAggregator
 from .core.evaluator import SentinelCostGuardEvaluator
@@ -86,6 +86,7 @@ __all__ = [
     "ResponseBudgetGuard",
     "GuardValidationResult",
     "LocalEmergencyBudgetStore",
+    "compute_emergency_capacity",
     "sanitize_threat_event",
     "ALLOWED_EVIDENCE_CODES",
     "BoundedThreatAggregator",

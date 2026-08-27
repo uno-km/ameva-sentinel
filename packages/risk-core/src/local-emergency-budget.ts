@@ -6,6 +6,26 @@
 
 import { BudgetStore, BudgetConsumeRequest, BudgetConsumeResult } from './budget-types.js';
 
+export function computeEmergencyCapacity(
+  normalCapacity: number,
+  emergencyRatio = 0.5,
+  expectedReplicaCount = 1,
+): number {
+  if (typeof normalCapacity !== 'number' || !Number.isFinite(normalCapacity) || normalCapacity < 0) {
+    throw new Error('normalCapacity must be a finite non-negative number');
+  }
+  if (typeof emergencyRatio !== 'number' || !Number.isFinite(emergencyRatio) || emergencyRatio <= 0 || emergencyRatio > 1) {
+    throw new Error('emergencyRatio must be a number > 0 and <= 1');
+  }
+  if (typeof expectedReplicaCount !== 'number' || !Number.isInteger(expectedReplicaCount) || expectedReplicaCount < 1) {
+    throw new Error('expectedReplicaCount must be an integer >= 1');
+  }
+  if (normalCapacity === 0) {
+    return 0;
+  }
+  return Math.max(1, Math.floor((normalCapacity * emergencyRatio) / expectedReplicaCount));
+}
+
 export class LocalEmergencyBudgetStore implements BudgetStore {
   private readonly defaultCapacity: number;
   private readonly defaultRefillRatePerSec: number;
@@ -49,7 +69,10 @@ export class LocalEmergencyBudgetStore implements BudgetStore {
         allowed: true,
         remainingCost: Math.floor(state.tokens),
         retryAfterSeconds: 0,
-        degraded: false
+        degraded: true,
+        store: 'local-emergency',
+        consistency: 'process-local',
+        reason: 'ALLOWED'
       };
     } else {
       const missing = cost - state.tokens;
@@ -59,7 +82,10 @@ export class LocalEmergencyBudgetStore implements BudgetStore {
         allowed: false,
         remainingCost: Math.floor(state.tokens),
         retryAfterSeconds,
-        degraded: false
+        degraded: true,
+        store: 'local-emergency',
+        consistency: 'process-local',
+        reason: 'QUOTA_EXCEEDED'
       };
     }
   }

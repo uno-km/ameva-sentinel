@@ -9,11 +9,12 @@ import {
   CostGuardDecision,
   BudgetStore,
   ThreatAggregateStore,
-  RateLimitTier
+  RateLimitTier,
+  RedisFailurePolicy
 } from './budget-types.js';
 import { CostPolicyRegistry } from './policy-registry.js';
 import { RequestShapeGuard } from './budget-guards.js';
-import { LocalEmergencyBudgetStore } from './local-emergency-budget.js';
+import { LocalEmergencyBudgetStore, computeEmergencyCapacity } from './local-emergency-budget.js';
 
 export class SentinelCostGuardEvaluator {
   private readonly registry: CostPolicyRegistry;
@@ -21,6 +22,7 @@ export class SentinelCostGuardEvaluator {
   private readonly emergencyStore: LocalEmergencyBudgetStore;
   private readonly threatStore?: ThreatAggregateStore;
   private readonly enforceByDefault: boolean;
+  private readonly failurePolicy: RedisFailurePolicy;
 
   constructor(options: {
     policyRegistry?: CostPolicyRegistry;
@@ -28,12 +30,14 @@ export class SentinelCostGuardEvaluator {
     emergencyStore?: LocalEmergencyBudgetStore;
     threatStore?: ThreatAggregateStore;
     enforceByDefault?: boolean;
+    failurePolicy?: RedisFailurePolicy;
   } = {}) {
     this.registry = options.policyRegistry || new CostPolicyRegistry();
     this.budgetStore = options.budgetStore || new LocalEmergencyBudgetStore();
     this.emergencyStore = options.emergencyStore || new LocalEmergencyBudgetStore(50, 1.0);
     this.threatStore = options.threatStore;
     this.enforceByDefault = options.enforceByDefault ?? false;
+    this.failurePolicy = options.failurePolicy || { mode: 'local-emergency', emergencyRatio: 1.0, expectedReplicaCount: 1 };
   }
 
   private resolveTier(context: RequestCostContext): { name: string; tier: RateLimitTier } {
@@ -220,57 +224,66 @@ export class SentinelCostGuardEvaluator {
       };
     } catch {
       // Redis or Primary Store Failure Handling
-      if (policy.failure_mode === 'deny') {
+      const failureMode = this.failurePolicy.mode;
+
+      if (policy.failure_mode === 'deny' || failureMode === 'fail-closed') {
         return {
           allowed: isShadow,
           action: isShadow ? 'OBSERVE' : 'DENY',
           proposedAction: 'DENY',
           enforcedAction: isShadow ? 'ALLOW' : 'DENY',
           violationDetected: true,
-          reasonCode: 'LIMITER_UNAVAILABLE',
+          reasonCode: 'FAIL_CLOSED',
           policyVersion,
           policyChecksum,
           displayChecksum,
           cost: policy.cost,
           degraded: true,
           enforced: !isShadow,
-          message: 'Distributed budget store unavailable (failure_mode=deny).'
+          message: 'Distributed budget store unavailable (failure_mode=fail-closed).'
         };
       }
 
-      if (policy.failure_mode === 'allow_with_emergency_cap') {
-        // Enforce Local Emergency Bucket with Tier Emergency Capacity
-        const emRes = await this.emergencyStore.consume(consumeRequest);
-        if (!emRes.allowed) {
-          return {
-            allowed: isShadow,
-            action: isShadow ? 'OBSERVE' : 'RATE_LIMIT',
-            proposedAction: 'RATE_LIMIT',
-            enforcedAction: isShadow ? 'ALLOW' : 'RATE_LIMIT',
-            violationDetected: true,
-            reasonCode: 'COST_BUDGET_EXCEEDED',
-            policyVersion,
-            policyChecksum,
-            displayChecksum,
-            cost: policy.cost,
-            budget: {
-              requestedCost: policy.cost,
-              remainingCost: emRes.remainingCost,
-              retryAfterSeconds: emRes.retryAfterSeconds
-            },
-            degraded: true,
-            enforced: !isShadow,
-            message: `Emergency local capacity (${selectedTier.emergency_local_capacity}) exceeded for route '${routeKey}'.`
-          };
-        }
-
+      if (policy.failure_mode === 'allow' || failureMode === 'fail-open') {
         return {
           allowed: true,
           action: 'ALLOW',
           proposedAction: 'ALLOW',
           enforcedAction: 'ALLOW',
           violationDetected: false,
-          reasonCode: 'WITHIN_BUDGET',
+          reasonCode: 'FAIL_OPEN',
+          policyVersion,
+          policyChecksum,
+          displayChecksum,
+          cost: policy.cost,
+          degraded: true,
+          enforced: !isShadow,
+          message: 'Distributed budget store unavailable (failure_mode=fail-open).'
+        };
+      }
+
+      // Default: 'local-emergency' with bounded replicas
+      const baseCap = selectedTier.emergency_local_capacity ?? selectedTier.capacity ?? 100;
+      const boundedEmergencyCap = computeEmergencyCapacity(
+        baseCap,
+        this.failurePolicy.emergencyRatio ?? 0.5,
+        this.failurePolicy.expectedReplicaCount ?? 1
+      );
+
+      const boundedRequest = {
+        ...consumeRequest,
+        emergencyCapacity: boundedEmergencyCap
+      };
+
+      const emRes = await this.emergencyStore.consume(boundedRequest);
+      if (!emRes.allowed) {
+        return {
+          allowed: isShadow,
+          action: isShadow ? 'OBSERVE' : 'RATE_LIMIT',
+          proposedAction: 'RATE_LIMIT',
+          enforcedAction: isShadow ? 'ALLOW' : 'RATE_LIMIT',
+          violationDetected: true,
+          reasonCode: 'COST_BUDGET_EXCEEDED',
           policyVersion,
           policyChecksum,
           displayChecksum,
@@ -278,11 +291,11 @@ export class SentinelCostGuardEvaluator {
           budget: {
             requestedCost: policy.cost,
             remainingCost: emRes.remainingCost,
-            retryAfterSeconds: 0
+            retryAfterSeconds: emRes.retryAfterSeconds
           },
           degraded: true,
           enforced: !isShadow,
-          message: 'Distributed budget store unavailable; operating under emergency local cap.'
+          message: `Emergency local capacity (${boundedEmergencyCap}) exceeded for route '${routeKey}'.`
         };
       }
 
@@ -292,14 +305,19 @@ export class SentinelCostGuardEvaluator {
         proposedAction: 'ALLOW',
         enforcedAction: 'ALLOW',
         violationDetected: false,
-        reasonCode: 'LIMITER_UNAVAILABLE',
+        reasonCode: 'WITHIN_BUDGET',
         policyVersion,
         policyChecksum,
         displayChecksum,
         cost: policy.cost,
+        budget: {
+          requestedCost: policy.cost,
+          remainingCost: emRes.remainingCost,
+          retryAfterSeconds: 0
+        },
         degraded: true,
-        enforced: false,
-        message: 'Distributed budget store unavailable; allowed under emergency fallback.'
+        enforced: !isShadow,
+        message: 'Distributed budget store unavailable; operating under bounded emergency local cap.'
       };
     }
   }

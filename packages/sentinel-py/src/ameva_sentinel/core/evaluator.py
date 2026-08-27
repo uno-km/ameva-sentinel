@@ -11,10 +11,11 @@ from .budget_types import (
     BudgetConsumeRequest,
     RouteCostPolicy,
     RateLimitTier,
+    RedisFailurePolicy,
 )
 from .policy_registry import CostPolicyRegistry
 from .guards import RequestShapeGuard
-from .local_store import LocalEmergencyBudgetStore
+from .local_store import LocalEmergencyBudgetStore, compute_emergency_capacity
 from .protocols import AsyncBudgetStore, SyncBudgetStore, ThreatAggregateStore
 
 
@@ -26,12 +27,14 @@ class SentinelCostGuardEvaluator:
         emergency_store: Optional[LocalEmergencyBudgetStore] = None,
         threat_store: Optional[ThreatAggregateStore] = None,
         enforce_by_default: bool = False,
+        failure_policy: Optional[RedisFailurePolicy] = None,
     ):
         self.registry = policy_registry or CostPolicyRegistry()
         self.budget_store = budget_store or LocalEmergencyBudgetStore()
         self.emergency_store = emergency_store or LocalEmergencyBudgetStore(default_capacity=50, default_refill_rate=1.0)
         self.threat_store = threat_store
         self.enforce_by_default = enforce_by_default
+        self.failure_policy = failure_policy or RedisFailurePolicy()
 
     def _resolve_tier(self, context: RequestCostContext) -> Tuple[str, RateLimitTier]:
         tiers = self.registry.config.rate_limit_tiers
@@ -236,54 +239,59 @@ class SentinelCostGuardEvaluator:
                 enforced=not is_shadow,
             )
         except Exception:
-            if policy.failure_mode == "deny":
+            failure_mode = self.failure_policy.mode
+
+            if policy.failure_mode == "deny" or failure_mode == "fail-closed":
                 return CostGuardDecision(
                     allowed=is_shadow,
                     action="OBSERVE" if is_shadow else "DENY",
                     proposed_action="DENY",
                     enforced_action="ALLOW" if is_shadow else "DENY",
                     violation_detected=True,
-                    reason_code="LIMITER_UNAVAILABLE",
+                    reason_code="FAIL_CLOSED",
                     policy_version=policy_version,
                     policy_checksum=policy_checksum,
                     display_checksum=display_checksum,
                     cost=policy.cost,
                     degraded=True,
                     enforced=not is_shadow,
-                    message="Distributed budget store unavailable (failure_mode=deny).",
+                    message="Distributed budget store unavailable (failure_mode=fail-closed).",
                 )
 
-            if policy.failure_mode == "allow_with_emergency_cap":
-                em_res = self.emergency_store.consume(consume_req)
-                if not em_res.allowed:
-                    return CostGuardDecision(
-                        allowed=is_shadow,
-                        action="OBSERVE" if is_shadow else "RATE_LIMIT",
-                        proposed_action="RATE_LIMIT",
-                        enforced_action="ALLOW" if is_shadow else "RATE_LIMIT",
-                        violation_detected=True,
-                        reason_code="COST_BUDGET_EXCEEDED",
-                        policy_version=policy_version,
-                        policy_checksum=policy_checksum,
-                        display_checksum=display_checksum,
-                        cost=policy.cost,
-                        budget=CostGuardBudgetInfo(
-                            requested_cost=policy.cost,
-                            remaining_cost=em_res.remaining_cost,
-                            retry_after_seconds=em_res.retry_after_seconds,
-                        ),
-                        degraded=True,
-                        enforced=not is_shadow,
-                        message=f"Emergency local capacity ({tier.emergency_local_capacity}) exceeded for route '{route_key}'.",
-                    )
-
+            if policy.failure_mode == "allow" or failure_mode == "fail-open":
                 return CostGuardDecision(
                     allowed=True,
                     action="ALLOW",
                     proposed_action="ALLOW",
                     enforced_action="ALLOW",
                     violation_detected=False,
-                    reason_code="WITHIN_BUDGET",
+                    reason_code="FAIL_OPEN",
+                    policy_version=policy_version,
+                    policy_checksum=policy_checksum,
+                    display_checksum=display_checksum,
+                    cost=policy.cost,
+                    degraded=True,
+                    enforced=not is_shadow,
+                    message="Distributed budget store unavailable (failure_mode=fail-open).",
+                )
+
+            base_cap = tier.emergency_local_capacity or tier.capacity or 100
+            bounded_emergency_cap = compute_emergency_capacity(
+                base_cap,
+                self.failure_policy.emergency_ratio,
+                self.failure_policy.expected_replica_count,
+            )
+            consume_req.emergency_capacity = bounded_emergency_cap
+
+            em_res = self.emergency_store.consume(consume_req)
+            if not em_res.allowed:
+                return CostGuardDecision(
+                    allowed=is_shadow,
+                    action="OBSERVE" if is_shadow else "RATE_LIMIT",
+                    proposed_action="RATE_LIMIT",
+                    enforced_action="ALLOW" if is_shadow else "RATE_LIMIT",
+                    violation_detected=True,
+                    reason_code="COST_BUDGET_EXCEEDED",
                     policy_version=policy_version,
                     policy_checksum=policy_checksum,
                     display_checksum=display_checksum,
@@ -291,11 +299,11 @@ class SentinelCostGuardEvaluator:
                     budget=CostGuardBudgetInfo(
                         requested_cost=policy.cost,
                         remaining_cost=em_res.remaining_cost,
-                        retry_after_seconds=0,
+                        retry_after_seconds=em_res.retry_after_seconds,
                     ),
                     degraded=True,
                     enforced=not is_shadow,
-                    message="Distributed budget store unavailable; operating under emergency local cap.",
+                    message=f"Emergency local capacity ({bounded_emergency_cap}) exceeded for route '{route_key}'.",
                 )
 
             return CostGuardDecision(
@@ -304,14 +312,19 @@ class SentinelCostGuardEvaluator:
                 proposed_action="ALLOW",
                 enforced_action="ALLOW",
                 violation_detected=False,
-                reason_code="LIMITER_UNAVAILABLE",
+                reason_code="WITHIN_BUDGET",
                 policy_version=policy_version,
                 policy_checksum=policy_checksum,
                 display_checksum=display_checksum,
                 cost=policy.cost,
+                budget=CostGuardBudgetInfo(
+                    requested_cost=policy.cost,
+                    remaining_cost=em_res.remaining_cost,
+                    retry_after_seconds=0,
+                ),
                 degraded=True,
-                enforced=False,
-                message="Distributed budget store unavailable; allowed under emergency fallback.",
+                enforced=not is_shadow,
+                message="Distributed budget store unavailable; operating under bounded emergency local cap.",
             )
 
     def evaluate_sync(self, context: RequestCostContext) -> CostGuardDecision:
@@ -394,54 +407,59 @@ class SentinelCostGuardEvaluator:
                 enforced=not is_shadow,
             )
         except Exception:
-            if policy.failure_mode == "deny":
+            failure_mode = self.failure_policy.mode
+
+            if policy.failure_mode == "deny" or failure_mode == "fail-closed":
                 return CostGuardDecision(
                     allowed=is_shadow,
                     action="OBSERVE" if is_shadow else "DENY",
                     proposed_action="DENY",
                     enforced_action="ALLOW" if is_shadow else "DENY",
                     violation_detected=True,
-                    reason_code="LIMITER_UNAVAILABLE",
+                    reason_code="FAIL_CLOSED",
                     policy_version=policy_version,
                     policy_checksum=policy_checksum,
                     display_checksum=display_checksum,
                     cost=policy.cost,
                     degraded=True,
                     enforced=not is_shadow,
-                    message="Distributed budget store unavailable (failure_mode=deny).",
+                    message="Distributed budget store unavailable (failure_mode=fail-closed).",
                 )
 
-            if policy.failure_mode == "allow_with_emergency_cap":
-                em_res = self.emergency_store.consume(consume_req)
-                if not em_res.allowed:
-                    return CostGuardDecision(
-                        allowed=is_shadow,
-                        action="OBSERVE" if is_shadow else "RATE_LIMIT",
-                        proposed_action="RATE_LIMIT",
-                        enforced_action="ALLOW" if is_shadow else "RATE_LIMIT",
-                        violation_detected=True,
-                        reason_code="COST_BUDGET_EXCEEDED",
-                        policy_version=policy_version,
-                        policy_checksum=policy_checksum,
-                        display_checksum=display_checksum,
-                        cost=policy.cost,
-                        budget=CostGuardBudgetInfo(
-                            requested_cost=policy.cost,
-                            remaining_cost=em_res.remaining_cost,
-                            retry_after_seconds=em_res.retry_after_seconds,
-                        ),
-                        degraded=True,
-                        enforced=not is_shadow,
-                        message=f"Emergency local capacity ({tier.emergency_local_capacity}) exceeded for route '{route_key}'.",
-                    )
-
+            if policy.failure_mode == "allow" or failure_mode == "fail-open":
                 return CostGuardDecision(
                     allowed=True,
                     action="ALLOW",
                     proposed_action="ALLOW",
                     enforced_action="ALLOW",
                     violation_detected=False,
-                    reason_code="WITHIN_BUDGET",
+                    reason_code="FAIL_OPEN",
+                    policy_version=policy_version,
+                    policy_checksum=policy_checksum,
+                    display_checksum=display_checksum,
+                    cost=policy.cost,
+                    degraded=True,
+                    enforced=not is_shadow,
+                    message="Distributed budget store unavailable (failure_mode=fail-open).",
+                )
+
+            base_cap = tier.emergency_local_capacity or tier.capacity or 100
+            bounded_emergency_cap = compute_emergency_capacity(
+                base_cap,
+                self.failure_policy.emergency_ratio,
+                self.failure_policy.expected_replica_count,
+            )
+            consume_req.emergency_capacity = bounded_emergency_cap
+
+            em_res = self.emergency_store.consume(consume_req)
+            if not em_res.allowed:
+                return CostGuardDecision(
+                    allowed=is_shadow,
+                    action="OBSERVE" if is_shadow else "RATE_LIMIT",
+                    proposed_action="RATE_LIMIT",
+                    enforced_action="ALLOW" if is_shadow else "RATE_LIMIT",
+                    violation_detected=True,
+                    reason_code="COST_BUDGET_EXCEEDED",
                     policy_version=policy_version,
                     policy_checksum=policy_checksum,
                     display_checksum=display_checksum,
@@ -449,11 +467,11 @@ class SentinelCostGuardEvaluator:
                     budget=CostGuardBudgetInfo(
                         requested_cost=policy.cost,
                         remaining_cost=em_res.remaining_cost,
-                        retry_after_seconds=0,
+                        retry_after_seconds=em_res.retry_after_seconds,
                     ),
                     degraded=True,
                     enforced=not is_shadow,
-                    message="Distributed budget store unavailable; operating under emergency local cap.",
+                    message=f"Emergency local capacity ({bounded_emergency_cap}) exceeded for route '{route_key}'.",
                 )
 
             return CostGuardDecision(
@@ -462,12 +480,17 @@ class SentinelCostGuardEvaluator:
                 proposed_action="ALLOW",
                 enforced_action="ALLOW",
                 violation_detected=False,
-                reason_code="LIMITER_UNAVAILABLE",
+                reason_code="WITHIN_BUDGET",
                 policy_version=policy_version,
                 policy_checksum=policy_checksum,
                 display_checksum=display_checksum,
                 cost=policy.cost,
+                budget=CostGuardBudgetInfo(
+                    requested_cost=policy.cost,
+                    remaining_cost=em_res.remaining_cost,
+                    retry_after_seconds=0,
+                ),
                 degraded=True,
-                enforced=False,
-                message="Distributed budget store unavailable; allowed under emergency fallback.",
+                enforced=not is_shadow,
+                message="Distributed budget store unavailable; operating under bounded emergency local cap.",
             )

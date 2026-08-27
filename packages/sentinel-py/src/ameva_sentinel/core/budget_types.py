@@ -219,12 +219,36 @@ class BudgetConsumeRequest:
     policy: Optional[RouteCostPolicy] = None
 
 
+from typing import Literal
+
+RedisFailureMode = Literal["fail-closed", "fail-open", "local-emergency"]
+
+
+@dataclass
+class RedisFailurePolicy:
+    mode: RedisFailureMode = "local-emergency"
+    emergency_ratio: float = 1.0
+    expected_replica_count: int = 1
+    risk_level: Optional[Literal["low", "medium", "high", "critical"]] = None
+
+
 @dataclass
 class BudgetConsumeResult:
     allowed: bool
     remaining_cost: int
     retry_after_seconds: int = 0
     degraded: bool = False
+    store: Literal["redis", "local-emergency", "bypass"] = "local-emergency"
+    consistency: Literal["distributed-atomic", "process-local", "none"] = "process-local"
+    reason: Literal[
+        "ALLOWED",
+        "QUOTA_EXCEEDED",
+        "REDIS_UNAVAILABLE",
+        "FAIL_CLOSED",
+        "FAIL_OPEN",
+        "INVALID_REQUEST",
+    ] = "ALLOWED"
+
 
 
 @dataclass

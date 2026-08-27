@@ -14,7 +14,9 @@ export type CostGuardReasonCode =
   | 'LIMITER_UNAVAILABLE'
   | 'POLICY_NOT_FOUND'
   | 'POLICY_INVALID'
-  | 'AUTH_REQUIRED';
+  | 'AUTH_REQUIRED'
+  | 'FAIL_CLOSED'
+  | 'FAIL_OPEN';
 
 export interface RouteCostPolicy {
   method: HttpMethod;
@@ -176,11 +178,32 @@ export interface BudgetConsumeRequest {
 }
 
 
+export type RedisFailureMode =
+  | 'fail-closed'
+  | 'fail-open'
+  | 'local-emergency';
+
+export interface RedisFailurePolicy {
+  mode: RedisFailureMode;
+  emergencyRatio?: number;
+  expectedReplicaCount?: number;
+  riskLevel?: 'low' | 'medium' | 'high' | 'critical';
+}
+
 export interface BudgetConsumeResult {
   allowed: boolean;
   remainingCost: number;
   retryAfterSeconds: number;
-  degraded?: boolean;
+  degraded: boolean;
+  store: 'redis' | 'local-emergency' | 'bypass';
+  consistency: 'distributed-atomic' | 'process-local' | 'none';
+  reason:
+    | 'ALLOWED'
+    | 'QUOTA_EXCEEDED'
+    | 'REDIS_UNAVAILABLE'
+    | 'FAIL_CLOSED'
+    | 'FAIL_OPEN'
+    | 'INVALID_REQUEST';
 }
 
 export interface BudgetStore {

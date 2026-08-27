@@ -197,7 +197,10 @@ export class RedisTokenBucketStore implements BudgetStore {
         allowed: false,
         remainingCost: 0,
         retryAfterSeconds: 0,
-        degraded: false
+        degraded: false,
+        store: 'redis',
+        consistency: 'distributed-atomic',
+        reason: 'INVALID_REQUEST'
       };
     }
 
@@ -209,7 +212,10 @@ export class RedisTokenBucketStore implements BudgetStore {
             allowed: false,
             remainingCost: 0,
             retryAfterSeconds: 0,
-            degraded: false
+            degraded: false,
+            store: 'redis',
+            consistency: 'distributed-atomic',
+            reason: 'INVALID_REQUEST'
           };
         }
       }
@@ -348,9 +354,12 @@ export class RedisTokenBucketStore implements BudgetStore {
 
     return {
       allowed,
-      remainingCost,
-      retryAfterSeconds,
-      degraded: false
+      remainingCost: Math.max(0, remainingCost),
+      retryAfterSeconds: Math.max(0, retryAfterSeconds),
+      degraded: false,
+      store: 'redis',
+      consistency: 'distributed-atomic',
+      reason: allowed ? 'ALLOWED' : 'QUOTA_EXCEEDED'
     };
   }
 }
