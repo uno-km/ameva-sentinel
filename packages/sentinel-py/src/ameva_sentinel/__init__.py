@@ -19,6 +19,8 @@ from .core.budget_types import (
     BudgetConsumeResult,
     RedactedThreatEvent,
     ThreatAggregateRecord,
+    BUDGET_SCOPES,
+    LEGACY_DEFAULT_BUDGET_SCOPES,
 )
 from .core.canonical import (
     canonicalize_policy_json,
@@ -72,6 +74,8 @@ __all__ = [
     "BudgetConsumeResult",
     "RedactedThreatEvent",
     "ThreatAggregateRecord",
+    "BUDGET_SCOPES",
+    "LEGACY_DEFAULT_BUDGET_SCOPES",
     "canonicalize_policy_json",
     "compute_policy_checksum",
     "hash_key_identifier",

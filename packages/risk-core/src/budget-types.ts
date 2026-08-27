@@ -124,6 +124,29 @@ export interface CostGuardDecision {
   message?: string;
 }
 
+export const BUDGET_SCOPES = [
+  'global',
+  'route',
+  'tenant',
+  'account',
+  'authKey',
+  'session',
+  'network',
+] as const;
+
+export type BudgetScope = typeof BUDGET_SCOPES[number];
+
+export const LEGACY_DEFAULT_BUDGET_SCOPES = [
+  'route',
+  'tenant',
+  'account',
+  'authKey',
+  'session',
+  'network',
+] as const;
+
+export type LegacyBudgetScope = typeof LEGACY_DEFAULT_BUDGET_SCOPES[number];
+
 export interface ScopeBudgetConfig {
   capacity: number;
   refillRatePerSec: number;
@@ -132,6 +155,7 @@ export interface ScopeBudgetConfig {
 export interface BudgetConsumeRequest {
   cost: number;
   routeKey: string;
+  globalKey?: string;
   tenantId?: string;
   accountId?: string;
   apiKeyId?: string;
@@ -141,6 +165,7 @@ export interface BudgetConsumeRequest {
   emergencyCapacity?: number;
   policy?: RouteCostPolicy;
   scopeBudgets?: {
+    global?: ScopeBudgetConfig;
     route?: ScopeBudgetConfig;
     tenant?: ScopeBudgetConfig;
     account?: ScopeBudgetConfig;

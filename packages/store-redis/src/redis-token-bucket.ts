@@ -2,6 +2,8 @@ import {
   BudgetStore,
   BudgetConsumeRequest,
   BudgetConsumeResult,
+  BUDGET_SCOPES,
+  BudgetScope,
   hashKeyIdentifier
 } from '@ameva/sentinel-risk-core';
 import { RedisClientLike } from './types.js';
@@ -199,6 +201,20 @@ export class RedisTokenBucketStore implements BudgetStore {
       };
     }
 
+    // Strict Scope SSOT: Reject unknown scope configurations immediately
+    if (request.scopeBudgets) {
+      for (const scopeName of Object.keys(request.scopeBudgets)) {
+        if (!BUDGET_SCOPES.includes(scopeName as any)) {
+          return {
+            allowed: false,
+            remainingCost: 0,
+            retryAfterSeconds: 0,
+            degraded: false
+          };
+        }
+      }
+    }
+
     // Explicit Budget Scope isolation avoiding unverified tenant hijacking
     const rawTag = request.tenantId
       ? `tenant:${request.tenantId}`
@@ -209,7 +225,14 @@ export class RedisTokenBucketStore implements BudgetStore {
           : `network:${request.networkKey || request.routeKey}`;
     const tenantTag = hashKeyIdentifier(rawTag);
 
-    const keys: string[] = [`${this.prefix}:{${tenantTag}}:route:${hashKeyIdentifier(request.routeKey)}`];
+    const keys: string[] = [];
+
+    // Optional global scope (only included when explicitly configured)
+    if (request.globalKey || request.scopeBudgets?.global) {
+      keys.push(`${this.prefix}:{${tenantTag}}:global:${hashKeyIdentifier(request.globalKey || 'global')}`);
+    }
+
+    keys.push(`${this.prefix}:{${tenantTag}}:route:${hashKeyIdentifier(request.routeKey)}`);
 
     if (request.tenantId) {
       keys.push(`${this.prefix}:{${tenantTag}}:tenant:${hashKeyIdentifier(request.tenantId)}`);
@@ -232,6 +255,12 @@ export class RedisTokenBucketStore implements BudgetStore {
 
     // Per-key hierarchical quota resolution with explicit scope overrides
     const perKeyBudgets = keys.map((key) => {
+      if (key.includes(':global:')) {
+        return request.scopeBudgets?.global || {
+          capacity: tierCapacity,
+          refillRatePerSec: tierRefill
+        };
+      }
       if (key.includes(':route:')) {
         return request.scopeBudgets?.route || {
           capacity: tierCapacity,

@@ -184,10 +184,31 @@ class CostGuardDecision:
         }
 
 
+BUDGET_SCOPES: tuple[str, ...] = (
+    "global",
+    "route",
+    "tenant",
+    "account",
+    "authKey",
+    "session",
+    "network",
+)
+
+LEGACY_DEFAULT_BUDGET_SCOPES: tuple[str, ...] = (
+    "route",
+    "tenant",
+    "account",
+    "authKey",
+    "session",
+    "network",
+)
+
+
 @dataclass
 class BudgetConsumeRequest:
     cost: int
     route_key: str
+    global_key: Optional[str] = None
     tenant_id: Optional[str] = None
     account_id: Optional[str] = None
     api_key_id: Optional[str] = None

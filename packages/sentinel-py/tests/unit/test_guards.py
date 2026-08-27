@@ -41,3 +41,10 @@ def test_response_budget_row_count():
     res2 = ResponseBudgetGuard.validate_row_count(2000, max_rows=1000)
     assert res2.valid is False
     assert res2.reason_code == "RESPONSE_ROW_BUDGET_EXCEEDED"
+
+
+def test_budget_scopes_ssot():
+    from ameva_sentinel import BUDGET_SCOPES, LEGACY_DEFAULT_BUDGET_SCOPES
+    assert BUDGET_SCOPES == ("global", "route", "tenant", "account", "authKey", "session", "network")
+    assert LEGACY_DEFAULT_BUDGET_SCOPES == ("route", "tenant", "account", "authKey", "session", "network")
+

@@ -413,7 +413,60 @@ async function run() {
     assert.equal(evalCallCount, 0, 'eval MUST NEVER be called on non-NOSCRIPT errors to prevent double deductions');
     console.log('  ✅ PASS: Non-NOSCRIPT errors bubble up immediately with zero eval fallback (No double deduction).');
 
-    console.log('\n🎉 ALL 9 REAL REDIS INTEGRATION & ERROR SAFETY TESTS PASSED CLEANLY!\n');
+    // =========================================================================
+    // TEST 10: Scope SSOT, Unknown Scope Rejection, & Optional Global Scope Verification
+    // =========================================================================
+    console.log('  [TEST 10] Testing Scope SSOT, Unknown Scope Rejection, & Optional Global Scope...');
+    // 10a. Legacy 6-scope without globalKey generates exactly 6 keys
+    const legacyReq = {
+      cost: 5,
+      routeKey: 'GET:/api/legacy-scope',
+      tenantId: 'tenant-legacy',
+      accountId: 'acc-legacy',
+      apiKeyId: 'key-legacy',
+      sessionId: 'sess-legacy',
+      networkKey: '192.168.1.0/24'
+    };
+    const legacyRes = await primaryStore.consume(legacyReq);
+    assert.equal(legacyRes.allowed, true, 'Legacy 6-scope request must be allowed');
+    const legacyTag = hashKeyIdentifier('tenant:tenant-legacy');
+    const legacyCreatedKeys = await redis.keys(`${TEST_PREFIX}:{${legacyTag}}:*`);
+    assert.equal(legacyCreatedKeys.length, 6, 'Legacy request must create exactly 6 keys without global key');
+    assert.ok(!legacyCreatedKeys.some(k => k.includes(':global:')), 'No global key should be created for legacy request');
+
+    // 10b. Optional global scope request generates 7 keys
+    const globalReq = {
+      cost: 5,
+      globalKey: 'enterprise-shared-cluster',
+      routeKey: 'GET:/api/global-scope',
+      tenantId: 'tenant-global',
+      accountId: 'acc-global',
+      apiKeyId: 'key-global',
+      sessionId: 'sess-global',
+      networkKey: '10.0.0.0/24'
+    };
+    const globalRes = await primaryStore.consume(globalReq);
+    assert.equal(globalRes.allowed, true, 'Global-scoped request must be allowed');
+    const globalTag = hashKeyIdentifier('tenant:tenant-global');
+    const globalCreatedKeys = await redis.keys(`${TEST_PREFIX}:{${globalTag}}:*`);
+    assert.equal(globalCreatedKeys.length, 7, 'Global scope request must create exactly 7 keys');
+    assert.ok(globalCreatedKeys.some(k => k.includes(':global:')), 'Global key must be present');
+
+    // 10c. Unknown scope rejection
+    const invalidScopeReq = {
+      cost: 5,
+      routeKey: 'GET:/api/bad-scope',
+      tenantId: 'tenant-bad-scope',
+      scopeBudgets: {
+        unknown_scope_custom: { capacity: 100, refillRatePerSec: 10 }
+      }
+    };
+    const invalidScopeRes = await primaryStore.consume(invalidScopeReq);
+    assert.equal(invalidScopeRes.allowed, false, 'Unknown scope in scopeBudgets must be rejected');
+
+    console.log('  ✅ PASS: Scope SSOT, legacy 6-scope backward compatibility, and optional global scope verified.');
+
+    console.log('\n🎉 ALL 10 REAL REDIS INTEGRATION & ERROR SAFETY TESTS PASSED CLEANLY!\n');
     process.exitCode = 0;
   } catch (err) {
     console.error('\n❌ REAL REDIS INTEGRATION TEST FAILED:', err);
