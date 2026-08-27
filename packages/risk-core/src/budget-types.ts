@@ -157,6 +157,8 @@ export interface ScopeBudgetConfig {
 export interface BudgetConsumeRequest {
   cost: number;
   routeKey: string;
+  requestId?: string;
+  idempotencyTtlSeconds?: number;
   globalKey?: string;
   tenantId?: string;
   accountId?: string;

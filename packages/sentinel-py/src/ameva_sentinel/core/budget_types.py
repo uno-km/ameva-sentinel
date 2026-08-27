@@ -208,6 +208,8 @@ LEGACY_DEFAULT_BUDGET_SCOPES: tuple[str, ...] = (
 class BudgetConsumeRequest:
     cost: int
     route_key: str
+    request_id: Optional[str] = None
+    idempotency_ttl_seconds: Optional[int] = None
     global_key: Optional[str] = None
     tenant_id: Optional[str] = None
     account_id: Optional[str] = None

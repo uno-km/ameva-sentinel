@@ -466,7 +466,70 @@ async function run() {
 
     console.log('  ✅ PASS: Scope SSOT, legacy 6-scope backward compatibility, and optional global scope verified.');
 
-    console.log('\n🎉 ALL 10 REAL REDIS INTEGRATION & ERROR SAFETY TESTS PASSED CLEANLY!\n');
+    // =========================================================================
+    // TEST 11: Replay-Safe Idempotent Quota Consumption & Conflict Detection
+    // =========================================================================
+    console.log('  [TEST 11] Testing Replay-Safe Idempotent Quota Consumption & Conflict Detection...');
+
+    // 11a. Same requestId called sequentially twice deducts exactly once
+    const idempReq1 = {
+      requestId: 'client-req-uuid-12345',
+      cost: 15,
+      routeKey: 'POST:/api/v1/payment',
+      tenantId: 'tenant-idemp-test',
+      idempotencyTtlSeconds: 30
+    };
+    const idempRes1 = await primaryStore.consume(idempReq1);
+    assert.equal(idempRes1.allowed, true, 'First idempotent call must be allowed');
+    assert.equal(idempRes1.remainingCost, 85, 'First call: 100 - 15 = 85');
+
+    const idempRes2 = await primaryStore.consume(idempReq1);
+    assert.equal(idempRes2.allowed, true, 'Replayed call must be allowed from idempotency cache');
+    assert.equal(idempRes2.remainingCost, 85, 'Replayed call must return original remaining cost (no second deduction)');
+
+    // Verify raw Redis route hash has tokens = 85 (only 15 subtracted, not 30)
+    const idempTag = hashKeyIdentifier('tenant:tenant-idemp-test');
+    const routeData = await redis.hgetall(`${TEST_PREFIX}:{${idempTag}}:route:${hashKeyIdentifier('POST:/api/v1/payment')}`);
+    assert.equal(Number(routeData.tokens), 85, 'Redis hash must have exactly 85 tokens (single deduction)');
+
+    // 11b. 20 Concurrent clients with identical requestId deduct exactly once
+    const concurrentReq = {
+      requestId: 'concurrent-race-req-999',
+      cost: 10,
+      routeKey: 'POST:/api/v1/order',
+      tenantId: 'tenant-concurrent-idemp'
+    };
+    const concurrentPromises = Array.from({ length: 20 }, () => primaryStore.consume({ ...concurrentReq }));
+    const concurrentResults = await Promise.all(concurrentPromises);
+    assert.ok(concurrentResults.every(r => r.allowed === true), 'All 20 concurrent requests must be allowed');
+    assert.ok(concurrentResults.every(r => r.remainingCost === 90), 'All 20 concurrent requests must observe 90 remaining tokens');
+
+    const concTag = hashKeyIdentifier('tenant:tenant-concurrent-idemp');
+    const concRouteData = await redis.hgetall(`${TEST_PREFIX}:{${concTag}}:route:${hashKeyIdentifier('POST:/api/v1/order')}`);
+    assert.equal(Number(concRouteData.tokens), 90, 'Redis must show exactly 90 tokens after 20 concurrent replays (single deduction)');
+
+    // 11c. Same requestId with conflicting cost is rejected with zero mutation
+    const conflictCostReq = {
+      requestId: 'client-req-uuid-12345',
+      cost: 50, // original was 15!
+      routeKey: 'POST:/api/v1/payment',
+      tenantId: 'tenant-idemp-test'
+    };
+    const conflictRes = await primaryStore.consume(conflictCostReq);
+    assert.equal(conflictRes.allowed, false, 'Conflicting cost with same requestId must be rejected');
+    assert.equal(conflictRes.reason, 'INVALID_REQUEST');
+
+    // Quota remains 85
+    const routeDataAfterConflict = await redis.hgetall(`${TEST_PREFIX}:{${idempTag}}:route:${hashKeyIdentifier('POST:/api/v1/payment')}`);
+    assert.equal(Number(routeDataAfterConflict.tokens), 85, 'Conflicting request must cause ZERO mutation on Redis quota');
+
+    // 11d. Raw requestId string is not present in Redis keys (hashed)
+    const allIdempKeys = await redis.keys(`${TEST_PREFIX}:{${idempTag}}:*`);
+    assert.ok(!allIdempKeys.some(k => k.includes('client-req-uuid-12345')), 'Raw requestId must not appear in Redis key names');
+
+    console.log('  ✅ PASS: Replay-safe idempotency, concurrent single-deduction, and conflict detection verified.');
+
+    console.log('\n🎉 ALL 11 REAL REDIS INTEGRATION & ERROR SAFETY TESTS PASSED CLEANLY!\n');
     process.exitCode = 0;
   } catch (err) {
     console.error('\n❌ REAL REDIS INTEGRATION TEST FAILED:', err);

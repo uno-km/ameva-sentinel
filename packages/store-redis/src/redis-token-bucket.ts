@@ -103,14 +103,37 @@ local max_retry_after = 0
 local can_consume = true
 local states = {}
 
--- Support either per-key capacity/refill parameters or uniform legacy arguments
-local expected_per_key_argv = 2 + (num_keys * 2)
-local is_per_key = (#ARGV == expected_per_key_argv)
-local ttl = is_per_key and tonumber(ARGV[2]) or tonumber(ARGV[4] or 120)
+-- Support Layout v2 (with idempotency) or Layout v1 (legacy)
+local is_v2 = (#ARGV >= 5 and (#ARGV - 5) == (num_keys * 2))
+local is_v1 = (#ARGV == (2 + (num_keys * 2)))
 
+local ttl = is_v2 and tonumber(ARGV[2]) or (is_v1 and tonumber(ARGV[2]) or tonumber(ARGV[4] or 120))
+local idemp_ttl = is_v2 and tonumber(ARGV[3] or 0) or 0
+local idemp_fp = is_v2 and tostring(ARGV[4] or "") or ""
+local idemp_key = is_v2 and tostring(ARGV[5] or "") or ""
+
+-- 1. Idempotency Cache Check (Fast-path return without token re-deduction)
+if idemp_ttl > 0 and idemp_key ~= "" then
+    local cached = redis.call('HMGET', idemp_key, 'allowed', 'remaining', 'retry_after', 'fingerprint')
+    if cached[1] and cached[4] then
+        local saved_fp = tostring(cached[4])
+        if saved_fp ~= idemp_fp then
+            -- Idempotency Conflict: Same requestId replayed with different payload fingerprint!
+            return { -1, 0, 0 }
+        end
+        return { tonumber(cached[1]), tonumber(cached[2]), tonumber(cached[3]) }
+    end
+end
+
+-- 2. Pass 1: Balance Inspection across all active scope keys
 for i, key in ipairs(all_keys) do
     local capacity, refill_rate
-    if is_per_key then
+    if is_v2 then
+        local cap_idx = 6 + ((i - 1) * 2)
+        local refill_idx = cap_idx + 1
+        capacity = tonumber(ARGV[cap_idx])
+        refill_rate = tonumber(ARGV[refill_idx])
+    elseif is_v1 then
         local cap_idx = 3 + ((i - 1) * 2)
         local refill_idx = cap_idx + 1
         capacity = tonumber(ARGV[cap_idx])
@@ -156,15 +179,29 @@ for i, key in ipairs(all_keys) do
     states[key] = { tokens = tokens, last_updated = last_updated }
 end
 
+-- 3. Pass 2: Commit or Reject with Idempotency Cache Recording
 if can_consume then
     for i, key in ipairs(all_keys) do
         local new_tokens = states[key].tokens - cost
         redis.call('HMSET', key, 'tokens', new_tokens, 'last_updated', states[key].last_updated)
         redis.call('EXPIRE', key, ttl)
     end
-    return { 1, math.floor(min_remaining - cost), 0 }
+
+    local remaining = math.floor(min_remaining - cost)
+    if idemp_ttl > 0 and idemp_key ~= "" then
+        redis.call('HMSET', idemp_key, 'allowed', 1, 'remaining', remaining, 'retry_after', 0, 'fingerprint', idemp_fp)
+        redis.call('EXPIRE', idemp_key, idemp_ttl)
+    end
+
+    return { 1, remaining, 0 }
 else
-    return { 0, math.floor(min_remaining), max_retry_after }
+    local remaining = math.floor(min_remaining)
+    if idemp_ttl > 0 and idemp_key ~= "" then
+        redis.call('HMSET', idemp_key, 'allowed', 0, 'remaining', remaining, 'retry_after', max_retry_after, 'fingerprint', idemp_fp)
+        redis.call('EXPIRE', idemp_key, idemp_ttl)
+    end
+
+    return { 0, remaining, max_retry_after }
 end
 `;
 
@@ -309,9 +346,38 @@ export class RedisTokenBucketStore implements BudgetStore {
       };
     });
 
+    // Validate requestId if provided
+    if (request.requestId !== undefined) {
+      if (typeof request.requestId !== 'string' || request.requestId.length === 0 || request.requestId.length > 256) {
+        return {
+          allowed: false,
+          remainingCost: 0,
+          retryAfterSeconds: 0,
+          degraded: false,
+          store: 'redis',
+          consistency: 'distributed-atomic',
+          reason: 'INVALID_REQUEST'
+        };
+      }
+    }
+
+    const idempTtl = request.requestId ? Math.min(3600, Math.max(1, request.idempotencyTtlSeconds || 60)) : 0;
+    const idempKey = request.requestId
+      ? `${this.prefix}:{${tenantTag}}:req:${hashKeyIdentifier(request.requestId)}`
+      : '';
+    const fpData = JSON.stringify({
+      c: request.cost,
+      k: keys,
+      b: perKeyBudgets.map(b => [b.capacity, b.refillRatePerSec])
+    });
+    const idempFp = request.requestId ? computeSha1Hex(fpData) : '';
+
     const argv: Array<string | number> = [
       request.cost,
       this.ttlSeconds,
+      idempTtl,
+      idempFp,
+      idempKey,
       ...perKeyBudgets.flatMap(({ capacity, refillRatePerSec }) => [capacity, refillRatePerSec])
     ];
 
@@ -346,6 +412,19 @@ export class RedisTokenBucketStore implements BudgetStore {
         // Non-NOSCRIPT errors (timeout, connection refused, network partition) bubble up immediately
         throw err;
       }
+    }
+
+    if (res[0] === -1) {
+      // Idempotency conflict: same requestId called with different parameters
+      return {
+        allowed: false,
+        remainingCost: 0,
+        retryAfterSeconds: 0,
+        degraded: false,
+        store: 'redis',
+        consistency: 'distributed-atomic',
+        reason: 'INVALID_REQUEST'
+      };
     }
 
     const allowed = res[0] === 1;

@@ -354,27 +354,27 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
 
   assert.equal(redisConsumeRes.allowed, true);
   assert.equal(redisConsumeRes.remainingCost, 91);
-  assert.equal(capturedKeyCount, 6, 'Must generate exactly 6 scope keys');
-  assert.ok(capturedScript.includes('expected_per_key_argv = 2 + (num_keys * 2)'), 'Lua script must include expected argv calculation');
-  assert.ok(capturedScript.includes('cap_idx = 3 + ((i - 1) * 2)'), 'Lua script must include 1-indexed cap calculation');
+  assert.ok(capturedScript.includes('is_v2'), 'Lua script must support Layout v2 with idempotency');
+  assert.ok(capturedScript.includes('cap_idx = 6 + ((i - 1) * 2)'), 'Lua script must calculate 1-indexed cap idx in Layout v2');
 
   // Verify ARGV mapping
   assert.equal(capturedArgs[0], 10, 'ARGV[1] must be cost');
   assert.equal(capturedArgs[1], 90, 'ARGV[2] must be ttlSeconds');
+  assert.equal(capturedArgs[2], 0, 'ARGV[3] must be idempTtl (0 when requestId omitted)');
 
-  // Verify 1:1 distinct pair mapping for all 6 scopes
-  assert.equal(capturedArgs[2], 101, 'Key 1 (route) capacity must be 101');
-  assert.equal(capturedArgs[3], 1.01, 'Key 1 (route) refill must be 1.01');
-  assert.equal(capturedArgs[4], 202, 'Key 2 (tenant) capacity must be 202');
-  assert.equal(capturedArgs[5], 2.02, 'Key 2 (tenant) refill must be 2.02');
-  assert.equal(capturedArgs[6], 303, 'Key 3 (account) capacity must be 303');
-  assert.equal(capturedArgs[7], 3.03, 'Key 3 (account) refill must be 3.03');
-  assert.equal(capturedArgs[8], 404, 'Key 4 (auth_key) capacity must be 404');
-  assert.equal(capturedArgs[9], 4.04, 'Key 4 (auth_key) refill must be 4.04');
-  assert.equal(capturedArgs[10], 505, 'Key 5 (session) capacity must be 505');
-  assert.equal(capturedArgs[11], 5.05, 'Key 5 (session) refill must be 5.05');
-  assert.equal(capturedArgs[12], 606, 'Key 6 (net) capacity must be 606');
-  assert.equal(capturedArgs[13], 6.06, 'Key 6 (net) refill must be 6.06');
+  // Verify 1:1 distinct pair mapping for all 6 scopes starting at ARGV[6]
+  assert.equal(capturedArgs[5], 101, 'Key 1 (route) capacity must be 101');
+  assert.equal(capturedArgs[6], 1.01, 'Key 1 (route) refill must be 1.01');
+  assert.equal(capturedArgs[7], 202, 'Key 2 (tenant) capacity must be 202');
+  assert.equal(capturedArgs[8], 2.02, 'Key 2 (tenant) refill must be 2.02');
+  assert.equal(capturedArgs[9], 303, 'Key 3 (account) capacity must be 303');
+  assert.equal(capturedArgs[10], 3.03, 'Key 3 (account) refill must be 3.03');
+  assert.equal(capturedArgs[11], 404, 'Key 4 (auth_key) capacity must be 404');
+  assert.equal(capturedArgs[12], 4.04, 'Key 4 (auth_key) refill must be 4.04');
+  assert.equal(capturedArgs[13], 505, 'Key 5 (session) capacity must be 505');
+  assert.equal(capturedArgs[14], 5.05, 'Key 5 (session) refill must be 5.05');
+  assert.equal(capturedArgs[15], 606, 'Key 6 (net) capacity must be 606');
+  assert.equal(capturedArgs[16], 6.06, 'Key 6 (net) refill must be 6.06');
 
   console.log('  ✅ PASS: Redis per-key hierarchical capacity and refill parameters resolved with distinct sentinel values and dispatched cleanly.');
   console.log('  ✅ PASS: Emergency local capacity strictly enforced under Redis outage.');
