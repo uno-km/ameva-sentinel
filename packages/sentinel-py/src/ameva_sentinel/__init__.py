@@ -51,18 +51,21 @@ from .trusted_proxy import (
     TrustedProxyPolicy,
     DEFAULT_TRUSTED_PROXY_POLICY,
     extract_client_ip,
+    inspect_client_address,
     is_ip_in_cidr,
     is_ip_in_any_cidr,
 )
 from .providers import resolve_provider_adapter, EdgeClientInfo
 from .observability import Sentinel, ActorClaim, Assessment
+from .adapters.asgi import SentinelASGIMiddleware, SentinelASGIObserver
+from .adapters.wsgi import SentinelWSGIMiddleware, SentinelWSGIObserver
+from .adapters.fastapi import create_fastapi_cost_guard, create_fastapi_observer
+from .adapters.enforcement import SentinelASGIEnforcer, SentinelWSGIEnforcer
 from .adapters.dashboard import (
     get_sentinel_dashboard_html,
     mount_fastapi_dashboard,
     mount_flask_dashboard,
 )
-
-__version__ = "2.2.0a1"
 
 __all__ = [
     "__version__",

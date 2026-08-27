@@ -1,6 +1,8 @@
-/**
+﻿/**
  * @file fastify.ts
- * Fastify PreHandler Hook for AMEVA-Sentinel Cost Guardrails.
+ * Fastify PreHandler Observer Hook for AMEVA-Sentinel.
+ * Observes request, runs pure inspection and cost evaluation, attaches results to request.sentinel,
+ * and always calls continuation. Never terminates reply or forces HTTP status codes.
  */
 
 import {
@@ -9,34 +11,38 @@ import {
   RequestCostContext,
   RequestShapeGuard,
   TrustedProxyPolicy,
-  extractClientIp
+  inspectClientAddress,
+  CostGuardDecision,
+  RequestInspection,
+  ClientAddressInspection
 } from '@ameva/sentinel-risk-core';
 
-export function createFastifyCostGuard(options: {
+export interface FastifyObserverOptions {
   evaluator?: SentinelCostGuardEvaluator;
   principalResolver?: (req: any) => VerifiedPrincipal | undefined;
   trustedProxyPolicy?: Partial<TrustedProxyPolicy>;
-} = {}) {
+  onAssessment?: (context: {
+    requestInspection: RequestInspection;
+    clientAddressInspection: ClientAddressInspection;
+    decision?: CostGuardDecision;
+    requestContext: RequestCostContext;
+  }) => void | Promise<void>;
+}
+
+export function createFastifySentinelObserver(options: FastifyObserverOptions = {}) {
   const evaluator = options.evaluator || new SentinelCostGuardEvaluator();
   const principalResolver = options.principalResolver;
   const trustedProxyPolicy = options.trustedProxyPolicy;
+  const onAssessment = options.onAssessment;
 
-  return async function sentinelFastifyHook(req: any, reply: any) {
+  return async function sentinelFastifyObserver(req: any, reply: any) {
     const rawPath = req.raw?.url ? req.raw.url.split('?')[0] : (req.url || '/');
-    const pathValidation = RequestShapeGuard.validatePath(rawPath);
-    if (!pathValidation.valid) {
-      return reply.code(400).send({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message });
-    }
+    const requestInspection = RequestShapeGuard.inspectPath(rawPath);
 
-    let clientIp: string;
-    try {
-      clientIp = extractClientIp({
-        socketRemoteAddress: req.raw?.socket?.remoteAddress || req.ip,
-        headers: req.headers
-      }, trustedProxyPolicy);
-    } catch (err: any) {
-      return reply.code(400).send({ error: 'INVALID_CLIENT_ADDRESS', message: err.message });
-    }
+    const clientAddressInspection = inspectClientAddress({
+      socketRemoteAddress: req.raw?.socket?.remoteAddress || req.ip,
+      headers: req.headers
+    }, trustedProxyPolicy);
 
     let pageSize: number | undefined;
     let seriesCount: number | undefined;
@@ -45,26 +51,17 @@ export function createFastifyCostGuard(options: {
     const query = req.query || {};
     if (query.pageSize) {
       const val = parseInt(String(query.pageSize), 10);
-      if (isNaN(val) || val <= 0) {
-        return reply.code(422).send({ error: 'Invalid pageSize parameter' });
-      }
-      pageSize = val;
+      if (!isNaN(val) && val > 0) pageSize = val;
     }
 
     if (query.seriesCount) {
       const val = parseInt(String(query.seriesCount), 10);
-      if (isNaN(val) || val <= 0) {
-        return reply.code(422).send({ error: 'Invalid seriesCount parameter' });
-      }
-      seriesCount = val;
+      if (!isNaN(val) && val > 0) seriesCount = val;
     }
 
     if (query.timeBuckets) {
       const val = parseInt(String(query.timeBuckets), 10);
-      if (isNaN(val) || val <= 0) {
-        return reply.code(422).send({ error: 'Invalid timeBuckets parameter' });
-      }
-      timeBuckets = val;
+      if (!isNaN(val) && val > 0) timeBuckets = val;
     }
 
     let principal: VerifiedPrincipal | undefined;
@@ -74,7 +71,7 @@ export function createFastifyCostGuard(options: {
       principal = req['sentinel.principal'];
     }
 
-    const context: RequestCostContext = {
+    const requestContext: RequestCostContext = {
       method: req.method || 'GET',
       path: rawPath,
       pageSize,
@@ -83,18 +80,35 @@ export function createFastifyCostGuard(options: {
       principal,
       sessionId: req.cookies?.['session_id'],
       tenantId: req.headers?.['x-tenant-id'],
-      networkKey: clientIp
+      networkKey: clientAddressInspection.clientAddress || clientAddressInspection.socketAddress || 'unknown'
     };
 
-    const decision = await evaluator.evaluate(context);
+    let decision: CostGuardDecision | undefined;
+    if (requestInspection.acceptedByInspector) {
+      decision = await evaluator.evaluate(requestContext);
+      if (reply && typeof reply.header === 'function') {
+        reply.header('x-sentinel-action', decision.action);
+        reply.header('x-sentinel-policy-version', decision.policyVersion);
+        reply.header('x-sentinel-checksum', decision.displayChecksum);
+      }
+    }
 
-    reply.header('x-sentinel-action', decision.action);
-    reply.header('x-sentinel-policy-version', decision.policyVersion);
-    reply.header('x-sentinel-checksum', decision.displayChecksum);
+    const sentinelContext = {
+      requestInspection,
+      clientAddressInspection,
+      decision,
+      requestContext
+    };
 
-    if (!decision.allowed) {
-      const statusCode = decision.action === 'REQUIRE_AUTH' ? 401 : (decision.action === 'RATE_LIMIT' ? 429 : 400);
-      return reply.code(statusCode).send(decision);
+    req.sentinel = sentinelContext;
+
+    if (typeof onAssessment === 'function') {
+      await onAssessment(sentinelContext);
     }
   };
 }
+
+/**
+ * @deprecated Use createFastifySentinelObserver or createFastifySentinelEnforcer.
+ */
+export const createFastifyCostGuard = createFastifySentinelObserver;

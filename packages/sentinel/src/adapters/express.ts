@@ -1,6 +1,8 @@
-/**
+﻿/**
  * @file express.ts
- * Express Middleware Adapter for AMEVA-Sentinel Cost Guardrails.
+ * Express Middleware Observer Adapter for AMEVA-Sentinel.
+ * Observes request, runs pure inspection and cost evaluation, attaches results to req.sentinel,
+ * and always calls next(). Never terminates response or forces HTTP status codes.
  */
 
 import {
@@ -9,34 +11,38 @@ import {
   RequestCostContext,
   RequestShapeGuard,
   TrustedProxyPolicy,
-  extractClientIp
+  inspectClientAddress,
+  CostGuardDecision,
+  RequestInspection,
+  ClientAddressInspection
 } from '@ameva/sentinel-risk-core';
 
-export function createExpressCostGuard(options: {
+export interface ExpressObserverOptions {
   evaluator?: SentinelCostGuardEvaluator;
   principalResolver?: (req: any) => VerifiedPrincipal | undefined;
   trustedProxyPolicy?: Partial<TrustedProxyPolicy>;
-} = {}) {
+  onAssessment?: (context: {
+    requestInspection: RequestInspection;
+    clientAddressInspection: ClientAddressInspection;
+    decision?: CostGuardDecision;
+    requestContext: RequestCostContext;
+  }) => void | Promise<void>;
+}
+
+export function createExpressSentinelObserver(options: ExpressObserverOptions = {}) {
   const evaluator = options.evaluator || new SentinelCostGuardEvaluator();
   const principalResolver = options.principalResolver;
   const trustedProxyPolicy = options.trustedProxyPolicy;
+  const onAssessment = options.onAssessment;
 
-  return async function sentinelCostGuardMiddleware(req: any, res: any, next: any) {
+  return async function sentinelExpressObserver(req: any, res: any, next: any) {
     const rawPath = req.originalUrl ? req.originalUrl.split('?')[0] : (req.path || req.url || '/');
-    const pathValidation = RequestShapeGuard.validatePath(rawPath);
-    if (!pathValidation.valid) {
-      return res.status(400).json({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message });
-    }
+    const requestInspection = RequestShapeGuard.inspectPath(rawPath);
 
-    let clientIp: string;
-    try {
-      clientIp = extractClientIp({
-        socketRemoteAddress: req.socket?.remoteAddress || req.connection?.remoteAddress || req.ip,
-        headers: req.headers
-      }, trustedProxyPolicy);
-    } catch (err: any) {
-      return res.status(400).json({ error: 'INVALID_CLIENT_ADDRESS', message: err.message });
-    }
+    const clientAddressInspection = inspectClientAddress({
+      socketRemoteAddress: req.socket?.remoteAddress || req.connection?.remoteAddress || req.ip,
+      headers: req.headers
+    }, trustedProxyPolicy);
 
     let pageSize: number | undefined;
     let seriesCount: number | undefined;
@@ -44,29 +50,19 @@ export function createExpressCostGuard(options: {
 
     if (req.query?.pageSize) {
       const val = parseInt(String(req.query.pageSize), 10);
-      if (isNaN(val) || val <= 0) {
-        return res.status(422).json({ error: 'Invalid pageSize parameter' });
-      }
-      pageSize = val;
+      if (!isNaN(val) && val > 0) pageSize = val;
     }
 
     if (req.query?.seriesCount) {
       const val = parseInt(String(req.query.seriesCount), 10);
-      if (isNaN(val) || val <= 0) {
-        return res.status(422).json({ error: 'Invalid seriesCount parameter' });
-      }
-      seriesCount = val;
+      if (!isNaN(val) && val > 0) seriesCount = val;
     }
 
     if (req.query?.timeBuckets) {
       const val = parseInt(String(req.query.timeBuckets), 10);
-      if (isNaN(val) || val <= 0) {
-        return res.status(422).json({ error: 'Invalid timeBuckets parameter' });
-      }
-      timeBuckets = val;
+      if (!isNaN(val) && val > 0) timeBuckets = val;
     }
 
-    // Strictly resolve verified principal from upstream auth
     let principal: VerifiedPrincipal | undefined;
     if (principalResolver) {
       principal = principalResolver(req);
@@ -74,7 +70,7 @@ export function createExpressCostGuard(options: {
       principal = req['sentinel.principal'];
     }
 
-    const context: RequestCostContext = {
+    const requestContext: RequestCostContext = {
       method: req.method || 'GET',
       path: rawPath,
       pageSize,
@@ -84,20 +80,38 @@ export function createExpressCostGuard(options: {
       sessionId: req.sessionID || req.cookies?.['session_id'],
       asn: req.asn ? Number(req.asn) : undefined,
       tenantId: req.headers?.['x-tenant-id'],
-      networkKey: clientIp
+      networkKey: clientAddressInspection.clientAddress || clientAddressInspection.socketAddress || 'unknown'
     };
 
-    const decision = await evaluator.evaluate(context);
+    let decision: CostGuardDecision | undefined;
+    if (requestInspection.acceptedByInspector) {
+      decision = await evaluator.evaluate(requestContext);
+      if (res && typeof res.setHeader === 'function') {
+        res.setHeader('x-sentinel-action', decision.action);
+        res.setHeader('x-sentinel-policy-version', decision.policyVersion);
+        res.setHeader('x-sentinel-checksum', decision.displayChecksum);
+      }
+    }
 
-    res.setHeader('x-sentinel-action', decision.action);
-    res.setHeader('x-sentinel-policy-version', decision.policyVersion);
-    res.setHeader('x-sentinel-checksum', decision.displayChecksum);
+    const sentinelContext = {
+      requestInspection,
+      clientAddressInspection,
+      decision,
+      requestContext
+    };
 
-    if (!decision.allowed) {
-      const statusCode = decision.action === 'REQUIRE_AUTH' ? 401 : (decision.action === 'RATE_LIMIT' ? 429 : 400);
-      return res.status(statusCode).json(decision);
+    req.sentinel = sentinelContext;
+
+    if (typeof onAssessment === 'function') {
+      await onAssessment(sentinelContext);
     }
 
     return next();
   };
 }
+
+/**
+ * @deprecated Use createExpressSentinelObserver (observe-only) or createExpressSentinelEnforcer (explicit enforcement).
+ */
+export const createExpressCostGuard = createExpressSentinelObserver;
+export const sentinelMiddleware = createExpressSentinelObserver;

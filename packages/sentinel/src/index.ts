@@ -2,6 +2,7 @@ import {
   SentinelAction,
   defaultPolicy,
   evaluate,
+  evaluateRiskNow,
   createPolicy,
   rules,
   MemoryFixedWindowCounterStore,
@@ -28,14 +29,23 @@ export {
   createPolicy,
   rules,
   evaluate,
+  evaluate as evaluateRisk,
+  evaluateRiskNow,
   MemoryFixedWindowCounterStore,
   MemoryCounterStore,
   MemoryRiskEventStore,
+  MemoryRiskEventStore as InMemoryRiskEventStore,
   LocalStorageRiskEventStore,
   toStoredRiskEvent,
   sanitizeSignals,
   createTraceId
 };
+
+export * from './adapters/express.js';
+export * from './adapters/fastify.js';
+export * from './adapters/next.js';
+export * from './adapters/enforcement.js';
+
 
 export type {
   SentinelRiskReport,

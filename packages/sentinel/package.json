@@ -22,6 +22,10 @@
       "types": "./dist/adapters/next.d.ts",
       "import": "./dist/adapters/next.js"
     },
+    "./enforcement": {
+      "types": "./dist/adapters/enforcement.d.ts",
+      "import": "./dist/adapters/enforcement.js"
+    },
     "./dashboard": {
       "types": "./dist/adapters/dashboard.d.ts",
       "import": "./dist/adapters/dashboard.js"
@@ -33,7 +37,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/adapters/express.ts src/adapters/fastify.ts src/adapters/next.ts src/adapters/dashboard.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022,dom --emitDeclarationOnly --declaration --outDir dist src/index.ts src/adapters/express.ts src/adapters/fastify.ts src/adapters/next.ts src/adapters/dashboard.ts"
+    "build": "tsup src/index.ts src/adapters/express.ts src/adapters/fastify.ts src/adapters/next.ts src/adapters/enforcement.ts src/adapters/dashboard.ts --format esm --clean && tsc --module nodenext --moduleResolution nodenext --target es2022 --lib es2022,dom --emitDeclarationOnly --declaration --outDir dist src/index.ts src/adapters/express.ts src/adapters/fastify.ts src/adapters/next.ts src/adapters/enforcement.ts src/adapters/dashboard.ts"
   },
   "dependencies": {
     "@ameva/sentinel-risk-core": "^2.2.0"

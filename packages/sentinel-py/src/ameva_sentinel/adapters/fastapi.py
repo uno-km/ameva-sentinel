@@ -18,3 +18,7 @@ def create_fastapi_cost_guard(
         evaluator=evaluator,
         principal_resolver=principal_resolver,
     )
+
+
+create_fastapi_observer = create_fastapi_cost_guard
+
