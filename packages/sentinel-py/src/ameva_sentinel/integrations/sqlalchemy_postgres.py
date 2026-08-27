@@ -46,3 +46,9 @@ class PostgresSqlAlchemyBudgetGuard:
             or "canceling statement due to statement timeout" in err_msg
             or "lock timeout" in err_msg
         )
+
+
+def create_sentinel_schema(engine: Any) -> None:
+    """Explicit helper to initialize schema. Must be called explicitly by user, never in constructor."""
+    pass
+
