@@ -20,6 +20,13 @@ async def test_local_emergency_budget_store():
     store = LocalEmergencyBudgetStore(default_capacity=100, default_refill_rate=1.66)
     policy = RouteCostPolicy(method="GET", path="/test", cost=30)
 
+    # Input validation checks
+    with pytest.raises(ValueError, match="cost must be an integer greater than zero"):
+        await store.consume_async(BudgetConsumeRequest(cost=-10, route_key="GET:/test"))
+
+    with pytest.raises(ValueError, match="route_key must be a non-empty bounded string"):
+        await store.consume_async(BudgetConsumeRequest(cost=10, route_key=""))
+
     # 1st consume: 30 of 100
     r1 = await store.consume_async(BudgetConsumeRequest(cost=30, route_key="GET:/test", policy=policy))
     assert r1.allowed is True

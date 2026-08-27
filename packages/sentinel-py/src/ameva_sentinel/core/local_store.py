@@ -1,6 +1,6 @@
-"""
+﻿"""
 In-Memory Emergency Budget Store implementing SyncBudgetStore and AsyncBudgetStore.
-Supports tier-specific emergency local capacities, namespace isolation, and dynamic token balance clamping.
+Supports tier-specific emergency local capacities, namespace isolation, strict input validation, and dynamic token balance clamping.
 """
 
 import time
@@ -27,6 +27,10 @@ def compute_emergency_capacity(
 
 class LocalEmergencyBudgetStore:
     def __init__(self, default_capacity: int = 100, default_refill_rate: float = 1.66):
+        if not isinstance(default_capacity, int) or default_capacity < 0:
+            raise ValueError("default_capacity must be a non-negative integer")
+        if not isinstance(default_refill_rate, (int, float)) or default_refill_rate < 0:
+            raise ValueError("default_refill_rate must be a non-negative number")
         self.default_capacity = default_capacity
         self.default_refill_rate = default_refill_rate
         self._buckets: Dict[str, Tuple[float, float]] = {}
@@ -45,6 +49,11 @@ class LocalEmergencyBudgetStore:
         return f"{tenant}{tier}route:{request.route_key}"
 
     def consume(self, request: BudgetConsumeRequest) -> BudgetConsumeResult:
+        if not request or not isinstance(request.cost, int) or request.cost <= 0:
+            raise ValueError("cost must be an integer greater than zero")
+        if not isinstance(request.route_key, str) or len(request.route_key) == 0 or len(request.route_key) > 512:
+            raise ValueError("route_key must be a non-empty bounded string")
+
         now = time.time()
         key = self._resolve_key(request)
         cost = request.cost
@@ -54,11 +63,16 @@ class LocalEmergencyBudgetStore:
             if request.emergency_capacity is not None
             else (request.tier.emergency_local_capacity if request.tier else self.default_capacity)
         )
+        if capacity < 0:
+            raise ValueError("capacity must be non-negative")
+
         refill_rate = (
             float(request.tier.refill_tokens_per_minute) / 60.0
             if request.tier
             else self.default_refill_rate
         )
+        if refill_rate < 0:
+            raise ValueError("refill_rate must be non-negative")
 
         tokens, last_updated = self._buckets.get(key, (capacity, now))
         elapsed = max(0.0, now - last_updated)
@@ -81,7 +95,7 @@ class LocalEmergencyBudgetStore:
             )
         else:
             missing = cost - tokens
-            retry_after = math.ceil(missing / max(0.001, refill_rate))
+            retry_after = 0 if refill_rate == 0 else math.ceil(missing / refill_rate)
             self._buckets[key] = (tokens, now)
             return BudgetConsumeResult(
                 allowed=False,

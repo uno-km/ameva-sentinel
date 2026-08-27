@@ -159,6 +159,25 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
   console.log('  [Group 3] Testing Emergency Store Tier Isolation...');
 
   const store = new LocalEmergencyBudgetStore(100, 0.001);
+
+  // 3.0 Strict input validation guards
+  await assert.rejects(async () => {
+    await store.consume({ cost: -10, routeKey: 'GET:/api' });
+  }, /cost must be finite and greater than zero/);
+
+  await assert.rejects(async () => {
+    await store.consume({ cost: NaN, routeKey: 'GET:/api' });
+  }, /cost must be finite and greater than zero/);
+
+  await assert.rejects(async () => {
+    await store.consume({ cost: 10, routeKey: '' });
+  }, /routeKey must be a non-empty bounded string/);
+
+  // computeEmergencyCapacity validation
+  assert.throws(() => computeEmergencyCapacity(-5), /normalCapacity must be a non-negative safe integer/);
+  assert.throws(() => computeEmergencyCapacity(10.5), /normalCapacity must be a non-negative safe integer/);
+  assert.throws(() => computeEmergencyCapacity(100, -0.1), /emergencyRatio must be a number > 0 and <= 1/);
+
   const baseRequest = {
     cost: 10,
     routeKey: 'GET:/api/v1/data',
@@ -297,7 +316,7 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
   assert.equal(computeEmergencyCapacity(100, 0.5, 10), 5, '10 replicas, ratio 0.5, cap 100 -> 5');
   assert.equal(computeEmergencyCapacity(0, 0.5, 10), 0, 'Capacity 0 remains 0');
   assert.equal(computeEmergencyCapacity(10, 0.5, 20), 1, 'Min capacity is 1 when non-zero');
-  assert.throws(() => computeEmergencyCapacity(-5, 0.5, 1), /finite non-negative/);
+  assert.throws(() => computeEmergencyCapacity(-5, 0.5, 1), /non-negative safe integer/);
   assert.throws(() => computeEmergencyCapacity(100, 0, 1), /number > 0/);
   assert.throws(() => computeEmergencyCapacity(100, 1.5, 1), /number > 0/);
   assert.throws(() => computeEmergencyCapacity(100, 0.5, 0), /integer >= 1/);
