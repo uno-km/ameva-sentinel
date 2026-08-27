@@ -227,6 +227,13 @@ RedisFailureMode = Literal["fail-closed", "fail-open", "local-emergency"]
 
 
 @dataclass
+class EvaluationContext:
+    now_epoch_ms: int
+    policy_hash: str = "v2.2.0"
+    runtime_version: str = "2.2.0"
+
+
+@dataclass
 class RedisFailurePolicy:
     mode: RedisFailureMode = "local-emergency"
     emergency_ratio: float = 1.0

@@ -2,7 +2,7 @@
  * AMEVA Sentinel - Core Engine Quality Gate & Boundary Test Suite
  */
 import assert from 'node:assert';
-import { evaluate, calculateConfidence, createPolicy, rules, SentinelAction } from '../packages/risk-core/dist/index.js';
+import { evaluate, evaluateRisk, evaluateRiskNow, calculateConfidence, createPolicy, rules, SentinelAction } from '../packages/risk-core/dist/index.js';
 
 console.log('\n🧪 Running AMEVA Sentinel Quality Gate Test Suite...\n');
 
@@ -146,6 +146,28 @@ it('should gracefully handle undefined, null, and NaN signals without throwing',
   const reportNaN = evaluate({ burstCount10s: NaN, isTrustedEventsCount: undefined });
   assert.strictEqual(reportNaN.score, 0);
   assert.strictEqual(reportNaN.action, SentinelAction.ALLOW);
+});
+
+// ==============================================================================
+// 7. Deterministic EvaluationContext Injection
+// ==============================================================================
+it('evaluateRisk with explicit EvaluationContext produces deterministic timestamp and identical output', () => {
+  const signals = { webdriver: true };
+  const policy = createPolicy([rules.webdriver()]);
+  const context = {
+    nowEpochMs: 1700000000000,
+    policyHash: 'sha256-policy-hash-mock',
+    runtimeVersion: '2.2.0'
+  };
+
+  const rep1 = evaluateRisk(signals, policy, context, { traceId: 'trc_fixed_123' });
+  const rep2 = evaluateRisk(signals, policy, context, { traceId: 'trc_fixed_123' });
+
+  assert.strictEqual(rep1.evaluatedAt, '2023-11-14T22:13:20.000Z');
+  assert.strictEqual(rep2.evaluatedAt, '2023-11-14T22:13:20.000Z');
+  assert.deepStrictEqual(rep1, rep2, 'Reports with identical signals, policy, and context must be byte-identical');
+
+  assert.throws(() => evaluateRisk(signals, policy, { nowEpochMs: -1, policyHash: 'h', runtimeVersion: '2.2.0' }), /positive finite integer/);
 });
 
 // ==============================================================================

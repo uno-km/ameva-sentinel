@@ -36,6 +36,12 @@ export interface TelemetrySignals {
   customSignals?: Record<string, any>;
 }
 
+export interface EvaluationContext {
+  nowEpochMs: number;
+  policyHash: string;
+  runtimeVersion: string;
+}
+
 export interface SentinelRiskReport {
   traceId: string;
   score: number;                       // 0 ~ 100 (Clamped)

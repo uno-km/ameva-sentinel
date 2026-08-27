@@ -19,6 +19,7 @@ from .core.budget_types import (
     BudgetConsumeResult,
     RedactedThreatEvent,
     ThreatAggregateRecord,
+    EvaluationContext,
     BUDGET_SCOPES,
     LEGACY_DEFAULT_BUDGET_SCOPES,
 )
@@ -74,6 +75,7 @@ __all__ = [
     "BudgetConsumeResult",
     "RedactedThreatEvent",
     "ThreatAggregateRecord",
+    "EvaluationContext",
     "BUDGET_SCOPES",
     "LEGACY_DEFAULT_BUDGET_SCOPES",
     "canonicalize_policy_json",

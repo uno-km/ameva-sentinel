@@ -4,40 +4,45 @@ import {
   TelemetrySignals,
   EvidenceItem,
   EnforcementMode,
+  EvaluationContext,
   createTraceId
 } from './types.js';
 import { calculateConfidence } from './confidence.js';
 import { SentinelPolicy, defaultPolicy } from './policy.js';
+import { computePolicyChecksum } from './policy-canonical.js';
+
+export const RUNTIME_VERSION = '2.2.0';
 
 export interface EvaluateOptions {
   policy?: SentinelPolicy;
   traceId?: string;
   enforcementMode?: EnforcementMode;
+  context?: EvaluationContext;
 }
 
 /**
- * Pure risk evaluation engine.
+ * Pure risk evaluation engine with deterministic EvaluationContext injection.
  * Evaluates telemetry signals against the configured SentinelPolicy.
  * Guaranteed input immutability and deterministic 0~100 score clamping.
  */
-export function evaluate(
-  signals: TelemetrySignals = {},
-  optionsOrPolicy: EvaluateOptions | SentinelPolicy = defaultPolicy
+export function evaluateRisk(
+  signals: Readonly<TelemetrySignals> = {},
+  policy: Readonly<SentinelPolicy> = defaultPolicy,
+  context?: EvaluationContext,
+  options: { traceId?: string; enforcementMode?: EnforcementMode } = {}
 ): SentinelRiskReport {
-  let policy: SentinelPolicy = defaultPolicy;
-  let traceId: string | undefined;
-  let enforcementMode: EnforcementMode = 'SHADOW';
+  const evalContext: EvaluationContext = context || {
+    nowEpochMs: Date.now(),
+    policyHash: (policy && policy.version) ? policy.version : 'v2.2.0',
+    runtimeVersion: RUNTIME_VERSION
+  };
 
-  if ('rules' in optionsOrPolicy && Array.isArray(optionsOrPolicy.rules)) {
-    policy = optionsOrPolicy;
-  } else {
-    const opts = optionsOrPolicy as EvaluateOptions;
-    if (opts.policy) policy = opts.policy;
-    if (opts.traceId) traceId = opts.traceId;
-    if (opts.enforcementMode) enforcementMode = opts.enforcementMode;
+  if (typeof evalContext.nowEpochMs !== 'number' || !Number.isFinite(evalContext.nowEpochMs) || evalContext.nowEpochMs <= 0) {
+    throw new Error('EvaluationContext nowEpochMs must be a positive finite integer');
   }
 
-  const currentTraceId = traceId || createTraceId();
+  const currentTraceId = options.traceId || createTraceId();
+  const enforcementMode: EnforcementMode = options.enforcementMode || 'SHADOW';
   const evidence: EvidenceItem[] = [];
   let calculatedScore = 0;
 
@@ -91,7 +96,51 @@ export function evaluate(
     enforcementMode,
     policyVersion: policy.version,
     evidence,
-    evaluatedAt: new Date().toISOString(),
+    evaluatedAt: new Date(evalContext.nowEpochMs).toISOString(),
     signals: safeSignals
   };
 }
+
+export function evaluateRiskNow(
+  signals: TelemetrySignals = {},
+  policy: SentinelPolicy = defaultPolicy,
+  options: { traceId?: string; enforcementMode?: EnforcementMode } = {}
+): SentinelRiskReport {
+  return evaluateRisk(
+    signals,
+    policy,
+    {
+      nowEpochMs: Date.now(),
+      policyHash: policy.version || 'v2.2.0',
+      runtimeVersion: RUNTIME_VERSION
+    },
+    options
+  );
+}
+
+export function evaluate(
+  signals: TelemetrySignals = {},
+  optionsOrPolicy: EvaluateOptions | SentinelPolicy = defaultPolicy
+): SentinelRiskReport {
+  let policy: SentinelPolicy = defaultPolicy;
+  let traceId: string | undefined;
+  let enforcementMode: EnforcementMode = 'SHADOW';
+  let context: EvaluationContext | undefined;
+
+  if ('rules' in optionsOrPolicy && Array.isArray(optionsOrPolicy.rules)) {
+    policy = optionsOrPolicy;
+  } else {
+    const opts = optionsOrPolicy as EvaluateOptions;
+    if (opts.policy) policy = opts.policy;
+    if (opts.traceId) traceId = opts.traceId;
+    if (opts.enforcementMode) enforcementMode = opts.enforcementMode;
+    if (opts.context) context = opts.context;
+  }
+
+  if (context) {
+    return evaluateRisk(signals, policy, context, { traceId, enforcementMode });
+  }
+
+  return evaluateRiskNow(signals, policy, { traceId, enforcementMode });
+}
+
