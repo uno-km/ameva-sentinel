@@ -85,18 +85,31 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
     });
   }, /Unknown field 'unknown_field'/);
 
-  // Path validation tests
+  // Path validation tests & ambiguity fixtures
   assert.equal(RequestShapeGuard.validatePath('/api/v1/chart').valid, true);
   assert.equal(RequestShapeGuard.validatePath('').valid, false);
   assert.equal(RequestShapeGuard.validatePath(undefined).valid, false);
-  assert.equal(RequestShapeGuard.validatePath('/api/v1/\0/secret').valid, false);
-  assert.equal(RequestShapeGuard.validatePath('/api/v1/%00/secret').valid, false);
-  assert.equal(RequestShapeGuard.validatePath('/api/v1/../secret').valid, false);
-  assert.equal(RequestShapeGuard.validatePath('/api/v1/%2e%2e/secret').valid, false);
-  assert.equal(RequestShapeGuard.validatePath('/api/v1/..%2fsecret').valid, false);
-  assert.equal(RequestShapeGuard.validatePath('/api/v1/%2fsecret').valid, false);
-  assert.equal(RequestShapeGuard.validatePath('C:\\windows\\system32').valid, false);
-  assert.equal(RequestShapeGuard.validatePath('/api/v1/%5csecret').valid, false);
+  assert.equal(RequestShapeGuard.validatePath('api/v1').message, 'PATH_MUST_START_WITH_SLASH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/\0/secret').message, 'ASCII_CONTROL_CHAR_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/\u001f/secret').message, 'ASCII_CONTROL_CHAR_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/\u007f/secret').message, 'ASCII_CONTROL_CHAR_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%00/secret').message, 'NULL_BYTE_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/../secret').message, 'DOT_SEGMENT_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/..').message, 'DOT_SEGMENT_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/.').message, 'DOT_SEGMENT_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('//api/v1').message, 'REPEATED_SLASHES_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api//v1').message, 'REPEATED_SLASHES_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/chart;jsessionid=123').message, 'SEMICOLON_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%252e%252e/secret').message, 'DOUBLE_ENCODING_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%255csecret').message, 'DOUBLE_ENCODING_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%2e%2e/secret').message, 'ENCODED_DOT_SEGMENT_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%2e./secret').message, 'ENCODED_DOT_SEGMENT_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/.%2e/secret').message, 'ENCODED_DOT_SEGMENT_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%').message, 'MALFORMED_PERCENT_ENCODING');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%2g').message, 'MALFORMED_PERCENT_ENCODING');
+  assert.equal(RequestShapeGuard.validatePath('C:\\windows\\system32').message, 'PATH_MUST_START_WITH_SLASH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%5csecret').message, 'BACKSLASH_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1\\secret').message, 'BACKSLASH_IN_PATH');
 
   console.log('  ✅ PASS: Policy validation and path ambiguity guards verified.');
 }

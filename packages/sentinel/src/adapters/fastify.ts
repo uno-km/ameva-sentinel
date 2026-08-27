@@ -22,7 +22,7 @@ export function createFastifyCostGuard(options: {
   const trustedProxyPolicy = options.trustedProxyPolicy;
 
   return async function sentinelFastifyHook(req: any, reply: any) {
-    const rawPath = req.url || '/';
+    const rawPath = req.raw?.url ? req.raw.url.split('?')[0] : (req.url || '/');
     const pathValidation = RequestShapeGuard.validatePath(rawPath);
     if (!pathValidation.valid) {
       return reply.code(400).send({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message });

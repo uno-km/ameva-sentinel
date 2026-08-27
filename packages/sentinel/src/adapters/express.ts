@@ -22,7 +22,7 @@ export function createExpressCostGuard(options: {
   const trustedProxyPolicy = options.trustedProxyPolicy;
 
   return async function sentinelCostGuardMiddleware(req: any, res: any, next: any) {
-    const rawPath = req.path || req.url || '/';
+    const rawPath = req.originalUrl ? req.originalUrl.split('?')[0] : (req.path || req.url || '/');
     const pathValidation = RequestShapeGuard.validatePath(rawPath);
     if (!pathValidation.valid) {
       return res.status(400).json({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message });

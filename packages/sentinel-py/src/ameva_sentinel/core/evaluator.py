@@ -109,7 +109,8 @@ class SentinelCostGuardEvaluator:
 
         # 2. Page size guard
         if context.page_size is not None:
-            page_res = RequestShapeGuard.validate_page_size(context.page_size, policy)
+            max_page = policy.page_size_max if policy.page_size_max is not None else (self.registry.config.defaults.page_size_max or 1000)
+            page_res = RequestShapeGuard.validate_page_size(context.page_size, max_page)
             if not page_res.valid:
                 return CostGuardDecision(
                     allowed=is_shadow,
@@ -129,8 +130,9 @@ class SentinelCostGuardEvaluator:
 
         # 3. Data point calculation budget
         if context.series_count is not None or context.time_buckets is not None:
+            max_points = policy.max_data_points if policy.max_data_points is not None else (self.registry.config.defaults.max_data_points or 50000)
             point_res = RequestShapeGuard.validate_data_point_budget(
-                context.series_count, context.time_buckets, policy
+                context.series_count or 1, context.time_buckets or 1, max_points
             )
             if not point_res.valid:
                 return CostGuardDecision(
@@ -151,7 +153,7 @@ class SentinelCostGuardEvaluator:
 
         # 4. Body size guard (against max_request_body_bytes)
         if context.body_bytes is not None:
-            max_body = policy.max_request_body_bytes or 1048576
+            max_body = policy.max_request_body_bytes if policy.max_request_body_bytes is not None else (self.registry.config.defaults.max_request_body_bytes or 1048576)
             body_res = RequestShapeGuard.validate_body_size(context.body_bytes, max_body)
             if not body_res.valid:
                 return CostGuardDecision(

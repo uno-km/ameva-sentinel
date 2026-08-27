@@ -30,7 +30,8 @@ class SentinelASGIMiddleware:
             return
 
         method = scope.get("method", "GET")
-        path = scope.get("path", "/")
+        raw_path_bytes = scope.get("raw_path")
+        path = raw_path_bytes.decode("latin1").split("?")[0] if raw_path_bytes else scope.get("path", "/")
 
         path_res = RequestShapeGuard.validate_path(path)
         if not path_res.valid:

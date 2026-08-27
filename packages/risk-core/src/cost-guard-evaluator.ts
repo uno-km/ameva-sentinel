@@ -113,7 +113,8 @@ export class SentinelCostGuardEvaluator {
 
     // 2. Request Shape Guard (Page Size)
     if (context.pageSize !== undefined) {
-      const pageValidation = RequestShapeGuard.validatePageSize(context.pageSize, policy);
+      const maxPage = policy.page_size_max ?? this.registry.config.defaults?.page_size_max ?? 1000;
+      const pageValidation = RequestShapeGuard.validatePageSize(context.pageSize, maxPage);
       if (!pageValidation.valid) {
         return {
           allowed: isShadow,
@@ -135,10 +136,11 @@ export class SentinelCostGuardEvaluator {
 
     // 3. Request Shape Guard (Calculation Data Points)
     if (context.seriesCount !== undefined || context.timeBuckets !== undefined) {
+      const maxPoints = policy.max_data_points ?? this.registry.config.defaults?.max_data_points ?? 50000;
       const pointValidation = RequestShapeGuard.validateDataPointBudget(
         context.seriesCount,
         context.timeBuckets,
-        policy
+        maxPoints
       );
       if (!pointValidation.valid) {
         return {
@@ -161,7 +163,7 @@ export class SentinelCostGuardEvaluator {
 
     // 4. Request Shape Guard (Body Payload Bytes)
     if (context.bodyBytes !== undefined) {
-      const maxBody = policy.max_request_body_bytes || 1048576;
+      const maxBody = policy.max_request_body_bytes ?? this.registry.config.defaults?.max_request_body_bytes ?? 1048576;
       const bodyValidation = RequestShapeGuard.validateBodySize(context.bodyBytes, maxBody);
       if (!bodyValidation.valid) {
         return {

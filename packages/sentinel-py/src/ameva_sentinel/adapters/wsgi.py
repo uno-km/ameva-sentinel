@@ -26,7 +26,8 @@ class SentinelWSGIMiddleware:
 
     def __call__(self, environ: dict, start_response: Callable) -> Any:
         method = environ.get("REQUEST_METHOD", "GET")
-        path = environ.get("PATH_INFO", "/")
+        raw_uri = environ.get("RAW_URI") or environ.get("REQUEST_URI") or environ.get("PATH_INFO", "/")
+        path = raw_uri.split("?")[0]
 
         path_res = RequestShapeGuard.validate_path(path)
         if not path_res.valid:

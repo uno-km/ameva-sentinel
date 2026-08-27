@@ -54,16 +54,30 @@ def test_request_shape_path_validation():
     assert RequestShapeGuard.validate_path("/api/v1/chart").valid is True
     assert RequestShapeGuard.validate_path("/users/123/profile").valid is True
 
-    # Invalid paths
+    # Invalid paths & ambiguity fixtures
     assert RequestShapeGuard.validate_path("").valid is False
     assert RequestShapeGuard.validate_path(None).valid is False
-    assert RequestShapeGuard.validate_path("/api/v1/\0/secret").valid is False
-    assert RequestShapeGuard.validate_path("/api/v1/%00/secret").valid is False
-    assert RequestShapeGuard.validate_path("/api/v1/../secret").valid is False
-    assert RequestShapeGuard.validate_path("/api/v1/%2e%2e/secret").valid is False
-    assert RequestShapeGuard.validate_path("/api/v1/..%2fsecret").valid is False
-    assert RequestShapeGuard.validate_path("C:\\windows\\system32").valid is False
-    assert RequestShapeGuard.validate_path("/api/v1/%5csecret").valid is False
+    assert RequestShapeGuard.validate_path("api/v1").message == "PATH_MUST_START_WITH_SLASH"
+    assert RequestShapeGuard.validate_path("/api/v1/\0/secret").message == "ASCII_CONTROL_CHAR_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/\u001f/secret").message == "ASCII_CONTROL_CHAR_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/\u007f/secret").message == "ASCII_CONTROL_CHAR_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/%00/secret").message == "NULL_BYTE_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/../secret").message == "DOT_SEGMENT_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/..").message == "DOT_SEGMENT_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/.").message == "DOT_SEGMENT_IN_PATH"
+    assert RequestShapeGuard.validate_path("//api/v1").message == "REPEATED_SLASHES_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api//v1").message == "REPEATED_SLASHES_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/chart;jsessionid=123").message == "SEMICOLON_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/%252e%252e/secret").message == "DOUBLE_ENCODING_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/%255csecret").message == "DOUBLE_ENCODING_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/%2e%2e/secret").message == "ENCODED_DOT_SEGMENT_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/%2e./secret").message == "ENCODED_DOT_SEGMENT_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/.%2e/secret").message == "ENCODED_DOT_SEGMENT_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/%").message == "MALFORMED_PERCENT_ENCODING"
+    assert RequestShapeGuard.validate_path("/api/v1/%2g").message == "MALFORMED_PERCENT_ENCODING"
+    assert RequestShapeGuard.validate_path("C:\\windows\\system32").message == "PATH_MUST_START_WITH_SLASH"
+    assert RequestShapeGuard.validate_path("/api/v1/%5csecret").message == "BACKSLASH_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1\\secret").message == "BACKSLASH_IN_PATH"
 
 
 def test_trusted_proxy_extraction():
