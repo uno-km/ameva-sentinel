@@ -67,37 +67,64 @@ def test_request_shape_path_validation():
 
 
 def test_trusted_proxy_extraction():
-    from ameva_sentinel import extract_client_ip, is_ip_in_cidr
+    import pytest
+    from ameva_sentinel import extract_client_ip, is_ip_in_cidr, TrustedProxyPolicy
 
-    # CIDR check
+    # CIDR check including IPv6 and mapped IPv4
     assert is_ip_in_cidr("127.0.0.1", "127.0.0.0/8") is True
     assert is_ip_in_cidr("10.0.5.23", "10.0.0.0/8") is True
     assert is_ip_in_cidr("203.0.113.195", "10.0.0.0/8") is False
+    assert is_ip_in_cidr("fc00::1", "fc00::/7") is True
+    assert is_ip_in_cidr("fe80::1", "fe80::/10") is True
+    assert is_ip_in_cidr("::ffff:192.168.1.10", "192.168.1.0/24") is True
+    assert is_ip_in_cidr("2001:db8::1%eth0", "2001:db8::/32") is False
 
-    # Untrusted direct connection with forged XFF
-    untrusted = extract_client_ip(
-        socket_remote_address="203.0.113.5",
-        headers={"x-forwarded-for": "8.8.8.8, 1.1.1.1", "x-real-ip": "9.9.9.9"},
+    # Default policy trusts NO proxy
+    with pytest.raises(ValueError, match="UNTRUSTED_FORWARDED_HEADERS"):
+        extract_client_ip(
+            socket_remote_address="10.0.0.1",
+            headers={"x-forwarded-for": "8.8.8.8"},
+        )
+
+    # Missing socket address
+    with pytest.raises(ValueError, match="MISSING_OR_INVALID_SOCKET_REMOTE_ADDRESS"):
+        extract_client_ip(
+            socket_remote_address="",
+            headers={"x-forwarded-for": "8.8.8.8"},
+        )
+
+    # Untrusted direct connection with no forwarded headers
+    direct = extract_client_ip(socket_remote_address="203.0.113.5")
+    assert direct == "203.0.113.5"
+
+    # Explicit trusted proxy right-to-left resolution
+    pol = TrustedProxyPolicy(
+        trusted_cidrs=("10.0.0.0/8", "172.16.0.0/12"),
+        max_forwarded_hops=3,
     )
-    assert untrusted == "203.0.113.5"
-
-    # Trusted proxy with XFF
-    trusted = extract_client_ip(
+    res = extract_client_ip(
         socket_remote_address="10.0.0.1",
-        headers={"x-forwarded-for": "203.0.113.195, 10.0.0.1"},
+        headers={"x-forwarded-for": "203.0.113.195, 172.16.0.5"},
+        policy=pol,
     )
-    assert trusted == "203.0.113.195"
+    assert res == "203.0.113.195"
 
-    # Header precedence
-    multi = extract_client_ip(
-        socket_remote_address="127.0.0.1",
-        headers={
-            "cf-connecting-ip": "198.51.100.42",
-            "x-real-ip": "198.51.100.99",
-            "x-forwarded-for": "198.51.100.1",
-        },
-    )
-    assert multi == "198.51.100.42"
+    # Hop limit exceeded
+    with pytest.raises(ValueError, match="FORWARDED_HOP_LIMIT_EXCEEDED"):
+        extract_client_ip(
+            socket_remote_address="10.0.0.1",
+            headers={"x-forwarded-for": "1.1.1.1, 2.2.2.2, 3.3.3.3, 4.4.4.4"},
+            policy=pol,
+        )
+
+    # Conflicting headers
+    with pytest.raises(ValueError, match="CONFLICTING_FORWARDED_HEADERS"):
+        extract_client_ip(
+            socket_remote_address="10.0.0.1",
+            headers={"forwarded": "for=198.51.100.1", "x-forwarded-for": "198.51.100.2"},
+            policy=pol,
+        )
+
 
 
 

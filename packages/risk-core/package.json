@@ -25,5 +25,8 @@
     "policy-as-code",
     "bot-detection"
   ],
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "dependencies": {
+    "ipaddr.js": "^2.5.0"
+  }
 }

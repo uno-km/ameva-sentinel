@@ -28,10 +28,15 @@ export function createFastifyCostGuard(options: {
       return reply.code(400).send({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message });
     }
 
-    const clientIp = extractClientIp({
-      socketRemoteAddress: req.raw?.socket?.remoteAddress || req.ip,
-      headers: req.headers
-    }, trustedProxyPolicy);
+    let clientIp: string;
+    try {
+      clientIp = extractClientIp({
+        socketRemoteAddress: req.raw?.socket?.remoteAddress || req.ip,
+        headers: req.headers
+      }, trustedProxyPolicy);
+    } catch (err: any) {
+      return reply.code(400).send({ error: 'INVALID_CLIENT_ADDRESS', message: err.message });
+    }
 
     let pageSize: number | undefined;
     let seriesCount: number | undefined;

@@ -448,44 +448,78 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
 {
   console.log('  [Group 8] Testing Trusted Proxy Policy & Client IP Extraction...');
 
-  // 8.1 CIDR containment
+  // 8.1 IPv6 CIDRs, Mapped IPv4, and Zone ID Rejection
   assert.equal(isIpInCidr('127.0.0.1', '127.0.0.0/8'), true);
   assert.equal(isIpInCidr('10.0.5.23', '10.0.0.0/8'), true);
   assert.equal(isIpInCidr('172.20.1.1', '172.16.0.0/12'), true);
   assert.equal(isIpInCidr('192.168.1.100', '192.168.0.0/16'), true);
   assert.equal(isIpInCidr('203.0.113.195', '10.0.0.0/8'), false);
+  assert.equal(isIpInCidr('fc00::1', 'fc00::/7'), true);
+  assert.equal(isIpInCidr('fdff:ffff::1', 'fc00::/7'), true);
+  assert.equal(isIpInCidr('fe80::1', 'fe80::/10'), true);
+  assert.equal(isIpInCidr('2001:db8::1', 'fc00::/7'), false);
+  assert.equal(isIpInCidr('::ffff:192.168.1.10', '192.168.1.0/24'), true);
+  assert.equal(isIpInCidr('2001:db8::1%eth0', '2001:db8::/32'), false);
 
-  // 8.2 Untrusted direct connection with forged XFF -> returns socket IP
-  const untrustedDirect = extractClientIp({
-    socketRemoteAddress: '203.0.113.5',
-    headers: {
-      'x-forwarded-for': '8.8.8.8, 1.1.1.1',
-      'x-real-ip': '9.9.9.9'
-    }
+  // 8.2 Default Policy trusts NO proxy (empty trustedCidrs)
+  assert.throws(() => {
+    extractClientIp({
+      socketRemoteAddress: '10.0.0.1',
+      headers: { 'x-forwarded-for': '8.8.8.8' }
+    });
+  }, /UNTRUSTED_FORWARDED_HEADERS/);
+
+  // 8.3 Missing socket address must throw error
+  assert.throws(() => {
+    extractClientIp({
+      socketRemoteAddress: '',
+      headers: { 'x-forwarded-for': '8.8.8.8' }
+    });
+  }, /MISSING_OR_INVALID_SOCKET_REMOTE_ADDRESS/);
+
+  // 8.4 Untrusted direct connection with no forwarded headers returns socket IP
+  const directIp = extractClientIp({
+    socketRemoteAddress: '203.0.113.5'
   });
-  assert.equal(untrustedDirect, '203.0.113.5', 'Untrusted socket IP must ignore forged XFF');
+  assert.equal(directIp, '203.0.113.5');
 
-  // 8.3 Trusted proxy connection with XFF -> extracts client IP
-  const trustedProxyReq = extractClientIp({
+  // 8.5 Explicit Trusted Proxy with XFF Right-to-Left Resolution
+  const customTrustedPolicy = {
+    trustedCidrs: ['10.0.0.0/8', '172.16.0.0/12'],
+    maxForwardedHops: 3
+  };
+  // Chain: Client (203.0.113.195) -> Proxy1 (172.16.0.5) -> Proxy2 (10.0.0.1) -> App
+  // XFF: "203.0.113.195, 172.16.0.5", socket: 10.0.0.1
+  const resolvedClient = extractClientIp({
     socketRemoteAddress: '10.0.0.1',
     headers: {
-      'x-forwarded-for': '203.0.113.195, 10.0.0.1'
+      'x-forwarded-for': '203.0.113.195, 172.16.0.5'
     }
-  });
-  assert.equal(trustedProxyReq, '203.0.113.195', 'Trusted proxy socket must extract first client IP from XFF');
+  }, customTrustedPolicy);
+  assert.equal(resolvedClient, '203.0.113.195', 'Right-to-left resolution must extract true client before trusted proxies');
 
-  // 8.4 Header precedence: cf-connecting-ip > x-real-ip > x-forwarded-for
-  const multiHeaderReq = extractClientIp({
-    socketRemoteAddress: '127.0.0.1',
-    headers: {
-      'cf-connecting-ip': '198.51.100.42',
-      'x-real-ip': '198.51.100.99',
-      'x-forwarded-for': '198.51.100.1'
-    }
-  });
-  assert.equal(multiHeaderReq, '198.51.100.42', 'Header precedence must prioritize cf-connecting-ip');
+  // 8.6 Hop limit exceeded throws error
+  assert.throws(() => {
+    extractClientIp({
+      socketRemoteAddress: '10.0.0.1',
+      headers: {
+        'x-forwarded-for': '1.1.1.1, 2.2.2.2, 3.3.3.3, 4.4.4.4'
+      }
+    }, customTrustedPolicy);
+  }, /FORWARDED_HOP_LIMIT_EXCEEDED/);
 
-  console.log('  ✅ PASS: Trusted Proxy Policy and client IP extraction verified.');
+  // 8.7 Conflicting headers rejected
+  assert.throws(() => {
+    extractClientIp({
+      socketRemoteAddress: '10.0.0.1',
+      headers: {
+        'forwarded': 'for=198.51.100.1',
+        'x-forwarded-for': '198.51.100.2'
+      }
+    }, customTrustedPolicy);
+  }, /CONFLICTING_FORWARDED_HEADERS/);
+
+  console.log('  ✅ PASS: Trusted Proxy Policy, right-to-left chain, IPv6 CIDR, and spoofing protection verified.');
 }
 
 console.log('\n🎉 ALL 8 MULTI-AXIS COST GUARD VERIFICATION GROUPS PASSED COMPLETELY!\n');

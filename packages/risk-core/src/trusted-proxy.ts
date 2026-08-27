@@ -3,115 +3,227 @@
  * Cryptographically safe client IP extraction with CIDR trust boundaries.
  */
 
+import ipaddr from 'ipaddr.js';
+
+export type TrustedForwardedHeader = 'forwarded' | 'x-forwarded-for' | 'x-real-ip' | 'cf-connecting-ip';
+
 export interface TrustedProxyPolicy {
-  trustedCidrs?: string[];
-  headerPrecedence?: Array<'cf-connecting-ip' | 'x-real-ip' | 'x-forwarded-for' | 'forwarded'>;
-  rejectUntrustedForwardedHeaders?: boolean;
+  trustedCidrs: readonly string[];
+  headerPrecedence: readonly TrustedForwardedHeader[];
+  rejectUntrustedForwardedHeaders: boolean;
+  rejectConflictingHeaders: boolean;
+  maxForwardedHops: number;
 }
 
-export const DEFAULT_TRUSTED_PROXY_POLICY: TrustedProxyPolicy = {
-  trustedCidrs: [
-    '127.0.0.0/8',
-    '10.0.0.0/8',
-    '172.16.0.0/12',
-    '192.168.0.0/16',
-    '::1/128',
-    'fc00::/7',
-    'fe80::/10'
-  ],
-  headerPrecedence: ['cf-connecting-ip', 'x-real-ip', 'x-forwarded-for', 'forwarded'],
-  rejectUntrustedForwardedHeaders: true
+export const DEFAULT_TRUSTED_PROXY_POLICY: TrustedProxyPolicy = Object.freeze({
+  trustedCidrs: Object.freeze([] as string[]),
+  headerPrecedence: Object.freeze(['forwarded', 'x-forwarded-for'] as TrustedForwardedHeader[]),
+  rejectUntrustedForwardedHeaders: true,
+  rejectConflictingHeaders: true,
+  maxForwardedHops: 1,
+});
+
+export type NormalizedIp = {
+  address: string;
+  family: 'ipv4' | 'ipv6';
 };
 
-function ipToLong(ip: string): number | null {
-  const parts = ip.split('.');
-  if (parts.length !== 4) return null;
-  let num = 0;
-  for (const part of parts) {
-    const n = parseInt(part, 10);
-    if (isNaN(n) || n < 0 || n > 255) return null;
-    num = (num << 8) + n;
-  }
-  return num >>> 0;
-}
-
-export function isIpInCidr(ip: string, cidr: string): boolean {
-  const cleanIp = ip.trim();
-  if (cidr === '*' || cidr === '0.0.0.0/0') return true;
-
-  if (cleanIp === '::1' && (cidr === '::1' || cidr === '::1/128')) return true;
-  if (cleanIp === '127.0.0.1' && (cidr === '127.0.0.1' || cidr === '127.0.0.1/32' || cidr === '127.0.0.0/8')) return true;
-
-  const [range, bitsStr] = cidr.split('/');
-  const bits = bitsStr ? parseInt(bitsStr, 10) : 32;
-
-  const ipLong = ipToLong(cleanIp);
-  const rangeLong = ipToLong(range);
-
-  if (ipLong === null || rangeLong === null) {
-    return cleanIp.toLowerCase() === range.toLowerCase();
+export function normalizeIp(rawValue: string | undefined | null): NormalizedIp | null {
+  if (
+    typeof rawValue !== 'string' ||
+    rawValue.length === 0 ||
+    rawValue.length > 128 ||
+    rawValue.includes('%')
+  ) {
+    return null;
   }
 
-  const mask = bits === 0 ? 0 : (~0 << (32 - bits)) >>> 0;
-  return (ipLong & mask) === (rangeLong & mask);
+  let candidate = rawValue.trim();
+
+  // Strip brackets from IPv6 with optional port [2001:db8::1]:443
+  if (candidate.startsWith('[') && candidate.includes(']')) {
+    const closingBracket = candidate.indexOf(']');
+    const suffix = candidate.slice(closingBracket + 1);
+    if (suffix && !/^:\d{1,5}$/.test(suffix)) {
+      return null;
+    }
+    candidate = candidate.slice(1, closingBracket);
+  } else if (/^(\d{1,3}\.){3}\d{1,3}:\d{1,5}$/.test(candidate)) {
+    candidate = candidate.split(':')[0];
+  }
+
+  if (!ipaddr.isValid(candidate)) {
+    return null;
+  }
+
+  let parsed = ipaddr.parse(candidate);
+
+  if (parsed.kind() === 'ipv6' && (parsed as ipaddr.IPv6).isIPv4MappedAddress()) {
+    parsed = (parsed as ipaddr.IPv6).toIPv4Address();
+  }
+
+  return {
+    address: parsed.toNormalizedString(),
+    family: parsed.kind() === 'ipv4' ? 'ipv4' : 'ipv6',
+  };
 }
 
-export function isIpInAnyCidr(ip: string, cidrs: string[]): boolean {
+export function isIpInCidr(rawIp: string, rawCidr: string): boolean {
+  const normalized = normalizeIp(rawIp);
+  if (!normalized) {
+    return false;
+  }
+
+  if (rawCidr === '*' || rawCidr === '0.0.0.0/0') {
+    return true;
+  }
+
+  try {
+    const [range, prefix] = ipaddr.parseCIDR(rawCidr);
+
+    let address = ipaddr.parse(normalized.address);
+
+    if (address.kind() === 'ipv6' && (address as ipaddr.IPv6).isIPv4MappedAddress()) {
+      address = (address as ipaddr.IPv6).toIPv4Address();
+    }
+
+    if (address.kind() !== range.kind()) {
+      return false;
+    }
+
+    return address.match(range, prefix);
+  } catch {
+    return false;
+  }
+}
+
+export function isIpInAnyCidr(ip: string, cidrs: readonly string[]): boolean {
   if (!ip || !cidrs || cidrs.length === 0) return false;
-  return cidrs.some(cidr => isIpInCidr(ip, cidr));
+  return cidrs.some((cidr) => isIpInCidr(ip, cidr));
 }
 
 export interface ClientIpExtractionRequest {
-  socketRemoteAddress?: string;
+  socketRemoteAddress?: string | null;
   headers?: Record<string, string | string[] | undefined>;
+}
+
+export function parseAndValidateIp(raw: string): string | null {
+  const norm = normalizeIp(raw);
+  return norm ? norm.address : null;
+}
+
+export function parseForwardedHeaderStrictly(headerName: string, rawValue: string): string[] {
+  if (headerName === 'forwarded') {
+    const ips: string[] = [];
+    const entries = rawValue.split(',');
+    for (const entry of entries) {
+      const match = /for="?([^";,\s]+)"?/i.exec(entry.trim());
+      if (match && match[1]) {
+        const cleaned = match[1].replace(/[\[\]]/g, '');
+        const norm = parseAndValidateIp(cleaned);
+        if (norm) ips.push(norm);
+      }
+    }
+    return ips;
+  }
+
+  if (headerName === 'x-forwarded-for') {
+    const parts = rawValue.split(',').map((s) => s.trim()).filter(Boolean);
+    const ips: string[] = [];
+    for (const part of parts) {
+      const norm = parseAndValidateIp(part);
+      if (norm) ips.push(norm);
+    }
+    return ips;
+  }
+
+  const first = rawValue.split(',')[0].trim();
+  const norm = parseAndValidateIp(first);
+  return norm ? [norm] : [];
+}
+
+export function selectFromForwardedChain(
+  socketIp: string,
+  forwardedIps: readonly string[],
+  trustedCidrs: readonly string[],
+  maxForwardedHops: number
+): string {
+  if (forwardedIps.length === 0) {
+    throw new Error('EMPTY_FORWARDED_CHAIN');
+  }
+  if (forwardedIps.length > maxForwardedHops) {
+    throw new Error('FORWARDED_HOP_LIMIT_EXCEEDED');
+  }
+
+  const chain = [...forwardedIps, socketIp];
+
+  for (let index = chain.length - 1; index >= 0; index -= 1) {
+    const candidate = chain[index];
+    if (!trustedCidrs.some((cidr) => isIpInCidr(candidate, cidr))) {
+      return candidate;
+    }
+  }
+
+  return forwardedIps[0];
 }
 
 export function extractClientIp(
   request: ClientIpExtractionRequest,
-  customPolicy?: Partial<TrustedProxyPolicy>
+  customPolicy: Partial<TrustedProxyPolicy> = {}
 ): string {
   const policy: TrustedProxyPolicy = {
     ...DEFAULT_TRUSTED_PROXY_POLICY,
-    ...customPolicy
+    ...customPolicy,
   };
 
-  const socketIp = (request.socketRemoteAddress || '').trim() || '127.0.0.1';
-  const trustedCidrs = policy.trustedCidrs || DEFAULT_TRUSTED_PROXY_POLICY.trustedCidrs!;
-
-  const isSocketTrusted = isIpInAnyCidr(socketIp, trustedCidrs);
-
-  if (!isSocketTrusted && policy.rejectUntrustedForwardedHeaders) {
-    return socketIp;
-  }
-
-  const headers = request.headers || {};
+  const normalizedSocket = normalizeIp(request.socketRemoteAddress);
+  const headers = request.headers ?? {};
   const getHeader = (name: string): string | undefined => {
     const val = headers[name.toLowerCase()] || headers[name];
     if (Array.isArray(val)) return val[0];
     return typeof val === 'string' ? val : undefined;
   };
 
-  const precedence = policy.headerPrecedence || DEFAULT_TRUSTED_PROXY_POLICY.headerPrecedence!;
-
-  for (const headerName of precedence) {
-    const rawVal = getHeader(headerName);
-    if (!rawVal) continue;
-
-    if (headerName === 'x-forwarded-for') {
-      const parts = rawVal.split(',').map(s => s.trim()).filter(Boolean);
-      if (parts.length > 0) {
-        return parts[0];
-      }
-    } else if (headerName === 'forwarded') {
-      const match = /for="?([^";,\s]+)"?/i.exec(rawVal);
-      if (match && match[1]) {
-        return match[1].replace(/[\[\]]/g, '');
-      }
-    } else {
-      const clean = rawVal.split(',')[0].trim();
-      if (clean) return clean;
+  const presentHeaders: Array<{ name: TrustedForwardedHeader; value: string }> = [];
+  for (const h of policy.headerPrecedence) {
+    const val = getHeader(h);
+    if (val && val.trim().length > 0) {
+      presentHeaders.push({ name: h, value: val.trim() });
     }
   }
 
-  return socketIp;
+  if (!normalizedSocket) {
+    if (presentHeaders.length > 0) {
+      throw new Error('MISSING_OR_INVALID_SOCKET_REMOTE_ADDRESS');
+    }
+    return 'unknown';
+  }
+
+  const socketIp = normalizedSocket.address;
+  const socketTrusted = isIpInAnyCidr(socketIp, policy.trustedCidrs);
+
+  if (!socketTrusted) {
+    if (policy.rejectUntrustedForwardedHeaders && presentHeaders.length > 0) {
+      throw new Error('UNTRUSTED_FORWARDED_HEADERS');
+    }
+    return socketIp;
+  }
+
+  if (policy.rejectConflictingHeaders && presentHeaders.length > 1) {
+    throw new Error('CONFLICTING_FORWARDED_HEADERS');
+  }
+
+  if (presentHeaders.length === 0) {
+    return socketIp;
+  }
+
+  const selected = presentHeaders[0];
+  const forwardedIps = parseForwardedHeaderStrictly(selected.name, selected.value);
+
+  return selectFromForwardedChain(
+    socketIp,
+    forwardedIps,
+    policy.trustedCidrs,
+    policy.maxForwardedHops
+  );
 }

@@ -74,6 +74,11 @@ def test_cross_runtime_hardening_invariants():
 
     # 4. Trusted proxy extraction
     assert is_ip_in_cidr("10.0.5.1", "10.0.0.0/8") is True
-    assert extract_client_ip(socket_remote_address="203.0.113.5", headers={"x-forwarded-for": "8.8.8.8"}) == "203.0.113.5"
-    assert extract_client_ip(socket_remote_address="10.0.0.1", headers={"x-forwarded-for": "203.0.113.195"}) == "203.0.113.195"
+    assert extract_client_ip(socket_remote_address="203.0.113.5") == "203.0.113.5"
+    from ameva_sentinel import TrustedProxyPolicy
+    assert extract_client_ip(
+        socket_remote_address="10.0.0.1",
+        headers={"x-forwarded-for": "203.0.113.195"},
+        policy=TrustedProxyPolicy(trusted_cidrs=("10.0.0.0/8",)),
+    ) == "203.0.113.195"
 

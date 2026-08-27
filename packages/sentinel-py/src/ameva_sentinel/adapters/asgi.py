@@ -47,11 +47,15 @@ class SentinelASGIMiddleware:
 
         client_info = scope.get("client")
         socket_ip = client_info[0] if client_info and len(client_info) > 0 else None
-        client_ip = extract_client_ip(
-            socket_remote_address=socket_ip,
-            headers=headers_dict,
-            policy=self.trusted_proxy_policy,
-        )
+        try:
+            client_ip = extract_client_ip(
+                socket_remote_address=socket_ip,
+                headers=headers_dict,
+                policy=self.trusted_proxy_policy,
+            )
+        except Exception as exc:
+            await self._respond_json(send, 400, {"error": "INVALID_CLIENT_ADDRESS", "message": str(exc)})
+            return
 
         query_string = scope.get("query_string", b"").decode("utf-8")
 

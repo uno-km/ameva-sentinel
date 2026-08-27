@@ -28,10 +28,15 @@ export function createExpressCostGuard(options: {
       return res.status(400).json({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message });
     }
 
-    const clientIp = extractClientIp({
-      socketRemoteAddress: req.socket?.remoteAddress || req.connection?.remoteAddress || req.ip,
-      headers: req.headers
-    }, trustedProxyPolicy);
+    let clientIp: string;
+    try {
+      clientIp = extractClientIp({
+        socketRemoteAddress: req.socket?.remoteAddress || req.connection?.remoteAddress || req.ip,
+        headers: req.headers
+      }, trustedProxyPolicy);
+    } catch (err: any) {
+      return res.status(400).json({ error: 'INVALID_CLIENT_ADDRESS', message: err.message });
+    }
 
     let pageSize: number | undefined;
     let seriesCount: number | undefined;

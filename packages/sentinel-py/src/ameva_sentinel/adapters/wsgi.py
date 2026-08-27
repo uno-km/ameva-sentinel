@@ -39,11 +39,14 @@ class SentinelWSGIMiddleware:
                 header_name = key[5:].replace("_", "-").lower()
                 headers[header_name] = value
 
-        client_ip = extract_client_ip(
-            socket_remote_address=environ.get("REMOTE_ADDR"),
-            headers=headers,
-            policy=self.trusted_proxy_policy,
-        )
+        try:
+            client_ip = extract_client_ip(
+                socket_remote_address=environ.get("REMOTE_ADDR"),
+                headers=headers,
+                policy=self.trusted_proxy_policy,
+            )
+        except Exception as exc:
+            return self._respond_json(start_response, 400, {"error": "INVALID_CLIENT_ADDRESS", "message": str(exc)})
 
         query_string = environ.get("QUERY_STRING", "")
 

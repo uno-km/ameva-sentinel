@@ -38,10 +38,18 @@ export function createNextCostGuard(options: {
       });
     }
 
-    const clientIp = extractClientIp({
-      socketRemoteAddress: req.ip,
-      headers: headersObj
-    }, trustedProxyPolicy);
+    let clientIp: string;
+    try {
+      clientIp = extractClientIp({
+        socketRemoteAddress: req.ip,
+        headers: headersObj
+      }, trustedProxyPolicy);
+    } catch (err: any) {
+      return new Response(JSON.stringify({ error: 'INVALID_CLIENT_ADDRESS', message: err.message }), {
+        status: 400,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
 
     let pageSize: number | undefined;
     let seriesCount: number | undefined;
