@@ -10,6 +10,7 @@ import {
 import { calculateConfidence } from './confidence.js';
 import { SentinelPolicy, defaultPolicy } from './policy.js';
 import { computePolicyChecksum } from './policy-canonical.js';
+import { deepFreeze, sanitizePlainObject } from './deep-freeze.js';
 
 export const RUNTIME_VERSION = '2.2.0';
 
@@ -23,7 +24,7 @@ export interface EvaluateOptions {
 /**
  * Pure risk evaluation engine with deterministic EvaluationContext injection.
  * Evaluates telemetry signals against the configured SentinelPolicy.
- * Guaranteed input immutability and deterministic 0~100 score clamping.
+ * Guaranteed input immutability, deep freezing, and deterministic 0~100 score clamping.
  */
 export function evaluateRisk(
   signals: Readonly<TelemetrySignals> = {},
@@ -46,8 +47,8 @@ export function evaluateRisk(
   const evidence: EvidenceItem[] = [];
   let calculatedScore = 0;
 
-  // Defensive copy to guarantee input immutability
-  const safeSignals: TelemetrySignals = { ...signals };
+  // Defensive sanitized copy to guarantee input immutability and prototype safety
+  const safeSignals: TelemetrySignals = signals ? sanitizePlainObject({ ...signals }) : {};
 
   for (const rule of policy.rules) {
     const result = rule.evaluate(safeSignals);
@@ -56,7 +57,7 @@ export function evaluateRisk(
       evidence.push({
         rule: rule.id,
         score: result.score,
-        attributes: { ...result.attributes },
+        attributes: sanitizePlainObject({ ...result.attributes }),
         message: result.message
       });
     }
@@ -87,7 +88,7 @@ export function evaluateRisk(
     action = recommendedAction === SentinelAction.ALLOW ? SentinelAction.ALLOW : SentinelAction.OBSERVE;
   }
 
-  return {
+  const report: SentinelRiskReport = {
     traceId: currentTraceId,
     score: finalScore,
     evidenceConfidence,
@@ -99,6 +100,8 @@ export function evaluateRisk(
     evaluatedAt: new Date(evalContext.nowEpochMs).toISOString(),
     signals: safeSignals
   };
+
+  return deepFreeze(report);
 }
 
 export function evaluateRiskNow(

@@ -67,8 +67,7 @@ async function run() {
     const store = new MemoryRiskEventStore({ maxItems: 3 });
 
     for (let i = 0; i < 5; i++) {
-      const rep = evaluate({});
-      rep.traceId = `trc_test_${i}`;
+      const rep = evaluate({}, { traceId: `trc_test_${i}` });
       await store.append(rep);
     }
 
@@ -81,8 +80,13 @@ async function run() {
   // 4. Time-to-Live (TTL) Pruning
   await it('should prune expired events beyond maxAgeMs', async () => {
     const store = new MemoryRiskEventStore({ maxAgeMs: 100 });
-    const rep = evaluate({});
-    rep.evaluatedAt = new Date(Date.now() - 500).toISOString(); // 500ms ago
+    const rep = evaluate({}, {
+      context: {
+        nowEpochMs: Date.now() - 500,
+        policyHash: 'v2.2.0',
+        runtimeVersion: '2.2.0'
+      }
+    });
 
     await store.append(rep);
     const unexpired = await store.list({ includeExpired: false });

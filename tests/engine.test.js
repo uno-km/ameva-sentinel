@@ -2,7 +2,7 @@
  * AMEVA Sentinel - Core Engine Quality Gate & Boundary Test Suite
  */
 import assert from 'node:assert';
-import { evaluate, evaluateRisk, evaluateRiskNow, calculateConfidence, createPolicy, rules, SentinelAction } from '../packages/risk-core/dist/index.js';
+import { evaluate, evaluateRisk, evaluateRiskNow, calculateConfidence, createPolicy, rules, SentinelAction, deepFreeze, sanitizePlainObject } from '../packages/risk-core/dist/index.js';
 
 console.log('\n🧪 Running AMEVA Sentinel Quality Gate Test Suite...\n');
 
@@ -168,6 +168,41 @@ it('evaluateRisk with explicit EvaluationContext produces deterministic timestam
   assert.deepStrictEqual(rep1, rep2, 'Reports with identical signals, policy, and context must be byte-identical');
 
   assert.throws(() => evaluateRisk(signals, policy, { nowEpochMs: -1, policyHash: 'h', runtimeVersion: '2.2.0' }), /positive finite integer/);
+});
+
+// ==============================================================================
+// 8. Defensive Copy, Deep Immutability, and Prototype Pollution Rejection
+// ==============================================================================
+it('deepFreeze prevents mutation of returned report and handles cycles and prototype pollution safely', () => {
+  const signals = { webdriver: true, burstCount10s: 15 };
+  const report = evaluate(signals);
+
+  // Attempt mutation on report top-level property
+  assert.throws(() => {
+    report.score = 999;
+  }, /TypeError/);
+
+  // Attempt mutation on nested evidence array / object
+  assert.throws(() => {
+    report.evidence[0].score = 999;
+  }, /TypeError/);
+
+  assert.throws(() => {
+    report.evidence[0].attributes.observed = false;
+  }, /TypeError/);
+
+  // Cycle detection in deepFreeze
+  const cyclicObj = { a: 1 };
+  cyclicObj.self = cyclicObj;
+  const frozenCyclic = deepFreeze(cyclicObj);
+  assert.ok(Object.isFrozen(frozenCyclic));
+  assert.strictEqual(frozenCyclic.self, frozenCyclic);
+
+  // Prototype pollution attempt
+  const maliciousInput = JSON.parse('{"__proto__": {"polluted": true}, "webdriver": true}');
+  const clean = sanitizePlainObject(maliciousInput);
+  assert.strictEqual(clean.polluted, undefined);
+  assert.strictEqual(({}).polluted, undefined, 'Global prototype must not be polluted');
 });
 
 // ==============================================================================
