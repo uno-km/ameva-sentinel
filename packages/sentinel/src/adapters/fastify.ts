@@ -3,14 +3,23 @@
  * Fastify PreHandler Hook for AMEVA-Sentinel Cost Guardrails.
  */
 
-import { SentinelCostGuardEvaluator, VerifiedPrincipal, RequestCostContext, RequestShapeGuard } from '@ameva/sentinel-risk-core';
+import {
+  SentinelCostGuardEvaluator,
+  VerifiedPrincipal,
+  RequestCostContext,
+  RequestShapeGuard,
+  TrustedProxyPolicy,
+  extractClientIp
+} from '@ameva/sentinel-risk-core';
 
 export function createFastifyCostGuard(options: {
   evaluator?: SentinelCostGuardEvaluator;
   principalResolver?: (req: any) => VerifiedPrincipal | undefined;
+  trustedProxyPolicy?: Partial<TrustedProxyPolicy>;
 } = {}) {
   const evaluator = options.evaluator || new SentinelCostGuardEvaluator();
   const principalResolver = options.principalResolver;
+  const trustedProxyPolicy = options.trustedProxyPolicy;
 
   return async function sentinelFastifyHook(req: any, reply: any) {
     const rawPath = req.url || '/';
@@ -18,6 +27,11 @@ export function createFastifyCostGuard(options: {
     if (!pathValidation.valid) {
       return reply.code(400).send({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message });
     }
+
+    const clientIp = extractClientIp({
+      socketRemoteAddress: req.raw?.socket?.remoteAddress || req.ip,
+      headers: req.headers
+    }, trustedProxyPolicy);
 
     let pageSize: number | undefined;
     let seriesCount: number | undefined;
@@ -57,13 +71,14 @@ export function createFastifyCostGuard(options: {
 
     const context: RequestCostContext = {
       method: req.method || 'GET',
-      path: req.url || '/',
+      path: rawPath,
       pageSize,
       seriesCount,
       timeBuckets,
       principal,
       sessionId: req.cookies?.['session_id'],
-      tenantId: req.headers?.['x-tenant-id']
+      tenantId: req.headers?.['x-tenant-id'],
+      networkKey: clientIp
     };
 
     const decision = await evaluator.evaluate(context);

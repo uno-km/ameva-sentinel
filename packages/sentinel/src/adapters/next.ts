@@ -3,14 +3,23 @@
  * Next.js Edge / Node Middleware Adapter for AMEVA-Sentinel Cost Guardrails.
  */
 
-import { SentinelCostGuardEvaluator, VerifiedPrincipal, RequestCostContext, RequestShapeGuard } from '@ameva/sentinel-risk-core';
+import {
+  SentinelCostGuardEvaluator,
+  VerifiedPrincipal,
+  RequestCostContext,
+  RequestShapeGuard,
+  TrustedProxyPolicy,
+  extractClientIp
+} from '@ameva/sentinel-risk-core';
 
 export function createNextCostGuard(options: {
   evaluator?: SentinelCostGuardEvaluator;
   principalResolver?: (req: any) => VerifiedPrincipal | undefined;
+  trustedProxyPolicy?: Partial<TrustedProxyPolicy>;
 } = {}) {
   const evaluator = options.evaluator || new SentinelCostGuardEvaluator();
   const principalResolver = options.principalResolver;
+  const trustedProxyPolicy = options.trustedProxyPolicy;
 
   return async function sentinelNextMiddleware(req: any) {
     const url = new URL(req.url, 'http://localhost');
@@ -21,6 +30,18 @@ export function createNextCostGuard(options: {
         headers: { 'content-type': 'application/json' }
       });
     }
+
+    const headersObj: Record<string, string> = {};
+    if (req.headers && typeof req.headers.forEach === 'function') {
+      req.headers.forEach((val: string, key: string) => {
+        headersObj[key] = val;
+      });
+    }
+
+    const clientIp = extractClientIp({
+      socketRemoteAddress: req.ip,
+      headers: headersObj
+    }, trustedProxyPolicy);
 
     let pageSize: number | undefined;
     let seriesCount: number | undefined;
@@ -74,7 +95,9 @@ export function createNextCostGuard(options: {
       seriesCount,
       timeBuckets,
       principal,
-      tenantId: req.headers?.get?.('x-tenant-id') || req.headers?.['x-tenant-id']
+      sessionId: req.cookies?.get?.('session_id')?.value,
+      tenantId: req.headers?.get?.('x-tenant-id') || undefined,
+      networkKey: clientIp
     };
 
     const decision = await evaluator.evaluate(context);

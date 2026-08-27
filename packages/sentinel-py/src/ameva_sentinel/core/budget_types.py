@@ -135,6 +135,7 @@ class RequestCostContext:
     pseudonymous_key: Optional[str] = None
     asn: Optional[int] = None
     tenant_id: Optional[str] = None  # Unverified context identifier
+    network_key: Optional[str] = None
 
 
 @dataclass

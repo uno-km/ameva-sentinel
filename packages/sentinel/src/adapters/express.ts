@@ -3,14 +3,23 @@
  * Express Middleware Adapter for AMEVA-Sentinel Cost Guardrails.
  */
 
-import { SentinelCostGuardEvaluator, VerifiedPrincipal, RequestCostContext, RequestShapeGuard } from '@ameva/sentinel-risk-core';
+import {
+  SentinelCostGuardEvaluator,
+  VerifiedPrincipal,
+  RequestCostContext,
+  RequestShapeGuard,
+  TrustedProxyPolicy,
+  extractClientIp
+} from '@ameva/sentinel-risk-core';
 
 export function createExpressCostGuard(options: {
   evaluator?: SentinelCostGuardEvaluator;
   principalResolver?: (req: any) => VerifiedPrincipal | undefined;
+  trustedProxyPolicy?: Partial<TrustedProxyPolicy>;
 } = {}) {
   const evaluator = options.evaluator || new SentinelCostGuardEvaluator();
   const principalResolver = options.principalResolver;
+  const trustedProxyPolicy = options.trustedProxyPolicy;
 
   return async function sentinelCostGuardMiddleware(req: any, res: any, next: any) {
     const rawPath = req.path || req.url || '/';
@@ -18,6 +27,11 @@ export function createExpressCostGuard(options: {
     if (!pathValidation.valid) {
       return res.status(400).json({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message });
     }
+
+    const clientIp = extractClientIp({
+      socketRemoteAddress: req.socket?.remoteAddress || req.connection?.remoteAddress || req.ip,
+      headers: req.headers
+    }, trustedProxyPolicy);
 
     let pageSize: number | undefined;
     let seriesCount: number | undefined;
@@ -57,14 +71,15 @@ export function createExpressCostGuard(options: {
 
     const context: RequestCostContext = {
       method: req.method || 'GET',
-      path: req.path || req.url || '/',
+      path: rawPath,
       pageSize,
       seriesCount,
       timeBuckets,
       principal,
       sessionId: req.sessionID || req.cookies?.['session_id'],
       asn: req.asn ? Number(req.asn) : undefined,
-      tenantId: req.headers?.['x-tenant-id']
+      tenantId: req.headers?.['x-tenant-id'],
+      networkKey: clientIp
     };
 
     const decision = await evaluator.evaluate(context);

@@ -16,4 +16,5 @@ export * from './bounded-threat-aggregator.js';
 export * from './cost-guard-evaluator.js';
 export * from './geo-registry.js';
 export * from './deep-freeze.js';
+export * from './trusted-proxy.js';
 

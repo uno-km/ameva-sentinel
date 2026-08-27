@@ -17,7 +17,9 @@ import {
   computePolicyChecksum,
   SAFE_FALLBACK_COST_POLICY,
   RequestShapeGuard,
-  ResponseBudgetGuard
+  ResponseBudgetGuard,
+  extractClientIp,
+  isIpInCidr
 } from '../packages/risk-core/dist/index.js';
 import { RedisTokenBucketStore, HIERARCHICAL_TOKEN_BUCKET_LUA } from '../packages/store-redis/dist/index.js';
 
@@ -442,5 +444,49 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
   console.log('  ✅ PASS: Unified shadow mode semantics and 9-fixture cross-runtime corpus verified.');
 }
 
-console.log('\n🎉 ALL 7 MULTI-AXIS COST GUARD VERIFICATION GROUPS PASSED COMPLETELY!\n');
+// 8. Trusted Proxy Policy & Client IP Extraction
+{
+  console.log('  [Group 8] Testing Trusted Proxy Policy & Client IP Extraction...');
+
+  // 8.1 CIDR containment
+  assert.equal(isIpInCidr('127.0.0.1', '127.0.0.0/8'), true);
+  assert.equal(isIpInCidr('10.0.5.23', '10.0.0.0/8'), true);
+  assert.equal(isIpInCidr('172.20.1.1', '172.16.0.0/12'), true);
+  assert.equal(isIpInCidr('192.168.1.100', '192.168.0.0/16'), true);
+  assert.equal(isIpInCidr('203.0.113.195', '10.0.0.0/8'), false);
+
+  // 8.2 Untrusted direct connection with forged XFF -> returns socket IP
+  const untrustedDirect = extractClientIp({
+    socketRemoteAddress: '203.0.113.5',
+    headers: {
+      'x-forwarded-for': '8.8.8.8, 1.1.1.1',
+      'x-real-ip': '9.9.9.9'
+    }
+  });
+  assert.equal(untrustedDirect, '203.0.113.5', 'Untrusted socket IP must ignore forged XFF');
+
+  // 8.3 Trusted proxy connection with XFF -> extracts client IP
+  const trustedProxyReq = extractClientIp({
+    socketRemoteAddress: '10.0.0.1',
+    headers: {
+      'x-forwarded-for': '203.0.113.195, 10.0.0.1'
+    }
+  });
+  assert.equal(trustedProxyReq, '203.0.113.195', 'Trusted proxy socket must extract first client IP from XFF');
+
+  // 8.4 Header precedence: cf-connecting-ip > x-real-ip > x-forwarded-for
+  const multiHeaderReq = extractClientIp({
+    socketRemoteAddress: '127.0.0.1',
+    headers: {
+      'cf-connecting-ip': '198.51.100.42',
+      'x-real-ip': '198.51.100.99',
+      'x-forwarded-for': '198.51.100.1'
+    }
+  });
+  assert.equal(multiHeaderReq, '198.51.100.42', 'Header precedence must prioritize cf-connecting-ip');
+
+  console.log('  ✅ PASS: Trusted Proxy Policy and client IP extraction verified.');
+}
+
+console.log('\n🎉 ALL 8 MULTI-AXIS COST GUARD VERIFICATION GROUPS PASSED COMPLETELY!\n');
 

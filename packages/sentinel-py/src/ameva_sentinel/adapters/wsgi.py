@@ -8,6 +8,7 @@ from typing import Callable, Optional, Any
 from ..core.evaluator import SentinelCostGuardEvaluator
 from ..core.budget_types import RequestCostContext, VerifiedPrincipal
 from ..core.guards import RequestShapeGuard
+from ..trusted_proxy import TrustedProxyPolicy, extract_client_ip
 
 
 class SentinelWSGIMiddleware:
@@ -16,10 +17,12 @@ class SentinelWSGIMiddleware:
         app: Any,
         evaluator: Optional[SentinelCostGuardEvaluator] = None,
         principal_resolver: Optional[Callable[[dict], Optional[VerifiedPrincipal]]] = None,
+        trusted_proxy_policy: Optional[TrustedProxyPolicy] = None,
     ):
         self.app = app
         self.evaluator = evaluator or SentinelCostGuardEvaluator()
         self.principal_resolver = principal_resolver
+        self.trusted_proxy_policy = trusted_proxy_policy
 
     def __call__(self, environ: dict, start_response: Callable) -> Any:
         method = environ.get("REQUEST_METHOD", "GET")
@@ -28,6 +31,19 @@ class SentinelWSGIMiddleware:
         path_res = RequestShapeGuard.validate_path(path)
         if not path_res.valid:
             return self._respond_json(start_response, 400, {"error": "INVALID_REQUEST_PATH", "message": path_res.message})
+
+        # Extract headers from WSGI environ (HTTP_* prefix)
+        headers = {}
+        for key, value in environ.items():
+            if key.startswith("HTTP_"):
+                header_name = key[5:].replace("_", "-").lower()
+                headers[header_name] = value
+
+        client_ip = extract_client_ip(
+            socket_remote_address=environ.get("REMOTE_ADDR"),
+            headers=headers,
+            policy=self.trusted_proxy_policy,
+        )
 
         query_string = environ.get("QUERY_STRING", "")
 
@@ -76,6 +92,7 @@ class SentinelWSGIMiddleware:
             series_count=series_count,
             time_buckets=time_buckets,
             principal=principal,
+            network_key=client_ip,
         )
 
         decision = self.evaluator.evaluate_sync(ctx)

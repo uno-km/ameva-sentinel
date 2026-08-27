@@ -8,6 +8,7 @@ from typing import Callable, Optional, Any
 from ..core.evaluator import SentinelCostGuardEvaluator
 from ..core.budget_types import RequestCostContext, VerifiedPrincipal
 from ..core.guards import RequestShapeGuard
+from ..trusted_proxy import TrustedProxyPolicy, extract_client_ip
 
 
 class SentinelASGIMiddleware:
@@ -16,10 +17,12 @@ class SentinelASGIMiddleware:
         app: Any,
         evaluator: Optional[SentinelCostGuardEvaluator] = None,
         principal_resolver: Optional[Callable[[dict], Optional[VerifiedPrincipal]]] = None,
+        trusted_proxy_policy: Optional[TrustedProxyPolicy] = None,
     ):
         self.app = app
         self.evaluator = evaluator or SentinelCostGuardEvaluator()
         self.principal_resolver = principal_resolver
+        self.trusted_proxy_policy = trusted_proxy_policy
 
     async def __call__(self, scope: dict, receive: Callable, send: Callable) -> None:
         if scope["type"] != "http":
@@ -33,6 +36,22 @@ class SentinelASGIMiddleware:
         if not path_res.valid:
             await self._respond_json(send, 400, {"error": "INVALID_REQUEST_PATH", "message": path_res.message})
             return
+
+        # Extract headers dict from raw ASGI headers list [(b"name", b"val")]
+        headers_dict = {}
+        for k, v in scope.get("headers", []):
+            try:
+                headers_dict[k.decode("latin1")] = v.decode("latin1")
+            except Exception:
+                pass
+
+        client_info = scope.get("client")
+        socket_ip = client_info[0] if client_info and len(client_info) > 0 else None
+        client_ip = extract_client_ip(
+            socket_remote_address=socket_ip,
+            headers=headers_dict,
+            policy=self.trusted_proxy_policy,
+        )
 
         query_string = scope.get("query_string", b"").decode("utf-8")
 
@@ -87,6 +106,7 @@ class SentinelASGIMiddleware:
             series_count=series_count,
             time_buckets=time_buckets,
             principal=principal,
+            network_key=client_ip,
         )
 
         decision = await self.evaluator.evaluate_async(ctx)

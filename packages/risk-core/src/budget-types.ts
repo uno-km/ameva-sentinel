@@ -103,6 +103,7 @@ export interface RequestCostContext {
   pseudonymousKey?: string;
   asn?: number;
   tenantId?: string; // Raw/unverified request header/query context
+  networkKey?: string;
 }
 
 export interface CostGuardDecision {

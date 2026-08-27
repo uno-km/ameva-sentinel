@@ -47,6 +47,13 @@ from .core.geo_registry import (
 )
 
 from .privacy import mask_ip_address, normalize_target_type
+from .trusted_proxy import (
+    TrustedProxyPolicy,
+    DEFAULT_TRUSTED_PROXY_POLICY,
+    extract_client_ip,
+    is_ip_in_cidr,
+    is_ip_in_any_cidr,
+)
 from .providers import resolve_provider_adapter, EdgeClientInfo
 from .observability import Sentinel, ActorClaim, Assessment
 from .adapters.dashboard import (
@@ -62,6 +69,11 @@ __all__ = [
     "Sentinel",
     "ActorClaim",
     "Assessment",
+    "TrustedProxyPolicy",
+    "DEFAULT_TRUSTED_PROXY_POLICY",
+    "extract_client_ip",
+    "is_ip_in_cidr",
+    "is_ip_in_any_cidr",
     "RouteCostPolicy",
     "RateLimitTier",
     "CostPolicyDefaults",
