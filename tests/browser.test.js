@@ -1,8 +1,8 @@
-/**
+﻿/**
  * @ameva/sentinel-browser Unit Test Suite
  */
 import assert from 'node:assert';
-import { createBrowserTelemetry } from '../packages/browser-sdk/dist/index.js';
+import { createBrowserTelemetry, browserTelemetry } from '../packages/browser-sdk/dist/index.js';
 
 console.log('\n🧪 Running @ameva/sentinel-browser Unit Test Suite...\n');
 
@@ -26,18 +26,20 @@ function it(name, fn) {
 async function run() {
   // 1. Snapshot returns expected fields even in non-browser Node runtime
   await it('telemetry.snapshot() should return schema-compliant signals in Node fallback', async () => {
-    const telemetry = createBrowserTelemetry({ autoStart: false });
+    const telemetry = createBrowserTelemetry();
     const snapshot = telemetry.snapshot();
 
-    assert.strictEqual(typeof snapshot.telemetryObserved, 'boolean');
+    assert.strictEqual(snapshot.telemetryObserved, false); // autoStart is false by default
     assert.strictEqual(typeof snapshot.observationDurationMs, 'number');
     assert.strictEqual(typeof snapshot.trustedInputCount, 'number');
     assert.strictEqual(typeof snapshot.collectedAt, 'string');
   });
 
-  // 2. Lifecycle management (start, reset, destroy)
-  await it('telemetry lifecycle should manage start and destroy without throwing', async () => {
+  // 2. Lifecycle management (start, stop, reset, destroy)
+  await it('telemetry lifecycle should manage start, stop, and destroy cleanly without side-effects', async () => {
     const telemetry = createBrowserTelemetry({ maxEventsCap: 100 });
+    assert.strictEqual(telemetry.snapshot().telemetryObserved, false);
+
     telemetry.start();
     telemetry.start(); // Idempotent start
 
@@ -45,7 +47,15 @@ async function run() {
     const snapAfterReset = telemetry.snapshot();
     assert.strictEqual(snapAfterReset.trustedInputCount, 0);
 
+    telemetry.stop();
+    telemetry.start(); // Restart works
     telemetry.destroy();
+  });
+
+  // 3. Singleton import has zero active listeners by default
+  await it('browserTelemetry singleton has zero auto-start listeners on import', async () => {
+    const snapshot = browserTelemetry.snapshot();
+    assert.strictEqual(snapshot.telemetryObserved, false);
   });
 
   console.log('\n------------------------------------------------');

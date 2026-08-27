@@ -1,14 +1,16 @@
-/**
+﻿/**
+ * @file index.ts
  * @ameva/sentinel-browser
  * Privacy-first browser environment & user interaction telemetry collector
  * 
  * Guarantees:
+ * - autoStart=false by default (zero listeners registered on import or creation)
  * - Throttled pointermove sampling (100ms interval) to protect 60fps main-thread
  * - Discrete click/touch/keyboard interactions recorded un-throttled
  * - ZERO raw mouse coordinates collected
  * - ZERO keystroke contents or form values collected
  * - Non-persistent per-tab ephemeral session identifier
- * - Clean lifecycle management with start() and destroy()
+ * - Clean lifecycle management with start(), stop(), and destroy()
  */
 
 export interface BrowserTelemetryOptions {
@@ -32,14 +34,16 @@ export interface BrowserTelemetrySnapshot {
   collectedAt: string;
 }
 
-export function getLocalSessionId(): string {
+export function getLocalSessionId(persist = false): string {
   if (typeof sessionStorage === 'undefined') return 'ephemeral_local_session';
   const key = 'ameva:sentinel:session-id';
   try {
     const existing = sessionStorage.getItem(key);
     if (existing) return existing;
     const newId = 'sess_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
-    sessionStorage.setItem(key, newId);
+    if (persist) {
+      sessionStorage.setItem(key, newId);
+    }
     return newId;
   } catch (e) {
     return 'ephemeral_local_session';
@@ -65,7 +69,7 @@ export class BrowserTelemetryCollector {
     this.maxEventsCap = options.maxEventsCap ?? 500;
     this.pointerIntervalMs = options.pointerSampleIntervalMs ?? 100;
     this.samplingWindowMs = options.samplingWindowMs ?? 5000;
-    if (options.autoStart !== false) {
+    if (options.autoStart === true) {
       this.start();
     }
   }
@@ -115,6 +119,14 @@ export class BrowserTelemetryCollector {
     window.addEventListener('click', onClick as EventListener, { passive: true, signal });
     window.addEventListener('touchstart', onTouch as EventListener, { passive: true, signal });
     window.addEventListener('keydown', onKey as EventListener, { passive: true, signal });
+  }
+
+  stop(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+    this.isListening = false;
   }
 
   snapshot(): BrowserTelemetrySnapshot {
@@ -168,11 +180,8 @@ export class BrowserTelemetryCollector {
   }
 
   destroy(): void {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
-    this.isListening = false;
+    this.stop();
+    this.reset();
   }
 }
 
@@ -180,4 +189,7 @@ export function createBrowserTelemetry(options?: BrowserTelemetryOptions): Brows
   return new BrowserTelemetryCollector(options);
 }
 
-export const browserTelemetry = new BrowserTelemetryCollector();
+export const createSentinelTelemetry = createBrowserTelemetry;
+
+export const browserTelemetry = new BrowserTelemetryCollector({ autoStart: false });
+export const sentinelTelemetry = browserTelemetry;
