@@ -10,7 +10,7 @@ import {
 import { calculateConfidence } from './confidence.js';
 import { SentinelPolicy, defaultPolicy } from './policy.js';
 import { computePolicyChecksum } from './policy-canonical.js';
-import { deepFreeze, sanitizePlainObject } from './deep-freeze.js';
+import { deepFreeze, defensiveClone } from './deep-freeze.js';
 
 export const RUNTIME_VERSION = '2.2.0';
 
@@ -24,7 +24,7 @@ export interface EvaluateOptions {
 /**
  * Pure risk evaluation engine with deterministic EvaluationContext injection.
  * Evaluates telemetry signals against the configured SentinelPolicy.
- * Guaranteed input immutability, deep freezing, and deterministic 0~100 score clamping.
+ * Guaranteed input immutability, side-effect-free deep freezing, and deterministic 0~100 score clamping.
  */
 export function evaluateRisk(
   signals: Readonly<TelemetrySignals> = {},
@@ -47,8 +47,8 @@ export function evaluateRisk(
   const evidence: EvidenceItem[] = [];
   let calculatedScore = 0;
 
-  // Defensive sanitized copy to guarantee input immutability and prototype safety
-  const safeSignals: TelemetrySignals = signals ? sanitizePlainObject({ ...signals }) : {};
+  // Defensive deep clone to guarantee input immutability and prototype/accessor safety
+  const safeSignals: TelemetrySignals = signals ? (defensiveClone(signals) as TelemetrySignals) : {};
 
   for (const rule of policy.rules) {
     const result = rule.evaluate(safeSignals);
@@ -57,7 +57,7 @@ export function evaluateRisk(
       evidence.push({
         rule: rule.id,
         score: result.score,
-        attributes: sanitizePlainObject({ ...result.attributes }),
+        attributes: (defensiveClone(result.attributes || {}) as Record<string, any>),
         message: result.message
       });
     }

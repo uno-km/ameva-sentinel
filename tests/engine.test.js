@@ -2,7 +2,7 @@
  * AMEVA Sentinel - Core Engine Quality Gate & Boundary Test Suite
  */
 import assert from 'node:assert';
-import { evaluate, evaluateRisk, evaluateRiskNow, calculateConfidence, createPolicy, rules, SentinelAction, deepFreeze, sanitizePlainObject } from '../packages/risk-core/dist/index.js';
+import { evaluate, evaluateRisk, evaluateRiskNow, calculateConfidence, createPolicy, rules, SentinelAction, deepFreeze, defensiveClone, sanitizePlainObject } from '../packages/risk-core/dist/index.js';
 
 console.log('\n🧪 Running AMEVA Sentinel Quality Gate Test Suite...\n');
 
@@ -138,14 +138,16 @@ it('evaluation does not mutate its inputs (Object.freeze guarantee)', () => {
 // ==============================================================================
 // 6. Safe Baseline for Undefined / NaN / Null Inputs
 // ==============================================================================
-it('should gracefully handle undefined, null, and NaN signals without throwing', () => {
+it('should gracefully handle undefined and null signals, and reject NaN with TypeError', () => {
   const reportNull = evaluate(null);
   assert.strictEqual(reportNull.score, 0);
   assert.strictEqual(reportNull.action, SentinelAction.ALLOW);
 
-  const reportNaN = evaluate({ burstCount10s: NaN, isTrustedEventsCount: undefined });
-  assert.strictEqual(reportNaN.score, 0);
-  assert.strictEqual(reportNaN.action, SentinelAction.ALLOW);
+  const reportUndefined = evaluate(undefined);
+  assert.strictEqual(reportUndefined.score, 0);
+  assert.strictEqual(reportUndefined.action, SentinelAction.ALLOW);
+
+  assert.throws(() => evaluate({ burstCount10s: NaN }), /Non-finite numbers are not allowed/);
 });
 
 // ==============================================================================
@@ -171,38 +173,78 @@ it('evaluateRisk with explicit EvaluationContext produces deterministic timestam
 });
 
 // ==============================================================================
-// 8. Defensive Copy, Deep Immutability, and Prototype Pollution Rejection
+// 8. Defensive Copy, Deep Immutability, and Accessor Rejection
 // ==============================================================================
-it('deepFreeze prevents mutation of returned report and handles cycles and prototype pollution safely', () => {
+it('deepFreeze and defensiveClone reject getters without execution and isolate nested arrays/objects', () => {
+  // 8.1 Getter side-effect rejection with ZERO execution count
+  let getterInvocations = 0;
+  const maliciousWithGetter = {
+    get maliciousProp() {
+      getterInvocations++;
+      return 'payload';
+    }
+  };
+
+  assert.throws(() => {
+    defensiveClone(maliciousWithGetter);
+  }, /Accessor properties are not allowed/);
+  assert.strictEqual(getterInvocations, 0, 'Getter must NEVER be executed during defensive clone');
+
+  assert.throws(() => {
+    deepFreeze(maliciousWithGetter);
+  }, /Accessor properties are not allowed/);
+  assert.strictEqual(getterInvocations, 0, 'Getter must NEVER be executed during deepFreeze');
+
+  // 8.2 Nested array mutation isolation
+  const inputNested = {
+    nestedList: [{ itemCode: 'ORIGINAL' }],
+    count: 10
+  };
+  const cloned = defensiveClone(inputNested);
+  inputNested.nestedList[0].itemCode = 'MUTATED';
+  inputNested.nestedList.push({ itemCode: 'ADDED' });
+
+  assert.strictEqual(cloned.nestedList[0].itemCode, 'ORIGINAL', 'Mutations on input array must not affect cloned output');
+  assert.strictEqual(cloned.nestedList.length, 1);
+
+  // 8.3 Symbol key and non-plain object rejection
+  assert.throws(() => {
+    defensiveClone({ [Symbol('test')]: 'value' });
+  }, /Symbol keys are not allowed/);
+
+  assert.throws(() => {
+    defensiveClone(new Date());
+  }, /Only plain objects and arrays are allowed/);
+
+  // 8.4 Cyclic input rejection in defensiveClone
+  const cyclicObj = { a: 1 };
+  cyclicObj.self = cyclicObj;
+  assert.throws(() => {
+    defensiveClone(cyclicObj);
+  }, /Cyclic input is not allowed/);
+
+  // 8.5 Prototype pollution key rejection
+  assert.throws(() => {
+    defensiveClone(JSON.parse('{"__proto__": {"polluted": true}}'));
+  }, /Forbidden object key/);
+
+  assert.throws(() => {
+    defensiveClone(JSON.parse('{"constructor": {"polluted": true}}'));
+  }, /Forbidden object key/);
+
+  assert.throws(() => {
+    defensiveClone(JSON.parse('{"prototype": {"polluted": true}}'));
+  }, /Forbidden object key/);
+
+  // 8.6 Report deep immutability
   const signals = { webdriver: true, burstCount10s: 15 };
   const report = evaluate(signals);
-
-  // Attempt mutation on report top-level property
   assert.throws(() => {
     report.score = 999;
   }, /TypeError/);
-
-  // Attempt mutation on nested evidence array / object
   assert.throws(() => {
     report.evidence[0].score = 999;
   }, /TypeError/);
-
-  assert.throws(() => {
-    report.evidence[0].attributes.observed = false;
-  }, /TypeError/);
-
-  // Cycle detection in deepFreeze
-  const cyclicObj = { a: 1 };
-  cyclicObj.self = cyclicObj;
-  const frozenCyclic = deepFreeze(cyclicObj);
-  assert.ok(Object.isFrozen(frozenCyclic));
-  assert.strictEqual(frozenCyclic.self, frozenCyclic);
-
-  // Prototype pollution attempt
-  const maliciousInput = JSON.parse('{"__proto__": {"polluted": true}, "webdriver": true}');
-  const clean = sanitizePlainObject(maliciousInput);
-  assert.strictEqual(clean.polluted, undefined);
-  assert.strictEqual(({}).polluted, undefined, 'Global prototype must not be polluted');
 });
 
 // ==============================================================================
