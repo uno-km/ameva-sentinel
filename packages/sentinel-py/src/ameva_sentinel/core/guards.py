@@ -17,6 +17,46 @@ class GuardValidationResult:
 
 class RequestShapeGuard:
     @staticmethod
+    def validate_path(path: Optional[str]) -> GuardValidationResult:
+        if not isinstance(path, str) or len(path) == 0 or len(path) > 2048:
+            return GuardValidationResult(
+                valid=False,
+                reason_code="REQUEST_SHAPE_EXCEEDED",
+                message="Invalid request path length.",
+            )
+
+        if "\0" in path or "%00" in path.lower():
+            return GuardValidationResult(
+                valid=False,
+                reason_code="REQUEST_SHAPE_EXCEEDED",
+                message="Request path contains forbidden null byte.",
+            )
+
+        if "\\" in path or "%5c" in path.lower():
+            return GuardValidationResult(
+                valid=False,
+                reason_code="REQUEST_SHAPE_EXCEEDED",
+                message="Request path contains forbidden backslash or encoded backslash.",
+            )
+
+        if "%2f" in path.lower():
+            return GuardValidationResult(
+                valid=False,
+                reason_code="REQUEST_SHAPE_EXCEEDED",
+                message="Request path contains forbidden encoded forward slash.",
+            )
+
+        import re
+        if re.search(r"(^|/|\.\.)(\.\.)(/|$)", path) or re.search(r"%2e%2e|%2e\.|%252e", path, re.IGNORECASE):
+            return GuardValidationResult(
+                valid=False,
+                reason_code="REQUEST_SHAPE_EXCEEDED",
+                message="Request path contains forbidden dot segment or traversal sequence.",
+            )
+
+        return GuardValidationResult(valid=True)
+
+    @staticmethod
     def validate_page_size(page_size: Optional[int], policy: RouteCostPolicy) -> GuardValidationResult:
         default_size = policy.page_size_default or 25
         max_size = policy.page_size_max or 50

@@ -13,6 +13,50 @@ export interface GuardValidationResult {
 }
 
 export class RequestShapeGuard {
+  public static validatePath(path: string | undefined): GuardValidationResult {
+    if (typeof path !== 'string' || path.length === 0 || path.length > 2048) {
+      return {
+        valid: false,
+        reasonCode: 'REQUEST_SHAPE_EXCEEDED',
+        message: 'Invalid request path length.'
+      };
+    }
+
+    if (path.includes('\0') || /%00/i.test(path)) {
+      return {
+        valid: false,
+        reasonCode: 'REQUEST_SHAPE_EXCEEDED',
+        message: 'Request path contains forbidden null byte.'
+      };
+    }
+
+    if (path.includes('\\') || /%5c/i.test(path)) {
+      return {
+        valid: false,
+        reasonCode: 'REQUEST_SHAPE_EXCEEDED',
+        message: 'Request path contains forbidden backslash or encoded backslash.'
+      };
+    }
+
+    if (/%2f/i.test(path)) {
+      return {
+        valid: false,
+        reasonCode: 'REQUEST_SHAPE_EXCEEDED',
+        message: 'Request path contains forbidden encoded forward slash.'
+      };
+    }
+
+    if (/(^|\/|\.\.)(\.\.)(\/|$)/.test(path) || /%2e%2e|%2e\.|%252e/i.test(path)) {
+      return {
+        valid: false,
+        reasonCode: 'REQUEST_SHAPE_EXCEEDED',
+        message: 'Request path contains forbidden dot segment or traversal sequence.'
+      };
+    }
+
+    return { valid: true };
+  }
+
   public static validatePageSize(
     pageSize: number | undefined,
     policy: RouteCostPolicy

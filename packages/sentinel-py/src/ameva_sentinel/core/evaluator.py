@@ -68,6 +68,25 @@ class SentinelCostGuardEvaluator:
         display_checksum = self.registry.display_checksum
         is_shadow = False if self.enforce_by_default else (policy.shadow_mode if policy.shadow_mode is not None else True)
 
+        # 0. Request Path Guard (Ambiguity & Traversal Rejection)
+        path_res = RequestShapeGuard.validate_path(context.path)
+        if not path_res.valid:
+            return CostGuardDecision(
+                allowed=is_shadow,
+                action="OBSERVE" if is_shadow else "DENY",
+                proposed_action="DENY",
+                enforced_action="ALLOW" if is_shadow else "DENY",
+                violation_detected=True,
+                reason_code="REQUEST_SHAPE_EXCEEDED",
+                policy_version=policy_version,
+                policy_checksum=policy_checksum,
+                display_checksum=display_checksum,
+                cost=policy.cost,
+                degraded=False,
+                enforced=not is_shadow,
+                message=path_res.message,
+            )
+
         # 1. Upstream-Verified Authentication check (Strictly require principal.authenticated is True)
         principal = context.principal
         is_authenticated = bool(principal and principal.authenticated)

@@ -3,7 +3,7 @@
  * Fastify PreHandler Hook for AMEVA-Sentinel Cost Guardrails.
  */
 
-import { SentinelCostGuardEvaluator, VerifiedPrincipal, RequestCostContext } from '@ameva/sentinel-risk-core';
+import { SentinelCostGuardEvaluator, VerifiedPrincipal, RequestCostContext, RequestShapeGuard } from '@ameva/sentinel-risk-core';
 
 export function createFastifyCostGuard(options: {
   evaluator?: SentinelCostGuardEvaluator;
@@ -13,6 +13,12 @@ export function createFastifyCostGuard(options: {
   const principalResolver = options.principalResolver;
 
   return async function sentinelFastifyHook(req: any, reply: any) {
+    const rawPath = req.url || '/';
+    const pathValidation = RequestShapeGuard.validatePath(rawPath);
+    if (!pathValidation.valid) {
+      return reply.code(400).send({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message });
+    }
+
     let pageSize: number | undefined;
     let seriesCount: number | undefined;
     let timeBuckets: number | undefined;

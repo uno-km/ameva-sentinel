@@ -66,6 +66,26 @@ export class SentinelCostGuardEvaluator {
     const isShadow = this.enforceByDefault ? false : (policy.shadow_mode ?? true);
     const { name: tierName, tier: selectedTier } = this.resolveTier(context);
 
+    // 0. Request Path Guard (Ambiguity & Traversal Rejection)
+    const pathValidation = RequestShapeGuard.validatePath(context.path);
+    if (!pathValidation.valid) {
+      return {
+        allowed: isShadow,
+        action: isShadow ? 'OBSERVE' : 'DENY',
+        proposedAction: 'DENY',
+        enforcedAction: isShadow ? 'ALLOW' : 'DENY',
+        violationDetected: true,
+        reasonCode: 'REQUEST_SHAPE_EXCEEDED',
+        policyVersion,
+        policyChecksum,
+        displayChecksum,
+        cost: policy.cost,
+        degraded: false,
+        enforced: !isShadow,
+        message: pathValidation.message
+      };
+    }
+
     // 1. Upstream-Verified Authentication Check (Strictly require principal.authenticated === true)
     const principal = context.principal;
     const isAuthenticated = principal?.authenticated === true;

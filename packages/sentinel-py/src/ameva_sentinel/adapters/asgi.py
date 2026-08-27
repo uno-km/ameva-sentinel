@@ -7,6 +7,7 @@ from urllib.parse import parse_qs
 from typing import Callable, Optional, Any
 from ..core.evaluator import SentinelCostGuardEvaluator
 from ..core.budget_types import RequestCostContext, VerifiedPrincipal
+from ..core.guards import RequestShapeGuard
 
 
 class SentinelASGIMiddleware:
@@ -27,6 +28,12 @@ class SentinelASGIMiddleware:
 
         method = scope.get("method", "GET")
         path = scope.get("path", "/")
+
+        path_res = RequestShapeGuard.validate_path(path)
+        if not path_res.valid:
+            await self._respond_json(send, 400, {"error": "INVALID_REQUEST_PATH", "message": path_res.message})
+            return
+
         query_string = scope.get("query_string", b"").decode("utf-8")
 
         page_size = None

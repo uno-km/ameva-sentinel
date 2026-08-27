@@ -48,3 +48,22 @@ def test_budget_scopes_ssot():
     assert BUDGET_SCOPES == ("global", "route", "tenant", "account", "authKey", "session", "network")
     assert LEGACY_DEFAULT_BUDGET_SCOPES == ("route", "tenant", "account", "authKey", "session", "network")
 
+
+def test_request_shape_path_validation():
+    # Valid paths
+    assert RequestShapeGuard.validate_path("/api/v1/chart").valid is True
+    assert RequestShapeGuard.validate_path("/users/123/profile").valid is True
+
+    # Invalid paths
+    assert RequestShapeGuard.validate_path("").valid is False
+    assert RequestShapeGuard.validate_path(None).valid is False
+    assert RequestShapeGuard.validate_path("/api/v1/\0/secret").valid is False
+    assert RequestShapeGuard.validate_path("/api/v1/%00/secret").valid is False
+    assert RequestShapeGuard.validate_path("/api/v1/../secret").valid is False
+    assert RequestShapeGuard.validate_path("/api/v1/%2e%2e/secret").valid is False
+    assert RequestShapeGuard.validate_path("/api/v1/..%2fsecret").valid is False
+    assert RequestShapeGuard.validate_path("/api/v1/%2fsecret").valid is False
+    assert RequestShapeGuard.validate_path("C:\\windows\\system32").valid is False
+    assert RequestShapeGuard.validate_path("/api/v1/%5csecret").valid is False
+
+

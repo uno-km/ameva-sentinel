@@ -3,7 +3,7 @@
  * Next.js Edge / Node Middleware Adapter for AMEVA-Sentinel Cost Guardrails.
  */
 
-import { SentinelCostGuardEvaluator, VerifiedPrincipal, RequestCostContext } from '@ameva/sentinel-risk-core';
+import { SentinelCostGuardEvaluator, VerifiedPrincipal, RequestCostContext, RequestShapeGuard } from '@ameva/sentinel-risk-core';
 
 export function createNextCostGuard(options: {
   evaluator?: SentinelCostGuardEvaluator;
@@ -14,6 +14,14 @@ export function createNextCostGuard(options: {
 
   return async function sentinelNextMiddleware(req: any) {
     const url = new URL(req.url, 'http://localhost');
+    const pathValidation = RequestShapeGuard.validatePath(url.pathname);
+    if (!pathValidation.valid) {
+      return new Response(JSON.stringify({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message }), {
+        status: 400,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+
     let pageSize: number | undefined;
     let seriesCount: number | undefined;
     let timeBuckets: number | undefined;

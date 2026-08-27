@@ -3,7 +3,7 @@
  * Express Middleware Adapter for AMEVA-Sentinel Cost Guardrails.
  */
 
-import { SentinelCostGuardEvaluator, VerifiedPrincipal, RequestCostContext } from '@ameva/sentinel-risk-core';
+import { SentinelCostGuardEvaluator, VerifiedPrincipal, RequestCostContext, RequestShapeGuard } from '@ameva/sentinel-risk-core';
 
 export function createExpressCostGuard(options: {
   evaluator?: SentinelCostGuardEvaluator;
@@ -13,6 +13,12 @@ export function createExpressCostGuard(options: {
   const principalResolver = options.principalResolver;
 
   return async function sentinelCostGuardMiddleware(req: any, res: any, next: any) {
+    const rawPath = req.path || req.url || '/';
+    const pathValidation = RequestShapeGuard.validatePath(rawPath);
+    if (!pathValidation.valid) {
+      return res.status(400).json({ error: 'INVALID_REQUEST_PATH', message: pathValidation.message });
+    }
+
     let pageSize: number | undefined;
     let seriesCount: number | undefined;
     let timeBuckets: number | undefined;

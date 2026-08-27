@@ -83,7 +83,20 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
     });
   }, /Unknown field 'unknown_field'/);
 
-  console.log('  ✅ PASS: Policy validation rejects invalid bounds, floats, unknown fields, and schema versions.');
+  // Path validation tests
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/chart').valid, true);
+  assert.equal(RequestShapeGuard.validatePath('').valid, false);
+  assert.equal(RequestShapeGuard.validatePath(undefined).valid, false);
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/\0/secret').valid, false);
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%00/secret').valid, false);
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/../secret').valid, false);
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%2e%2e/secret').valid, false);
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/..%2fsecret').valid, false);
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%2fsecret').valid, false);
+  assert.equal(RequestShapeGuard.validatePath('C:\\windows\\system32').valid, false);
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%5csecret').valid, false);
+
+  console.log('  ✅ PASS: Policy validation and path ambiguity guards verified.');
 }
 
 // 2. Unverified Principal Rejection & Unverified Tenant Isolation

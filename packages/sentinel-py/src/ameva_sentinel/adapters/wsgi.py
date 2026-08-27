@@ -7,6 +7,7 @@ from urllib.parse import parse_qs
 from typing import Callable, Optional, Any
 from ..core.evaluator import SentinelCostGuardEvaluator
 from ..core.budget_types import RequestCostContext, VerifiedPrincipal
+from ..core.guards import RequestShapeGuard
 
 
 class SentinelWSGIMiddleware:
@@ -23,6 +24,11 @@ class SentinelWSGIMiddleware:
     def __call__(self, environ: dict, start_response: Callable) -> Any:
         method = environ.get("REQUEST_METHOD", "GET")
         path = environ.get("PATH_INFO", "/")
+
+        path_res = RequestShapeGuard.validate_path(path)
+        if not path_res.valid:
+            return self._respond_json(start_response, 400, {"error": "INVALID_REQUEST_PATH", "message": path_res.message})
+
         query_string = environ.get("QUERY_STRING", "")
 
         page_size = None
