@@ -1,4 +1,4 @@
-﻿"""
+"""
 Cryptographically safe client IP extraction with CIDR trust boundaries for Python SDK.
 """
 
@@ -6,6 +6,7 @@ import ipaddress
 import re
 from typing import Optional, List, Dict, Any, Tuple
 from dataclasses import dataclass, field
+from .core.budget_types import ClientAddressFinding, ClientAddressInspection
 
 
 @dataclass(frozen=True)
@@ -118,6 +119,155 @@ def select_client_from_chain(
             return candidate
 
     return forwarded_ips[0]
+
+
+def inspect_client_address(
+    socket_remote_address: Optional[str] = None,
+    headers: Optional[Dict[str, Any]] = None,
+    policy: Optional[TrustedProxyPolicy] = None,
+) -> ClientAddressInspection:
+    from .core.budget_types import ClientAddressFinding, ClientAddressInspection
+
+    pol = policy or DEFAULT_TRUSTED_PROXY_POLICY
+    findings: List[ClientAddressFinding] = []
+    normalized_socket = normalize_ip(socket_remote_address)
+
+    hdrs = headers or {}
+    lower_headers = {k.lower().replace("_", "-"): str(v).strip() for k, v in hdrs.items() if v is not None}
+
+    present_headers: List[Tuple[str, str]] = []
+    for h in pol.header_precedence:
+        val = lower_headers.get(h.lower())
+        if val:
+            present_headers.append((h, val))
+
+    if not normalized_socket:
+        if present_headers:
+            findings.append(
+                ClientAddressFinding(
+                    code="MISSING_OR_INVALID_SOCKET_REMOTE_ADDRESS",
+                    severity="high",
+                    message="Socket remote address is missing or invalid while forwarded headers are present.",
+                )
+            )
+            return ClientAddressInspection(
+                socket_address=None,
+                client_address=None,
+                forwarded_address=present_headers[0][1] if present_headers else None,
+                source="unknown",
+                trust="invalid",
+                findings=findings,
+            )
+        return ClientAddressInspection(
+            socket_address=None,
+            client_address=None,
+            forwarded_address=None,
+            source="unknown",
+            trust="trusted",
+            findings=findings,
+        )
+
+    socket_ip = normalized_socket
+    socket_trusted = is_ip_in_any_cidr(socket_ip, pol.trusted_cidrs)
+
+    if not present_headers:
+        return ClientAddressInspection(
+            socket_address=socket_ip,
+            client_address=socket_ip,
+            forwarded_address=None,
+            source="socket",
+            trust="trusted",
+            findings=findings,
+        )
+
+    if not socket_trusted:
+        findings.append(
+            ClientAddressFinding(
+                code="UNTRUSTED_FORWARDED_HEADERS",
+                severity="high",
+                message="Socket remote address is not in trusted CIDR list, ignoring forwarded headers.",
+            )
+        )
+        return ClientAddressInspection(
+            socket_address=socket_ip,
+            client_address=socket_ip,
+            forwarded_address=present_headers[0][1],
+            source="socket",
+            trust="untrusted",
+            findings=findings,
+        )
+
+    if pol.reject_conflicting_headers and len(present_headers) > 1:
+        findings.append(
+            ClientAddressFinding(
+                code="CONFLICTING_FORWARDED_HEADERS",
+                severity="high",
+                message="Multiple conflicting forwarded headers present.",
+            )
+        )
+
+    selected_name, selected_value = present_headers[0]
+    forwarded_ips = parse_forwarded_header_strictly(selected_name, selected_value)
+
+    if not forwarded_ips:
+        findings.append(
+            ClientAddressFinding(
+                code="INVALID_FORWARDED_ADDRESS",
+                severity="medium",
+                message="Forwarded header value contained no valid IP addresses.",
+            )
+        )
+        return ClientAddressInspection(
+            socket_address=socket_ip,
+            client_address=socket_ip,
+            forwarded_address=selected_value,
+            source="socket",
+            trust="invalid",
+            findings=findings,
+        )
+
+    if len(forwarded_ips) > pol.max_forwarded_hops:
+        findings.append(
+            ClientAddressFinding(
+                code="FORWARDED_HOP_LIMIT_EXCEEDED",
+                severity="high",
+                message=f"Forwarded hops ({len(forwarded_ips)}) exceeded limit ({pol.max_forwarded_hops}).",
+            )
+        )
+        return ClientAddressInspection(
+            socket_address=socket_ip,
+            client_address=socket_ip,
+            forwarded_address=selected_value,
+            source="socket",
+            trust="invalid",
+            findings=findings,
+        )
+
+    resolved_client_ip = socket_ip
+    try:
+        resolved_client_ip = select_client_from_chain(
+            socket_ip=socket_ip,
+            forwarded_ips=forwarded_ips,
+            trusted_cidrs=pol.trusted_cidrs,
+            max_forwarded_hops=pol.max_forwarded_hops,
+        )
+    except Exception as exc:
+        findings.append(
+            ClientAddressFinding(
+                code=str(exc),
+                severity="high",
+                message=str(exc),
+            )
+        )
+
+    return ClientAddressInspection(
+        socket_address=socket_ip,
+        client_address=resolved_client_ip,
+        forwarded_address=selected_value,
+        source="socket" if resolved_client_ip == socket_ip else "forwarded",
+        trust="untrusted" if findings else "trusted",
+        findings=findings,
+    )
 
 
 def extract_client_ip(

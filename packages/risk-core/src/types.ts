@@ -42,15 +42,44 @@ export interface EvaluationContext {
   runtimeVersion: string;
 }
 
+export interface Finding {
+  code: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+  attributes?: Record<string, unknown>;
+}
+
+export interface EvaluationProvenance {
+  nowEpochMs: number;
+  policyHash: string;
+  runtimeVersion: string;
+}
+
+export interface RiskAssessment {
+  riskScore: number;
+  confidence: number;
+  findings: readonly Finding[];
+  recommendedAction: SentinelAction | 'ALLOW' | 'OBSERVE' | 'CHALLENGE' | 'RATE_LIMIT' | 'DENY';
+  provenance: EvaluationProvenance;
+  /** @deprecated Use recommendedAction */
+  action?: SentinelAction;
+  /** @deprecated Application decision must not be in core */
+  enforcedAction?: SentinelAction;
+}
+
 export interface SentinelRiskReport {
   traceId: string;
   score: number;                       // 0 ~ 100 (Clamped)
+  riskScore?: number;                  // Alias for score
   evidenceConfidence: number;          // 0.00 ~ 1.00 (Signal Completeness Index)
-  action: SentinelAction;              // Actual action executed (OBSERVE in shadow mode)
+  confidence?: number;                 // Alias for evidenceConfidence
+  action: SentinelAction;              // Actual action executed
   recommendedAction: SentinelAction;   // Evaluated policy recommendation
   enforcementMode: EnforcementMode;    // 'SHADOW' | 'ENFORCE'
   policyVersion: string;
   evidence: EvidenceItem[];
+  findings?: readonly Finding[];
+  provenance?: EvaluationProvenance;
   evaluatedAt: string;
   signals?: TelemetrySignals;
 }

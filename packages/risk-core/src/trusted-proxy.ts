@@ -1,9 +1,10 @@
-﻿/**
+/**
  * @file trusted-proxy.ts
  * Cryptographically safe client IP extraction with CIDR trust boundaries.
  */
 
 import ipaddr from 'ipaddr.js';
+import { ClientAddressFinding, ClientAddressInspection } from './budget-types.js';
 
 export type TrustedForwardedHeader = 'forwarded' | 'x-forwarded-for' | 'x-real-ip' | 'cf-connecting-ip';
 
@@ -167,6 +168,162 @@ export function selectFromForwardedChain(
   return forwardedIps[0];
 }
 
+export function inspectClientAddress(
+  request: ClientIpExtractionRequest,
+  customPolicy: Partial<TrustedProxyPolicy> = {}
+): ClientAddressInspection {
+  const policy: TrustedProxyPolicy = {
+    ...DEFAULT_TRUSTED_PROXY_POLICY,
+    ...customPolicy,
+  };
+
+  const findings: ClientAddressFinding[] = [];
+  const normalizedSocket = normalizeIp(request.socketRemoteAddress);
+  const headers = request.headers ?? {};
+  const getHeader = (name: string): string | undefined => {
+    const val = headers[name.toLowerCase()] || headers[name];
+    if (Array.isArray(val)) return val[0];
+    return typeof val === 'string' ? val : undefined;
+  };
+
+  const presentHeaders: Array<{ name: TrustedForwardedHeader; value: string }> = [];
+  for (const h of policy.headerPrecedence) {
+    const val = getHeader(h);
+    if (val && val.trim().length > 0) {
+      presentHeaders.push({ name: h, value: val.trim() });
+    }
+  }
+
+  const socketAddress = normalizedSocket ? normalizedSocket.address : null;
+
+  if (!normalizedSocket) {
+    if (presentHeaders.length > 0) {
+      findings.push({
+        code: 'MISSING_OR_INVALID_SOCKET_REMOTE_ADDRESS',
+        severity: 'high',
+        message: 'Socket remote address is missing or invalid while forwarded headers are present.'
+      });
+      return {
+        socketAddress: null,
+        clientAddress: null,
+        forwardedAddress: presentHeaders[0]?.value || null,
+        source: 'unknown',
+        trust: 'invalid',
+        findings
+      };
+    }
+    return {
+      socketAddress: null,
+      clientAddress: null,
+      forwardedAddress: null,
+      source: 'unknown',
+      trust: 'trusted',
+      findings
+    };
+  }
+
+  const socketIp = normalizedSocket.address;
+  const socketTrusted = isIpInAnyCidr(socketIp, policy.trustedCidrs);
+
+  if (presentHeaders.length === 0) {
+    return {
+      socketAddress: socketIp,
+      clientAddress: socketIp,
+      forwardedAddress: null,
+      source: 'socket',
+      trust: 'trusted',
+      findings
+    };
+  }
+
+  if (!socketTrusted) {
+    findings.push({
+      code: 'UNTRUSTED_FORWARDED_HEADERS',
+      severity: 'high',
+      message: 'Socket remote address is not in trusted CIDR list, ignoring forwarded headers.'
+    });
+    return {
+      socketAddress: socketIp,
+      clientAddress: socketIp,
+      forwardedAddress: presentHeaders[0].value,
+      source: 'socket',
+      trust: 'untrusted',
+      findings
+    };
+  }
+
+  if (policy.rejectConflictingHeaders && presentHeaders.length > 1) {
+    findings.push({
+      code: 'CONFLICTING_FORWARDED_HEADERS',
+      severity: 'high',
+      message: 'Multiple conflicting forwarded headers present.'
+    });
+  }
+
+  const selected = presentHeaders[0];
+  const forwardedIps = parseForwardedHeaderStrictly(selected.name, selected.value);
+
+  if (forwardedIps.length === 0) {
+    findings.push({
+      code: 'INVALID_FORWARDED_ADDRESS',
+      severity: 'medium',
+      message: 'Forwarded header value contained no valid IP addresses.'
+    });
+    return {
+      socketAddress: socketIp,
+      clientAddress: socketIp,
+      forwardedAddress: selected.value,
+      source: 'socket',
+      trust: 'invalid',
+      findings
+    };
+  }
+
+  if (forwardedIps.length > policy.maxForwardedHops) {
+    findings.push({
+      code: 'FORWARDED_HOP_LIMIT_EXCEEDED',
+      severity: 'high',
+      message: `Forwarded hops (${forwardedIps.length}) exceeded limit (${policy.maxForwardedHops}).`
+    });
+    return {
+      socketAddress: socketIp,
+      clientAddress: socketIp,
+      forwardedAddress: selected.value,
+      source: 'socket',
+      trust: 'invalid',
+      findings
+    };
+  }
+
+  let resolvedClientIp = socketIp;
+  try {
+    resolvedClientIp = selectFromForwardedChain(
+      socketIp,
+      forwardedIps,
+      policy.trustedCidrs,
+      policy.maxForwardedHops
+    );
+  } catch (err: any) {
+    findings.push({
+      code: err.message || 'FORWARDED_RESOLUTION_ERROR',
+      severity: 'high',
+      message: err.message || 'Error resolving forwarded chain'
+    });
+  }
+
+  return {
+    socketAddress: socketIp,
+    clientAddress: resolvedClientIp,
+    forwardedAddress: selected.value,
+    source: resolvedClientIp === socketIp ? 'socket' : 'forwarded',
+    trust: findings.length > 0 ? 'untrusted' : 'trusted',
+    findings
+  };
+}
+
+/**
+ * @deprecated Legacy convenience function. For pure non-throwing inspection, use `inspectClientAddress()`.
+ */
 export function extractClientIp(
   request: ClientIpExtractionRequest,
   customPolicy: Partial<TrustedProxyPolicy> = {}

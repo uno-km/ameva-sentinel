@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file local-emergency-budget.ts
  * In-Memory Emergency Local Budget Store (Token Bucket).
  * Safely isolates tier buckets, validates inputs strictly, and clamps token balance on capacity downgrade.
@@ -132,7 +132,28 @@ export class LocalEmergencyBudgetStore implements BudgetStore {
     }
   }
 
+  public get size(): number {
+    return this.buckets.size;
+  }
+
+  public delete(key: string): boolean {
+    return this.buckets.delete(key);
+  }
+
+  public prune(maxAgeSeconds = 3600): number {
+    const now = Date.now() / 1000;
+    let prunedCount = 0;
+    for (const [key, state] of this.buckets.entries()) {
+      if (now - state.lastUpdated > maxAgeSeconds) {
+        this.buckets.delete(key);
+        prunedCount++;
+      }
+    }
+    return prunedCount;
+  }
+
   public reset(): void {
     this.buckets.clear();
   }
 }
+

@@ -10,11 +10,39 @@ import {
   BudgetStore,
   ThreatAggregateStore,
   RateLimitTier,
-  RedisFailurePolicy
+  RedisFailurePolicy,
+  RouteCostPolicy,
+  CostGuardAction,
+  CostGuardReasonCode,
+  PolicyIdentity,
+  RequestInspection,
+  BudgetConsumeRequest
 } from './budget-types.js';
 import { CostPolicyRegistry } from './policy-registry.js';
 import { RequestShapeGuard } from './budget-guards.js';
 import { LocalEmergencyBudgetStore, computeEmergencyCapacity } from './local-emergency-budget.js';
+
+export interface CostGuardOptions {
+  policyRegistry?: CostPolicyRegistry;
+  budgetStore?: BudgetStore;
+  emergencyStore?: LocalEmergencyBudgetStore;
+  threatStore?: ThreatAggregateStore;
+  enforceByDefault?: boolean;
+  failurePolicy?: RedisFailurePolicy;
+}
+
+export interface CostGuardInspection {
+  policy: RouteCostPolicy;
+  policyIdentity: PolicyIdentity;
+  requestedCost: number;
+  recommendedAction: CostGuardAction;
+  requestInspection: RequestInspection;
+  consumeRequest: BudgetConsumeRequest;
+  isShadow: boolean;
+  violationDetected: boolean;
+  reasonCode: CostGuardReasonCode;
+  message?: string;
+}
 
 export class SentinelCostGuardEvaluator {
   private readonly registry: CostPolicyRegistry;
@@ -24,14 +52,7 @@ export class SentinelCostGuardEvaluator {
   private readonly enforceByDefault: boolean;
   private readonly failurePolicy: RedisFailurePolicy;
 
-  constructor(options: {
-    policyRegistry?: CostPolicyRegistry;
-    budgetStore?: BudgetStore;
-    emergencyStore?: LocalEmergencyBudgetStore;
-    threatStore?: ThreatAggregateStore;
-    enforceByDefault?: boolean;
-    failurePolicy?: RedisFailurePolicy;
-  } = {}) {
+  constructor(options: CostGuardOptions = {}) {
     this.registry = options.policyRegistry || new CostPolicyRegistry();
     this.budgetStore = options.budgetStore || new LocalEmergencyBudgetStore();
     this.emergencyStore = options.emergencyStore || new LocalEmergencyBudgetStore(50, 1.0);
@@ -40,101 +61,74 @@ export class SentinelCostGuardEvaluator {
     this.failurePolicy = options.failurePolicy || { mode: 'local-emergency', emergencyRatio: 1.0, expectedReplicaCount: 1 };
   }
 
-  private resolveTier(context: RequestCostContext): { name: string; tier: RateLimitTier } {
-    const tiers = this.registry.config.rate_limit_tiers || {};
-    const principal = context.principal;
-    if (principal?.authenticated && principal.tier && tiers[principal.tier]) {
-      return { name: principal.tier, tier: tiers[principal.tier] };
-    }
-    if (principal?.authenticated) {
-      const tier = tiers.authenticated_key || { capacity: 2000, refill_tokens_per_minute: 2000, emergency_local_capacity: 200 };
-      return { name: 'authenticated_key', tier };
-    }
-    if (context.sessionId) {
-      const tier = tiers.session || { capacity: 300, refill_tokens_per_minute: 300, emergency_local_capacity: 50 };
-      return { name: 'session', tier };
-    }
-    const tier = tiers.anonymous_network || { capacity: 100, refill_tokens_per_minute: 100, emergency_local_capacity: 30 };
-    return { name: 'anonymous_network', tier };
-  }
-
-  public async evaluate(context: RequestCostContext): Promise<CostGuardDecision> {
+  public inspectCostRequest(context: RequestCostContext): CostGuardInspection {
     const policy = this.registry.getRoutePolicy(context.method, context.path);
-    const policyVersion = this.registry.config.policy_version;
-    const policyChecksum = this.registry.checksum;
-    const displayChecksum = this.registry.displayChecksum;
-    const isShadow = this.enforceByDefault ? false : (policy.shadow_mode ?? true);
-    const { name: tierName, tier: selectedTier } = this.resolveTier(context);
+    const policyIdentity: PolicyIdentity = {
+      checksumSha256: this.registry.checksum,
+      displayChecksum: this.registry.displayChecksum
+    };
+    const isShadow = !this.enforceByDefault ? (policy.shadow_mode ?? true) : false;
 
-    // 0. Request Path Guard (Ambiguity & Traversal Rejection)
-    const pathValidation = RequestShapeGuard.validatePath(context.path);
-    if (!pathValidation.valid) {
+    // 0. Request Path Inspection
+    const pathInspection = RequestShapeGuard.inspectPath(context.path);
+    if (!pathInspection.acceptedByInspector) {
       return {
-        allowed: isShadow,
-        action: isShadow ? 'OBSERVE' : 'DENY',
-        proposedAction: 'DENY',
-        enforcedAction: isShadow ? 'ALLOW' : 'DENY',
+        policy,
+        policyIdentity,
+        requestedCost: policy.cost,
+        recommendedAction: 'DENY',
+        requestInspection: pathInspection,
+        consumeRequest: { cost: policy.cost, routeKey: `${context.method.toUpperCase()}:${policy.path}`, policy },
+        isShadow,
         violationDetected: true,
         reasonCode: 'REQUEST_SHAPE_EXCEEDED',
-        policyVersion,
-        policyChecksum,
-        displayChecksum,
-        cost: policy.cost,
-        degraded: false,
-        enforced: !isShadow,
-        message: pathValidation.message
+        message: pathInspection.findings[0]?.code
       };
     }
 
-    // 1. Upstream-Verified Authentication Check (Strictly require principal.authenticated === true)
+    // 1. Auth Inspection
     const principal = context.principal;
     const isAuthenticated = principal?.authenticated === true;
-    const trustedTenantId = isAuthenticated ? principal.tenantId : undefined;
-    const trustedAccountId = isAuthenticated ? principal.accountId : undefined;
-    const trustedApiKeyId = isAuthenticated ? principal.apiKeyId : undefined;
-
     if (policy.authentication === 'required' && !isAuthenticated) {
       return {
-        allowed: isShadow,
-        action: isShadow ? 'OBSERVE' : 'REQUIRE_AUTH',
-        proposedAction: 'REQUIRE_AUTH',
-        enforcedAction: isShadow ? 'ALLOW' : 'REQUIRE_AUTH',
+        policy,
+        policyIdentity,
+        requestedCost: policy.cost,
+        recommendedAction: 'REQUIRE_AUTH',
+        requestInspection: pathInspection,
+        consumeRequest: { cost: policy.cost, routeKey: `${context.method.toUpperCase()}:${policy.path}`, policy },
+        isShadow,
         violationDetected: true,
         reasonCode: 'AUTH_REQUIRED',
-        policyVersion,
-        policyChecksum,
-        displayChecksum,
-        cost: policy.cost,
-        degraded: false,
-        enforced: !isShadow,
         message: 'Authentication credentials required and must be verified by upstream auth layer.'
       };
     }
 
-    // 2. Request Shape Guard (Page Size)
+    // 2. Page Size Inspection
     if (context.pageSize !== undefined) {
       const maxPage = policy.page_size_max ?? this.registry.config.defaults?.page_size_max ?? 1000;
       const pageValidation = RequestShapeGuard.validatePageSize(context.pageSize, maxPage);
       if (!pageValidation.valid) {
         return {
-          allowed: isShadow,
-          action: isShadow ? 'OBSERVE' : 'DENY',
-          proposedAction: 'DENY',
-          enforcedAction: isShadow ? 'ALLOW' : 'DENY',
+          policy,
+          policyIdentity,
+          requestedCost: policy.cost,
+          recommendedAction: 'DENY',
+          requestInspection: {
+            acceptedByInspector: false,
+            findings: [{ code: 'REQUEST_SHAPE_EXCEEDED', severity: 'high', message: pageValidation.message || 'Page size exceeded' }],
+            normalizedValues: { pageSize: context.pageSize }
+          },
+          consumeRequest: { cost: policy.cost, routeKey: `${context.method.toUpperCase()}:${policy.path}`, policy },
+          isShadow,
           violationDetected: true,
           reasonCode: 'REQUEST_SHAPE_EXCEEDED',
-          policyVersion,
-          policyChecksum,
-          displayChecksum,
-          cost: policy.cost,
-          degraded: false,
-          enforced: !isShadow,
           message: pageValidation.message
         };
       }
     }
 
-    // 3. Request Shape Guard (Calculation Data Points)
+    // 3. Calculation Data Points Inspection
     if (context.seriesCount !== undefined || context.timeBuckets !== undefined) {
       const maxPoints = policy.max_data_points ?? this.registry.config.defaults?.max_data_points ?? 50000;
       const pointValidation = RequestShapeGuard.validateDataPointBudget(
@@ -144,53 +138,56 @@ export class SentinelCostGuardEvaluator {
       );
       if (!pointValidation.valid) {
         return {
-          allowed: isShadow,
-          action: isShadow ? 'OBSERVE' : 'DENY',
-          proposedAction: 'DENY',
-          enforcedAction: isShadow ? 'ALLOW' : 'DENY',
+          policy,
+          policyIdentity,
+          requestedCost: policy.cost,
+          recommendedAction: 'DENY',
+          requestInspection: {
+            acceptedByInspector: false,
+            findings: [{ code: 'REQUEST_SHAPE_EXCEEDED', severity: 'high', message: pointValidation.message || 'Data point budget exceeded' }],
+            normalizedValues: { seriesCount: context.seriesCount, timeBuckets: context.timeBuckets }
+          },
+          consumeRequest: { cost: policy.cost, routeKey: `${context.method.toUpperCase()}:${policy.path}`, policy },
+          isShadow,
           violationDetected: true,
           reasonCode: 'REQUEST_SHAPE_EXCEEDED',
-          policyVersion,
-          policyChecksum,
-          displayChecksum,
-          cost: policy.cost,
-          degraded: false,
-          enforced: !isShadow,
           message: pointValidation.message
         };
       }
     }
 
-    // 4. Request Shape Guard (Body Payload Bytes)
+    // 4. Body Payload Size Inspection
     if (context.bodyBytes !== undefined) {
       const maxBody = policy.max_request_body_bytes ?? this.registry.config.defaults?.max_request_body_bytes ?? 1048576;
       const bodyValidation = RequestShapeGuard.validateBodySize(context.bodyBytes, maxBody);
       if (!bodyValidation.valid) {
         return {
-          allowed: isShadow,
-          action: isShadow ? 'OBSERVE' : 'DENY',
-          proposedAction: 'DENY',
-          enforcedAction: isShadow ? 'ALLOW' : 'DENY',
+          policy,
+          policyIdentity,
+          requestedCost: policy.cost,
+          recommendedAction: 'DENY',
+          requestInspection: {
+            acceptedByInspector: false,
+            findings: [{ code: 'REQUEST_SHAPE_EXCEEDED', severity: 'high', message: bodyValidation.message || 'Body size exceeded' }],
+            normalizedValues: { bodyBytes: context.bodyBytes }
+          },
+          consumeRequest: { cost: policy.cost, routeKey: `${context.method.toUpperCase()}:${policy.path}`, policy },
+          isShadow,
           violationDetected: true,
           reasonCode: 'REQUEST_SHAPE_EXCEEDED',
-          policyVersion,
-          policyChecksum,
-          displayChecksum,
-          cost: policy.cost,
-          degraded: false,
-          enforced: !isShadow,
           message: bodyValidation.message
         };
       }
     }
 
+    const { name: tierName, tier: selectedTier } = this.resolveTier(context);
     const routeKey = `${context.method.toUpperCase()}:${policy.path}`;
-    const consumeRequest = {
+    const consumeRequest: BudgetConsumeRequest = {
       cost: policy.cost,
       routeKey,
-      tenantId: trustedTenantId,
-      accountId: trustedAccountId,
-      apiKeyId: trustedApiKeyId,
+      tenantId: isAuthenticated ? principal?.tenantId : undefined,
+      accountId: isAuthenticated ? principal?.accountId : undefined,
+      apiKeyId: isAuthenticated ? principal?.apiKeyId : undefined,
       sessionId: context.sessionId,
       networkKey: context.pseudonymousKey,
       tier: { ...selectedTier, name: tierName },
@@ -198,11 +195,91 @@ export class SentinelCostGuardEvaluator {
       policy
     };
 
-    // 5. Distributed & Emergency Budget Consumption
-    try {
-      const consumeRes = await this.budgetStore.consume(consumeRequest);
+    return {
+      policy,
+      policyIdentity,
+      requestedCost: policy.cost,
+      recommendedAction: 'ALLOW',
+      requestInspection: pathInspection,
+      consumeRequest,
+      isShadow,
+      violationDetected: false,
+      reasonCode: 'WITHIN_BUDGET'
+    };
+  }
 
-      if (!consumeRes.allowed) {
+  private resolveTier(context: RequestCostContext): { name: string; tier: RateLimitTier } {
+    const tiers = this.registry.config.rate_limit_tiers || {};
+    const principal = context.principal;
+
+    if (principal?.authenticated && principal.tier && tiers[principal.tier]) {
+      return { name: principal.tier, tier: tiers[principal.tier] };
+    }
+    if (principal?.authenticated && tiers.authenticated_key) {
+      return { name: 'authenticated_key', tier: tiers.authenticated_key };
+    }
+    if (principal?.authenticated) {
+      return {
+        name: 'authenticated_key',
+        tier: { capacity: 2000, refill_tokens_per_minute: 2000, emergency_local_capacity: 200 }
+      };
+    }
+    if (context.sessionId && tiers.session) {
+      return { name: 'session', tier: tiers.session };
+    }
+    if (context.sessionId) {
+      return {
+        name: 'session',
+        tier: { capacity: 300, refill_tokens_per_minute: 300, emergency_local_capacity: 50 }
+      };
+    }
+    if (tiers.anonymous_network) {
+      return { name: 'anonymous_network', tier: tiers.anonymous_network };
+    }
+    return {
+      name: 'anonymous_network',
+      tier: { capacity: 100, refill_tokens_per_minute: 100, emergency_local_capacity: 30 }
+    };
+  }
+
+  public async evaluate(context: RequestCostContext): Promise<CostGuardDecision> {
+    const inspection = this.inspectCostRequest(context);
+    const { policy, policyIdentity, isShadow } = inspection;
+    const policyVersion = this.registry.config.policy_version;
+    const policyChecksum = policyIdentity.checksumSha256;
+    const displayChecksum = policyIdentity.displayChecksum;
+
+    if (inspection.violationDetected) {
+      return {
+        allowed: isShadow,
+        action: isShadow ? 'OBSERVE' : inspection.recommendedAction,
+        proposedAction: inspection.recommendedAction,
+        enforcedAction: isShadow ? 'ALLOW' : inspection.recommendedAction,
+        violationDetected: true,
+        reasonCode: inspection.reasonCode,
+        policyVersion,
+        policyChecksum,
+        displayChecksum,
+        cost: policy.cost,
+        degraded: false,
+        enforced: !isShadow,
+        message: inspection.message
+      };
+    }
+
+    const routeKey = inspection.consumeRequest.routeKey;
+
+    try {
+      const consumeRes = await this.budgetStore.consume(inspection.consumeRequest);
+
+      const isAllowed = 'status' in consumeRes
+        ? (consumeRes.status === 'consumed' || consumeRes.allowed === true)
+        : consumeRes.allowed;
+      const remainingCost = 'remainingCost' in consumeRes ? consumeRes.remainingCost : 0;
+      const retryAfter = 'retryAfterSeconds' in consumeRes ? consumeRes.retryAfterSeconds : 0;
+      const isDegraded = 'degraded' in consumeRes ? consumeRes.degraded : false;
+
+      if (!isAllowed) {
         return {
           allowed: isShadow,
           action: isShadow ? 'OBSERVE' : 'RATE_LIMIT',
@@ -216,10 +293,10 @@ export class SentinelCostGuardEvaluator {
           cost: policy.cost,
           budget: {
             requestedCost: policy.cost,
-            remainingCost: consumeRes.remainingCost,
-            retryAfterSeconds: consumeRes.retryAfterSeconds
+            remainingCost,
+            retryAfterSeconds: retryAfter
           },
-          degraded: consumeRes.degraded,
+          degraded: isDegraded,
           enforced: !isShadow,
           message: `Cost budget exceeded for route '${routeKey}'.`
         };
@@ -238,10 +315,10 @@ export class SentinelCostGuardEvaluator {
         cost: policy.cost,
         budget: {
           requestedCost: policy.cost,
-          remainingCost: consumeRes.remainingCost,
+          remainingCost,
           retryAfterSeconds: 0
         },
-        degraded: consumeRes.degraded,
+        degraded: isDegraded,
         enforced: !isShadow
       };
     } catch {
@@ -285,7 +362,7 @@ export class SentinelCostGuardEvaluator {
       }
 
       // Default: 'local-emergency' with bounded replicas
-      const baseCap = selectedTier.emergency_local_capacity ?? selectedTier.capacity ?? 100;
+      const baseCap = inspection.consumeRequest.tier?.emergency_local_capacity ?? inspection.consumeRequest.tier?.capacity ?? 100;
       const boundedEmergencyCap = computeEmergencyCapacity(
         baseCap,
         this.failurePolicy.emergencyRatio ?? 0.5,
@@ -293,12 +370,16 @@ export class SentinelCostGuardEvaluator {
       );
 
       const boundedRequest = {
-        ...consumeRequest,
+        ...inspection.consumeRequest,
         emergencyCapacity: boundedEmergencyCap
       };
 
       const emRes = await this.emergencyStore.consume(boundedRequest);
-      if (!emRes.allowed) {
+      const emAllowed = 'status' in emRes ? (emRes.status === 'consumed' || emRes.allowed === true) : emRes.allowed;
+      const emRemaining = emRes.remainingCost;
+      const emRetryAfter = 'retryAfterSeconds' in emRes ? emRes.retryAfterSeconds : 0;
+
+      if (!emAllowed) {
         return {
           allowed: isShadow,
           action: isShadow ? 'OBSERVE' : 'RATE_LIMIT',
@@ -312,8 +393,8 @@ export class SentinelCostGuardEvaluator {
           cost: policy.cost,
           budget: {
             requestedCost: policy.cost,
-            remainingCost: emRes.remainingCost,
-            retryAfterSeconds: emRes.retryAfterSeconds
+            remainingCost: emRemaining,
+            retryAfterSeconds: emRetryAfter
           },
           degraded: true,
           enforced: !isShadow,
@@ -334,7 +415,7 @@ export class SentinelCostGuardEvaluator {
         cost: policy.cost,
         budget: {
           requestedCost: policy.cost,
-          remainingCost: emRes.remainingCost,
+          remainingCost: emRemaining,
           retryAfterSeconds: 0
         },
         degraded: true,

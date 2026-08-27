@@ -1,4 +1,4 @@
-﻿"""
+"""
 In-Memory Emergency Budget Store implementing SyncBudgetStore and AsyncBudgetStore.
 Supports tier-specific emergency local capacities, namespace isolation, strict input validation, and dynamic token balance clamping.
 """
@@ -110,5 +110,23 @@ class LocalEmergencyBudgetStore:
     async def consume_async(self, request: BudgetConsumeRequest) -> BudgetConsumeResult:
         return self.consume(request)
 
+    @property
+    def size(self) -> int:
+        return len(self._buckets)
+
+    def delete(self, key: str) -> bool:
+        if key in self._buckets:
+            del self._buckets[key]
+            return True
+        return False
+
+    def prune(self, max_age_seconds: float = 3600.0) -> int:
+        now = time.time()
+        keys_to_delete = [k for k, (_, last_updated) in self._buckets.items() if now - last_updated > max_age_seconds]
+        for k in keys_to_delete:
+            del self._buckets[k]
+        return len(keys_to_delete)
+
     def reset(self) -> None:
         self._buckets.clear()
+

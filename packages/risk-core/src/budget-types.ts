@@ -193,6 +193,68 @@ export interface RedisFailurePolicy {
   riskLevel?: 'low' | 'medium' | 'high' | 'critical';
 }
 
+export interface RequestFinding {
+  code: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+  parameter?: string;
+}
+
+export interface RequestInspection {
+  acceptedByInspector: boolean;
+  findings: readonly RequestFinding[];
+  normalizedValues: Readonly<Record<string, unknown>>;
+}
+
+export interface ClientAddressFinding {
+  code: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+}
+
+export interface ClientAddressInspection {
+  socketAddress: string | null;
+  clientAddress: string | null;
+  forwardedAddress: string | null;
+  source: 'socket' | 'forwarded' | 'unknown';
+  trust: 'trusted' | 'untrusted' | 'invalid';
+  findings: readonly ClientAddressFinding[];
+}
+
+export type BudgetStoreResult =
+  | {
+      status: 'consumed';
+      remainingCost: number;
+      retryAfterSeconds: 0;
+      consistency: 'distributed-atomic' | 'process-local';
+      replayed: boolean;
+      allowed?: boolean;
+    }
+  | {
+      status: 'exhausted';
+      remainingCost: number;
+      retryAfterSeconds: number;
+      consistency: 'distributed-atomic' | 'process-local';
+      replayed: boolean;
+      allowed?: boolean;
+    }
+  | {
+      status: 'unavailable';
+      errorCode: string;
+      executionCertainty: 'not-executed' | 'unknown';
+      allowed?: boolean;
+    }
+  | {
+      status: 'invalid-request';
+      errorCode: string;
+      allowed?: boolean;
+    }
+  | {
+      status: 'idempotency-conflict';
+      errorCode: 'IDEMPOTENCY_CONFLICT';
+      allowed?: boolean;
+    };
+
 export interface BudgetConsumeResult {
   allowed: boolean;
   remainingCost: number;
@@ -210,7 +272,7 @@ export interface BudgetConsumeResult {
 }
 
 export interface BudgetStore {
-  consume(request: BudgetConsumeRequest): Promise<BudgetConsumeResult>;
+  consume(request: BudgetConsumeRequest): Promise<BudgetConsumeResult | BudgetStoreResult>;
 }
 
 export interface RedactedThreatEvent {

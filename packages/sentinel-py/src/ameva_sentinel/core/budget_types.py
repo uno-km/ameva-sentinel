@@ -261,6 +261,76 @@ class BudgetConsumeResult:
 
 
 
+@dataclass(frozen=True)
+class Finding:
+    code: str
+    severity: Literal["low", "medium", "high", "critical"]
+    message: str
+    attributes: Optional[Dict[str, Any]] = None
+
+
+@dataclass(frozen=True)
+class EvaluationProvenance:
+    now_epoch_ms: int
+    policy_hash: str = "v2.2.0"
+    runtime_version: str = "2.2.0"
+
+
+@dataclass(frozen=True)
+class RiskAssessment:
+    risk_score: int
+    confidence: float
+    findings: List[Finding]
+    recommended_action: Literal["ALLOW", "OBSERVE", "CHALLENGE", "RATE_LIMIT", "DENY"]
+    provenance: EvaluationProvenance
+    action: Optional[str] = None
+    enforced_action: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class RequestFinding:
+    code: str
+    severity: Literal["low", "medium", "high", "critical"]
+    message: str
+    parameter: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class RequestInspection:
+    accepted_by_inspector: bool
+    findings: List[RequestFinding]
+    normalized_values: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ClientAddressFinding:
+    code: str
+    severity: Literal["low", "medium", "high", "critical"]
+    message: str
+
+
+@dataclass(frozen=True)
+class ClientAddressInspection:
+    socket_address: Optional[str]
+    client_address: Optional[str]
+    forwarded_address: Optional[str]
+    source: Literal["socket", "forwarded", "unknown"]
+    trust: Literal["trusted", "untrusted", "invalid"]
+    findings: List[ClientAddressFinding] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class BudgetStoreResult:
+    status: Literal["consumed", "exhausted", "unavailable", "invalid-request", "idempotency-conflict"]
+    remaining_cost: int = 0
+    retry_after_seconds: int = 0
+    consistency: Literal["distributed-atomic", "process-local"] = "process-local"
+    replayed: bool = False
+    error_code: Optional[str] = None
+    execution_certainty: Optional[Literal["not-executed", "unknown"]] = None
+    allowed: Optional[bool] = None
+
+
 @dataclass
 class RedactedThreatEvent:
     signature: str
@@ -280,3 +350,4 @@ class ThreatAggregateRecord:
     asn: int
     count: int
     samples: List[Dict[str, Any]] = field(default_factory=list)
+

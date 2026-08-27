@@ -4,70 +4,139 @@
  * Protects against path traversal, encoding ambiguities, semicolon matrix parameters, and parameter pollution.
  */
 
-import { RouteCostPolicy } from './budget-types.js';
+import { RouteCostPolicy, RequestFinding, RequestInspection } from './budget-types.js';
 
 export interface ValidationResult {
   valid: boolean;
   message?: string;
   reasonCode?: string;
+  findings?: readonly RequestFinding[];
 }
 
 export class RequestShapeGuard {
-  public static validatePath(rawPath: string): ValidationResult {
+  public static inspectPath(rawPath: string | undefined | null): RequestInspection {
+    const findings: RequestFinding[] = [];
     if (typeof rawPath !== 'string' || rawPath.length === 0 || rawPath.length > 2048) {
-      return { valid: false, message: 'PATH_LENGTH_INVALID' };
+      findings.push({
+        code: 'PATH_LENGTH_INVALID',
+        severity: 'high',
+        message: 'Path length is empty or exceeds 2048 characters.'
+      });
+      return {
+        acceptedByInspector: false,
+        findings,
+        normalizedValues: { rawPath: rawPath || '' }
+      };
     }
 
     if (!rawPath.startsWith('/')) {
-      return { valid: false, message: 'PATH_MUST_START_WITH_SLASH' };
+      findings.push({
+        code: 'PATH_MUST_START_WITH_SLASH',
+        severity: 'medium',
+        message: 'Path must start with a forward slash.'
+      });
     }
 
     // ASCII control characters (0x00-0x1F, 0x7F)
     if (/[\u0000-\u001f\u007f]/.test(rawPath)) {
-      return { valid: false, message: 'ASCII_CONTROL_CHAR_IN_PATH' };
+      findings.push({
+        code: 'ASCII_CONTROL_CHAR_IN_PATH',
+        severity: 'critical',
+        message: 'Path contains ASCII control characters.'
+      });
     }
 
     // Malformed percent encoding
     if (/%(?![0-9a-fA-F]{2})/.test(rawPath)) {
-      return { valid: false, message: 'MALFORMED_PERCENT_ENCODING' };
+      findings.push({
+        code: 'MALFORMED_PERCENT_ENCODING',
+        severity: 'high',
+        message: 'Path contains invalid percent encoding sequence.'
+      });
     }
 
     // Double percent encodings (%252e, %252f, %255c, %2525)
     if (/%25(?:2e|2f|5c|25)/i.test(rawPath)) {
-      return { valid: false, message: 'DOUBLE_ENCODING_IN_PATH' };
+      findings.push({
+        code: 'DOUBLE_ENCODING_IN_PATH',
+        severity: 'high',
+        message: 'Path contains double percent encoding.'
+      });
     }
 
     // Dot segments (. or ..)
     if (/(^|\/)\.\.?($|\/)/.test(rawPath)) {
-      return { valid: false, message: 'DOT_SEGMENT_IN_PATH' };
+      findings.push({
+        code: 'DOT_SEGMENT_IN_PATH',
+        severity: 'high',
+        message: 'Path contains dot directory traversal segments.'
+      });
     }
 
     // Repeated slashes (//+)
     if (/\/{2,}/.test(rawPath)) {
-      return { valid: false, message: 'REPEATED_SLASHES_IN_PATH' };
+      findings.push({
+        code: 'REPEATED_SLASHES_IN_PATH',
+        severity: 'low',
+        message: 'Path contains repeated consecutive slashes.'
+      });
     }
 
     // Semicolon matrix parameter ambiguity
     if (/(^|\/)[^/?#]*;/.test(rawPath)) {
-      return { valid: false, message: 'SEMICOLON_IN_PATH' };
+      findings.push({
+        code: 'SEMICOLON_IN_PATH',
+        severity: 'medium',
+        message: 'Path contains matrix parameter semicolon separator.'
+      });
     }
 
     // Backslash or encoded backslash
     if (/\\|%5c/i.test(rawPath)) {
-      return { valid: false, message: 'BACKSLASH_IN_PATH' };
+      findings.push({
+        code: 'BACKSLASH_IN_PATH',
+        severity: 'high',
+        message: 'Path contains backslash or encoded backslash.'
+      });
     }
 
     // Null byte or encoded null byte
     if (/\0|%00/i.test(rawPath)) {
-      return { valid: false, message: 'NULL_BYTE_IN_PATH' };
+      findings.push({
+        code: 'NULL_BYTE_IN_PATH',
+        severity: 'critical',
+        message: 'Path contains NUL byte.'
+      });
     }
 
     // Encoded dot segments (%2e%2e, %2e., .%2e)
     if (/%2e%2e|%2e\.|\.%2e/i.test(rawPath)) {
-      return { valid: false, message: 'ENCODED_DOT_SEGMENT_IN_PATH' };
+      findings.push({
+        code: 'ENCODED_DOT_SEGMENT_IN_PATH',
+        severity: 'high',
+        message: 'Path contains encoded dot segment traversal.'
+      });
     }
 
-    return { valid: true };
+    return {
+      acceptedByInspector: findings.length === 0,
+      findings,
+      normalizedValues: { rawPath }
+    };
+  }
+
+  public static validatePath(rawPath: string): ValidationResult {
+    const inspection = this.inspectPath(rawPath);
+    if (!inspection.acceptedByInspector) {
+      const first = inspection.findings[0];
+      return {
+        valid: false,
+        message: first.code,
+        reasonCode: first.code,
+        findings: inspection.findings
+      };
+    }
+    return { valid: true, findings: inspection.findings };
   }
 
   public static validateMethod(method: string): ValidationResult {

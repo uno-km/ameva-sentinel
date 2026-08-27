@@ -20,49 +20,135 @@ GuardValidationResult = ValidationResult
 
 class RequestShapeGuard:
     @staticmethod
-    def validate_path(raw_path: str) -> ValidationResult:
+    def inspect_path(raw_path: Optional[str]) -> "RequestInspection":
+        from .budget_types import RequestFinding, RequestInspection
+
+        findings = []
         if not isinstance(raw_path, str) or len(raw_path) == 0 or len(raw_path) > 2048:
-            return ValidationResult(valid=False, message="PATH_LENGTH_INVALID")
+            findings.append(
+                RequestFinding(
+                    code="PATH_LENGTH_INVALID",
+                    severity="high",
+                    message="Path length is empty or exceeds 2048 characters.",
+                )
+            )
+            return RequestInspection(
+                accepted_by_inspector=False,
+                findings=findings,
+                normalized_values={"raw_path": raw_path or ""},
+            )
 
         if not raw_path.startswith("/"):
-            return ValidationResult(valid=False, message="PATH_MUST_START_WITH_SLASH")
+            findings.append(
+                RequestFinding(
+                    code="PATH_MUST_START_WITH_SLASH",
+                    severity="medium",
+                    message="Path must start with a forward slash.",
+                )
+            )
 
         # ASCII control characters (0x00-0x1F, 0x7F)
         if re.search(r"[\x00-\x1f\x7f]", raw_path):
-            return ValidationResult(valid=False, message="ASCII_CONTROL_CHAR_IN_PATH")
+            findings.append(
+                RequestFinding(
+                    code="ASCII_CONTROL_CHAR_IN_PATH",
+                    severity="critical",
+                    message="Path contains ASCII control characters.",
+                )
+            )
 
         # Malformed percent encoding
         if re.search(r"%(?![0-9a-fA-F]{2})", raw_path):
-            return ValidationResult(valid=False, message="MALFORMED_PERCENT_ENCODING")
+            findings.append(
+                RequestFinding(
+                    code="MALFORMED_PERCENT_ENCODING",
+                    severity="high",
+                    message="Path contains invalid percent encoding sequence.",
+                )
+            )
 
         # Double percent encodings
         if re.search(r"%25(?:2e|2f|5c|25)", raw_path, re.IGNORECASE):
-            return ValidationResult(valid=False, message="DOUBLE_ENCODING_IN_PATH")
+            findings.append(
+                RequestFinding(
+                    code="DOUBLE_ENCODING_IN_PATH",
+                    severity="high",
+                    message="Path contains double percent encoding.",
+                )
+            )
 
         # Dot segments (. or ..)
         if re.search(r"(^|/)\.\.?(?:/|$)", raw_path):
-            return ValidationResult(valid=False, message="DOT_SEGMENT_IN_PATH")
+            findings.append(
+                RequestFinding(
+                    code="DOT_SEGMENT_IN_PATH",
+                    severity="high",
+                    message="Path contains dot directory traversal segments.",
+                )
+            )
 
         # Repeated slashes (//+)
         if re.search(r"/{2,}", raw_path):
-            return ValidationResult(valid=False, message="REPEATED_SLASHES_IN_PATH")
+            findings.append(
+                RequestFinding(
+                    code="REPEATED_SLASHES_IN_PATH",
+                    severity="low",
+                    message="Path contains repeated consecutive slashes.",
+                )
+            )
 
         # Semicolon matrix parameter ambiguity
         if re.search(r"(^|/)[^/?#]*;", raw_path):
-            return ValidationResult(valid=False, message="SEMICOLON_IN_PATH")
+            findings.append(
+                RequestFinding(
+                    code="SEMICOLON_IN_PATH",
+                    severity="medium",
+                    message="Path contains matrix parameter semicolon separator.",
+                )
+            )
 
         # Backslash or encoded backslash
         if "\\" in raw_path or "%5c" in raw_path.lower():
-            return ValidationResult(valid=False, message="BACKSLASH_IN_PATH")
+            findings.append(
+                RequestFinding(
+                    code="BACKSLASH_IN_PATH",
+                    severity="high",
+                    message="Path contains backslash or encoded backslash.",
+                )
+            )
 
         # Null byte or encoded null byte
         if "%00" in raw_path.lower() or "\\0" in raw_path:
-            return ValidationResult(valid=False, message="NULL_BYTE_IN_PATH")
+            findings.append(
+                RequestFinding(
+                    code="NULL_BYTE_IN_PATH",
+                    severity="critical",
+                    message="Path contains NUL byte.",
+                )
+            )
 
         # Encoded dot segments
         if re.search(r"%2e%2e|%2e\.|\.%2e", raw_path, re.IGNORECASE):
-            return ValidationResult(valid=False, message="ENCODED_DOT_SEGMENT_IN_PATH")
+            findings.append(
+                RequestFinding(
+                    code="ENCODED_DOT_SEGMENT_IN_PATH",
+                    severity="high",
+                    message="Path contains encoded dot segment traversal.",
+                )
+            )
 
+        return RequestInspection(
+            accepted_by_inspector=len(findings) == 0,
+            findings=findings,
+            normalized_values={"raw_path": raw_path},
+        )
+
+    @staticmethod
+    def validate_path(raw_path: str) -> ValidationResult:
+        inspection = RequestShapeGuard.inspect_path(raw_path)
+        if not inspection.accepted_by_inspector:
+            first = inspection.findings[0]
+            return ValidationResult(valid=False, message=first.code, reason_code=first.code)
         return ValidationResult(valid=True)
 
     @staticmethod

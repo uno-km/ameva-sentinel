@@ -61,117 +61,156 @@ class SentinelCostGuardEvaluator:
             return "anonymous_network", t
         return "anonymous_network", RateLimitTier(name="anonymous_network", capacity=100, refill_tokens_per_minute=100, emergency_local_capacity=30)
 
-    def _pre_evaluate(self, context: RequestCostContext) -> Optional[CostGuardDecision]:
+    def inspect_cost_request(self, context: RequestCostContext) -> Any:
         policy = self.registry.get_route_policy(context.method, context.path)
         policy_version = self.registry.config.policy_version
         policy_checksum = self.registry.checksum
         display_checksum = self.registry.display_checksum
         is_shadow = False if self.enforce_by_default else (policy.shadow_mode if policy.shadow_mode is not None else True)
 
-        # 0. Request Path Guard (Ambiguity & Traversal Rejection)
-        path_res = RequestShapeGuard.validate_path(context.path)
-        if not path_res.valid:
-            return CostGuardDecision(
-                allowed=is_shadow,
-                action="OBSERVE" if is_shadow else "DENY",
-                proposed_action="DENY",
-                enforced_action="ALLOW" if is_shadow else "DENY",
-                violation_detected=True,
-                reason_code="REQUEST_SHAPE_EXCEEDED",
-                policy_version=policy_version,
-                policy_checksum=policy_checksum,
-                display_checksum=display_checksum,
-                cost=policy.cost,
-                degraded=False,
-                enforced=not is_shadow,
-                message=path_res.message,
-            )
+        # 0. Request Path Inspection
+        path_inspection = RequestShapeGuard.inspect_path(context.path)
+        if not path_inspection.accepted_by_inspector:
+            return {
+                "policy": policy,
+                "policy_version": policy_version,
+                "policy_checksum": policy_checksum,
+                "display_checksum": display_checksum,
+                "requested_cost": policy.cost,
+                "recommended_action": "DENY",
+                "request_inspection": path_inspection,
+                "is_shadow": is_shadow,
+                "violation_detected": True,
+                "reason_code": "REQUEST_SHAPE_EXCEEDED",
+                "message": path_inspection.findings[0].code if path_inspection.findings else "INVALID_PATH",
+            }
 
-        # 1. Upstream-Verified Authentication check (Strictly require principal.authenticated is True)
+        # 1. Upstream-Verified Authentication check
         principal = context.principal
         is_authenticated = bool(principal and principal.authenticated)
         if policy.authentication == "required" and not is_authenticated:
-            return CostGuardDecision(
-                allowed=is_shadow,
-                action="OBSERVE" if is_shadow else "REQUIRE_AUTH",
-                proposed_action="REQUIRE_AUTH",
-                enforced_action="ALLOW" if is_shadow else "REQUIRE_AUTH",
-                violation_detected=True,
-                reason_code="AUTH_REQUIRED",
-                policy_version=policy_version,
-                policy_checksum=policy_checksum,
-                display_checksum=display_checksum,
-                cost=policy.cost,
-                degraded=False,
-                enforced=not is_shadow,
-                message="Authentication credentials required and must be verified by upstream auth layer.",
-            )
+            return {
+                "policy": policy,
+                "policy_version": policy_version,
+                "policy_checksum": policy_checksum,
+                "display_checksum": display_checksum,
+                "requested_cost": policy.cost,
+                "recommended_action": "REQUIRE_AUTH",
+                "request_inspection": path_inspection,
+                "is_shadow": is_shadow,
+                "violation_detected": True,
+                "reason_code": "AUTH_REQUIRED",
+                "message": "Authentication credentials required and must be verified by upstream auth layer.",
+            }
 
-        # 2. Page size guard
+        # 2. Page size inspection
         if context.page_size is not None:
             max_page = policy.page_size_max if policy.page_size_max is not None else (self.registry.config.defaults.page_size_max or 1000)
             page_res = RequestShapeGuard.validate_page_size(context.page_size, max_page)
             if not page_res.valid:
-                return CostGuardDecision(
-                    allowed=is_shadow,
-                    action="OBSERVE" if is_shadow else "DENY",
-                    proposed_action="DENY",
-                    enforced_action="ALLOW" if is_shadow else "DENY",
-                    violation_detected=True,
-                    reason_code="REQUEST_SHAPE_EXCEEDED",
-                    policy_version=policy_version,
-                    policy_checksum=policy_checksum,
-                    display_checksum=display_checksum,
-                    cost=policy.cost,
-                    degraded=False,
-                    enforced=not is_shadow,
-                    message=page_res.message,
-                )
+                return {
+                    "policy": policy,
+                    "policy_version": policy_version,
+                    "policy_checksum": policy_checksum,
+                    "display_checksum": display_checksum,
+                    "requested_cost": policy.cost,
+                    "recommended_action": "DENY",
+                    "request_inspection": path_inspection,
+                    "is_shadow": is_shadow,
+                    "violation_detected": True,
+                    "reason_code": "REQUEST_SHAPE_EXCEEDED",
+                    "message": page_res.message,
+                }
 
-        # 3. Data point calculation budget
+        # 3. Data point calculation budget inspection
         if context.series_count is not None or context.time_buckets is not None:
             max_points = policy.max_data_points if policy.max_data_points is not None else (self.registry.config.defaults.max_data_points or 50000)
             point_res = RequestShapeGuard.validate_data_point_budget(
                 context.series_count or 1, context.time_buckets or 1, max_points
             )
             if not point_res.valid:
-                return CostGuardDecision(
-                    allowed=is_shadow,
-                    action="OBSERVE" if is_shadow else "DENY",
-                    proposed_action="DENY",
-                    enforced_action="ALLOW" if is_shadow else "DENY",
-                    violation_detected=True,
-                    reason_code="REQUEST_SHAPE_EXCEEDED",
-                    policy_version=policy_version,
-                    policy_checksum=policy_checksum,
-                    display_checksum=display_checksum,
-                    cost=policy.cost,
-                    degraded=False,
-                    enforced=not is_shadow,
-                    message=point_res.message,
-                )
+                return {
+                    "policy": policy,
+                    "policy_version": policy_version,
+                    "policy_checksum": policy_checksum,
+                    "display_checksum": display_checksum,
+                    "requested_cost": policy.cost,
+                    "recommended_action": "DENY",
+                    "request_inspection": path_inspection,
+                    "is_shadow": is_shadow,
+                    "violation_detected": True,
+                    "reason_code": "REQUEST_SHAPE_EXCEEDED",
+                    "message": point_res.message,
+                }
 
-        # 4. Body size guard (against max_request_body_bytes)
+        # 4. Body size guard inspection
         if context.body_bytes is not None:
             max_body = policy.max_request_body_bytes if policy.max_request_body_bytes is not None else (self.registry.config.defaults.max_request_body_bytes or 1048576)
             body_res = RequestShapeGuard.validate_body_size(context.body_bytes, max_body)
             if not body_res.valid:
-                return CostGuardDecision(
-                    allowed=is_shadow,
-                    action="OBSERVE" if is_shadow else "DENY",
-                    proposed_action="DENY",
-                    enforced_action="ALLOW" if is_shadow else "DENY",
-                    violation_detected=True,
-                    reason_code="REQUEST_SHAPE_EXCEEDED",
-                    policy_version=policy_version,
-                    policy_checksum=policy_checksum,
-                    display_checksum=display_checksum,
-                    cost=policy.cost,
-                    degraded=False,
-                    enforced=not is_shadow,
-                    message=body_res.message,
-                )
+                return {
+                    "policy": policy,
+                    "policy_version": policy_version,
+                    "policy_checksum": policy_checksum,
+                    "display_checksum": display_checksum,
+                    "requested_cost": policy.cost,
+                    "recommended_action": "DENY",
+                    "request_inspection": path_inspection,
+                    "is_shadow": is_shadow,
+                    "violation_detected": True,
+                    "reason_code": "REQUEST_SHAPE_EXCEEDED",
+                    "message": body_res.message,
+                }
 
+        tier_name, selected_tier = self._resolve_tier(context)
+        route_key = f"{context.method.upper()}:{policy.path}"
+        consume_req = BudgetConsumeRequest(
+            cost=policy.cost,
+            route_key=route_key,
+            tenant_id=principal.tenant_id if (principal and is_authenticated) else None,
+            account_id=principal.account_id if (principal and is_authenticated) else None,
+            api_key_id=principal.api_key_id if (principal and is_authenticated) else None,
+            session_id=context.session_id,
+            network_key=context.pseudonymous_key,
+            tier=selected_tier,
+            emergency_capacity=selected_tier.emergency_local_capacity,
+            policy=policy,
+        )
+
+        return {
+            "policy": policy,
+            "policy_version": policy_version,
+            "policy_checksum": policy_checksum,
+            "display_checksum": display_checksum,
+            "requested_cost": policy.cost,
+            "recommended_action": "ALLOW",
+            "request_inspection": path_inspection,
+            "consume_request": consume_req,
+            "is_shadow": is_shadow,
+            "violation_detected": False,
+            "reason_code": "WITHIN_BUDGET",
+        }
+
+    def _pre_evaluate(self, context: RequestCostContext) -> Optional[CostGuardDecision]:
+        insp = self.inspect_cost_request(context)
+        if insp["violation_detected"]:
+            is_shadow = insp["is_shadow"]
+            rec_action = insp["recommended_action"]
+            return CostGuardDecision(
+                allowed=is_shadow,
+                action="OBSERVE" if is_shadow else rec_action,
+                proposed_action=rec_action,
+                enforced_action="ALLOW" if is_shadow else rec_action,
+                violation_detected=True,
+                reason_code=insp["reason_code"],
+                policy_version=insp["policy_version"],
+                policy_checksum=insp["policy_checksum"],
+                display_checksum=insp["display_checksum"],
+                cost=insp["requested_cost"],
+                degraded=False,
+                enforced=not is_shadow,
+                message=insp.get("message"),
+            )
         return None
 
     async def evaluate_async(self, context: RequestCostContext) -> CostGuardDecision:

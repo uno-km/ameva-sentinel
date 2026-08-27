@@ -122,22 +122,33 @@ export function evaluateRiskNow(
 }
 
 export function evaluate(
-  signals: TelemetrySignals = {},
+  signalsOrOptions: TelemetrySignals | { signals?: TelemetrySignals; policy?: SentinelPolicy; traceId?: string; enforcementMode?: EnforcementMode; context?: EvaluationContext } = {},
   optionsOrPolicy: EvaluateOptions | SentinelPolicy = defaultPolicy
 ): SentinelRiskReport {
+  let signals: TelemetrySignals = {};
   let policy: SentinelPolicy = defaultPolicy;
   let traceId: string | undefined;
   let enforcementMode: EnforcementMode = 'SHADOW';
   let context: EvaluationContext | undefined;
 
-  if ('rules' in optionsOrPolicy && Array.isArray(optionsOrPolicy.rules)) {
-    policy = optionsOrPolicy;
-  } else {
-    const opts = optionsOrPolicy as EvaluateOptions;
+  if (signalsOrOptions && typeof signalsOrOptions === 'object' && 'signals' in signalsOrOptions && !('signalsVersion' in signalsOrOptions) && !('behavioral' in signalsOrOptions)) {
+    const opts = signalsOrOptions as any;
+    signals = opts.signals || {};
     if (opts.policy) policy = opts.policy;
     if (opts.traceId) traceId = opts.traceId;
     if (opts.enforcementMode) enforcementMode = opts.enforcementMode;
     if (opts.context) context = opts.context;
+  } else {
+    signals = (signalsOrOptions || {}) as TelemetrySignals;
+    if ('rules' in optionsOrPolicy && Array.isArray(optionsOrPolicy.rules)) {
+      policy = optionsOrPolicy;
+    } else {
+      const opts = optionsOrPolicy as EvaluateOptions;
+      if (opts.policy) policy = opts.policy;
+      if (opts.traceId) traceId = opts.traceId;
+      if (opts.enforcementMode) enforcementMode = opts.enforcementMode;
+      if (opts.context) context = opts.context;
+    }
   }
 
   if (context) {
@@ -146,4 +157,5 @@ export function evaluate(
 
   return evaluateRiskNow(signals, policy, { traceId, enforcementMode });
 }
+
 
