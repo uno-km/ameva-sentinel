@@ -9,6 +9,7 @@ node_modules/
 
 # Build Artifacts & Distributions
 dist/
+dist-tarballs/
 build/
 out/
 .tsbuildinfo
