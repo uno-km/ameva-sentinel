@@ -67,3 +67,21 @@ class Sentinel:
                 asn=edge_info.asn,
                 provider=edge_info.provider,
             )
+
+    @staticmethod
+    def create_degraded_assessment(error: Any, claim: Optional[ActorClaim] = None) -> Assessment:
+        """Official fail-open assessment on unhandled evaluation errors."""
+        err_msg = str(error) if error else "Internal evaluation failure"
+        masked_ip = mask_ip_address(claim.ip_address) if claim and claim.ip_address else "0.0.0.0"
+        return Assessment(
+            action="DEGRADED_ALLOW",
+            bot_category="DEGRADED_SYSTEM_ERROR",
+            confidence=0.0,
+            masked_ip=masked_ip,
+            target_type=claim.target_type if claim else "standard",
+            provider="fail_open"
+        )
+
+
+def create_degraded_assessment(error: Any, claim: Optional[ActorClaim] = None) -> Assessment:
+    return Sentinel.create_degraded_assessment(error, claim)

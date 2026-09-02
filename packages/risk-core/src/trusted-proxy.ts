@@ -120,8 +120,7 @@ export function parseForwardedHeaderStrictly(headerName: string, rawValue: strin
     for (const entry of entries) {
       const match = /for="?([^";,\s]+)"?/i.exec(entry.trim());
       if (match && match[1]) {
-        const cleaned = match[1].replace(/[\[\]]/g, '');
-        const norm = parseAndValidateIp(cleaned);
+        const norm = parseAndValidateIp(match[1]);
         if (norm) ips.push(norm);
       }
     }

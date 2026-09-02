@@ -11,7 +11,17 @@ import {
   LocalStorageRiskEventStore,
   toStoredRiskEvent,
   sanitizeSignals,
-  createTraceId
+  createTraceId,
+  resolveGeoPayloadCore,
+  calculateBandwidthSavings,
+  matchRouteBaseline,
+  measureUtf8Bytes,
+  matchBotPattern,
+  AI_BOT_PATTERNS,
+  createSentinelToken,
+  verifySentinelToken,
+  timingSafeEqualHex,
+  createDegradedReport
 } from '@ameva/sentinel-risk-core';
 
 import type {
@@ -20,7 +30,13 @@ import type {
   SentinelPolicy,
   StoredRiskEventV1,
   CounterStore,
-  RiskEventStore
+  RiskEventStore,
+  GeoBaselineOptions,
+  GeoResolutionResult,
+  GeoBotPattern,
+  SentinelTokenPayload,
+  TokenVerificationResult,
+  DegradedReportOptions
 } from '@ameva/sentinel-risk-core';
 
 export {
@@ -38,7 +54,17 @@ export {
   LocalStorageRiskEventStore,
   toStoredRiskEvent,
   sanitizeSignals,
-  createTraceId
+  createTraceId,
+  resolveGeoPayloadCore,
+  calculateBandwidthSavings,
+  matchRouteBaseline,
+  measureUtf8Bytes,
+  matchBotPattern,
+  AI_BOT_PATTERNS,
+  createSentinelToken,
+  verifySentinelToken,
+  timingSafeEqualHex,
+  createDegradedReport
 };
 
 export * from './adapters/express.js';
@@ -53,7 +79,13 @@ export type {
   SentinelPolicy,
   StoredRiskEventV1,
   CounterStore,
-  RiskEventStore
+  RiskEventStore,
+  GeoBaselineOptions,
+  GeoResolutionResult,
+  GeoBotPattern,
+  SentinelTokenPayload,
+  TokenVerificationResult,
+  DegradedReportOptions
 };
 
 export interface SentinelOptions {
@@ -62,6 +94,10 @@ export interface SentinelOptions {
   counterStore?: CounterStore;
   eventStore?: RiskEventStore | null;
   rateKeyProvider?: (req: any) => string | null;
+  geoBaseline?: GeoBaselineOptions;
+  secretKey?: string;
+  tokenVerifier?: (token: string, signals: TelemetrySignals) => Promise<boolean> | boolean;
+  maxTokenAgeMs?: number;
 }
 
 export class Sentinel {
@@ -70,6 +106,10 @@ export class Sentinel {
   private counterStore: CounterStore;
   private eventStore: RiskEventStore | null;
   private rateKeyProvider?: (req: any) => string | null;
+  private geoBaseline?: GeoBaselineOptions;
+  private secretKey?: string;
+  private tokenVerifier?: (token: string, signals: TelemetrySignals) => Promise<boolean> | boolean;
+  private maxTokenAgeMs?: number;
 
   constructor(options: SentinelOptions = {}) {
     this.policy = options.policy || defaultPolicy;
@@ -77,6 +117,10 @@ export class Sentinel {
     this.counterStore = options.counterStore || new MemoryFixedWindowCounterStore();
     this.eventStore = options.eventStore || null;
     this.rateKeyProvider = options.rateKeyProvider;
+    this.geoBaseline = options.geoBaseline;
+    this.secretKey = options.secretKey;
+    this.tokenVerifier = options.tokenVerifier;
+    this.maxTokenAgeMs = options.maxTokenAgeMs;
   }
 
   async score(req: any): Promise<SentinelRiskReport> {
@@ -96,7 +140,8 @@ export class Sentinel {
       burstCount10s
     };
 
-    const verified = await this.verify(enrichedSignals);
+    const rawToken = typeof req?.token === 'string' ? req.token : ((req?.signals as any)?.token || (rawSignals as any)?._rawToken);
+    const verified = await this.verify(enrichedSignals, rawToken);
     const report = evaluate(verified, {
       policy: this.policy,
       enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW'
@@ -136,7 +181,7 @@ export class Sentinel {
 
     if (req.signals && typeof req.signals === 'object') {
       const s = req.signals;
-      return {
+      const resSignals: TelemetrySignals = {
         webdriver: !!s.webdriverObserved || !!s.webdriver,
         telemetryObserved: !!s.telemetryObserved,
         sampleComplete: !!s.sampleComplete,
@@ -144,10 +189,14 @@ export class Sentinel {
         isTrustedEventsCount: typeof s.trustedInputCount === 'number' ? s.trustedInputCount : (typeof s.isTrustedEventsCount === 'number' ? s.isTrustedEventsCount : 0),
         touchMismatch: !!s.touchMismatch,
         suspiciousUA: !!s.suspiciousUA,
-        tokenPresented: Boolean(s.token),
+        tokenPresented: Boolean(s.token || (typeof req.token === 'string' && req.token.length > 0)),
         tokenVerified: false,
         tokenFreshnessMs: typeof s.tokenFreshnessMs === 'number' ? s.tokenFreshnessMs : 100
       };
+      if (s.token || req.token) {
+        (resSignals as any)._rawToken = s.token || req.token;
+      }
+      return resSignals;
     }
 
     const headers = req.headers || {};
@@ -169,8 +218,9 @@ export class Sentinel {
     const isWebdriver = !!body.webdriver || /HeadlessChrome|PhantomJS|Selenium|Playwright/i.test(ua);
     const isTouchMismatch = secChUaMobile === '?1' && body.is_touch === false;
     const isSuspiciousUA = ua.length === 0 || /python-requests|curl|wget|scrapy|aiohttp/i.test(ua);
+    const rawToken = body.token || req.token || getHeader('x-sentinel-token');
 
-    return {
+    const signals: TelemetrySignals = {
       webdriver: isWebdriver,
       telemetryObserved: body.telemetry_observed !== undefined ? !!body.telemetry_observed : (body.trusted_events !== undefined),
       sampleComplete: body.sample_complete !== undefined ? !!body.sample_complete : false,
@@ -179,14 +229,155 @@ export class Sentinel {
       touchMismatch: isTouchMismatch,
       suspiciousUA: isSuspiciousUA,
       claimedBot: body.claimed_bot || (ua.includes('Bot') ? 'claimed_bot' : undefined),
-      tokenPresented: Boolean(body.token),
+      tokenPresented: Boolean(rawToken),
       tokenVerified: false,
-      tokenFreshnessMs: body.timestamp ? Date.now() - body.timestamp : 100
+      tokenFreshnessMs: body.timestamp ? Math.max(0, Date.now() - body.timestamp) : 100
+    };
+
+    if (rawToken) {
+      (signals as any)._rawToken = rawToken;
+    }
+
+    return signals;
+  }
+
+  /**
+   * 3-Tier Attestation Pipeline:
+   * 1. Sanity & Out-of-Bounds Clamping
+   * 2. Cryptographic Token HMAC-SHA256 Signature & Structure Verification
+   * 3. Token Freshness Window Check & Custom Verifier Hook
+   */
+  async verify(signals: TelemetrySignals, rawToken?: string): Promise<TelemetrySignals> {
+    if (!signals || typeof signals !== 'object') {
+      return {};
+    }
+
+    const observationDurationMs = typeof signals.observationDurationMs === 'number' && !isNaN(signals.observationDurationMs)
+      ? Math.max(0, Math.min(86400000, signals.observationDurationMs))
+      : 6000;
+
+    const isTrustedEventsCount = typeof signals.isTrustedEventsCount === 'number' && !isNaN(signals.isTrustedEventsCount)
+      ? Math.max(0, Math.floor(signals.isTrustedEventsCount))
+      : 0;
+
+    const burstCount10s = typeof signals.burstCount10s === 'number' && !isNaN(signals.burstCount10s)
+      ? Math.max(1, Math.floor(signals.burstCount10s))
+      : 1;
+
+    let tokenFreshnessMs = typeof signals.tokenFreshnessMs === 'number' && !isNaN(signals.tokenFreshnessMs)
+      ? Math.max(0, signals.tokenFreshnessMs)
+      : 0;
+
+    const actualToken = rawToken || (signals as any)?._rawToken || (signals as any)?.token;
+    const tokenPresented = Boolean(signals.tokenPresented || actualToken);
+    let tokenVerified = false;
+    let suspiciousUA = Boolean(signals.suspiciousUA);
+
+    const maxAge = typeof this.maxTokenAgeMs === 'number' && this.maxTokenAgeMs > 0
+      ? this.maxTokenAgeMs
+      : 300000; // 5 minutes freshness window
+
+    if (tokenPresented) {
+      const isFresh = tokenFreshnessMs >= 0 && tokenFreshnessMs <= maxAge;
+
+      if (typeof actualToken === 'string' && actualToken.length > 0) {
+        if (actualToken.startsWith('v1.')) {
+          // 1. Structured Sentinel Token Verification (HMAC / Format / Timestamp)
+          const verification = verifySentinelToken(actualToken, this.secretKey, { maxAgeMs: maxAge });
+
+          if (verification.valid) {
+            tokenFreshnessMs = verification.ageMs !== undefined ? Math.max(0, verification.ageMs) : tokenFreshnessMs;
+
+            if (this.tokenVerifier) {
+              try {
+                tokenVerified = Boolean(await this.tokenVerifier(actualToken, signals));
+              } catch {
+                tokenVerified = false;
+              }
+            } else {
+              tokenVerified = true;
+            }
+          } else {
+            tokenVerified = false;
+            if (verification.reason === 'INVALID_SIGNATURE') {
+              suspiciousUA = true; // Flag signature tampering
+            }
+          }
+        } else if (this.tokenVerifier) {
+          // 2. Custom Token Verifier hook with freshness constraint
+          if (isFresh) {
+            try {
+              tokenVerified = Boolean(await this.tokenVerifier(actualToken, signals));
+            } catch {
+              tokenVerified = false;
+            }
+          } else {
+            tokenVerified = false;
+          }
+        } else {
+          // 3. Simple Token with freshness window
+          tokenVerified = isFresh;
+        }
+      } else {
+        if (this.tokenVerifier) {
+          if (isFresh) {
+            try {
+              tokenVerified = Boolean(await this.tokenVerifier('', signals));
+            } catch {
+              tokenVerified = false;
+            }
+          } else {
+            tokenVerified = false;
+          }
+        } else {
+          tokenVerified = isFresh;
+        }
+      }
+    }
+
+    return {
+      webdriver: Boolean(signals.webdriver),
+      telemetryObserved: Boolean(signals.telemetryObserved),
+      sampleComplete: Boolean(signals.sampleComplete),
+      touchMismatch: Boolean(signals.touchMismatch),
+      suspiciousUA,
+      claimedBot: signals.claimedBot ? String(signals.claimedBot) : undefined,
+      observationDurationMs,
+      isTrustedEventsCount,
+      burstCount10s,
+      tokenPresented,
+      tokenVerified,
+      tokenFreshnessMs
     };
   }
 
-  async verify(signals: TelemetrySignals): Promise<TelemetrySignals> {
-    return signals;
+  /**
+   * Resolves AI crawler/agent requests to optimized GEO Markdown payloads with exact bandwidth savings calculation.
+   * Returns null if the request does not match any recognized AI/search/social crawler.
+   */
+  resolveGeoPayload(req: any, options?: GeoBaselineOptions): GeoResolutionResult | null {
+    const mergedOptions: GeoBaselineOptions = {
+      defaultBaselineBytes: options?.defaultBaselineBytes !== undefined
+        ? options.defaultBaselineBytes
+        : this.geoBaseline?.defaultBaselineBytes,
+      routeBaselines: {
+        ...(this.geoBaseline?.routeBaselines || {}),
+        ...(options?.routeBaselines || {})
+      },
+      payloadResolver: options?.payloadResolver || this.geoBaseline?.payloadResolver
+    };
+    return resolveGeoPayloadCore(req, mergedOptions);
+  }
+
+  /**
+   * Standard factory to construct a transparent Fail-Open Degraded Risk Report during unhandled host/runtime errors.
+   */
+  createDegradedReport(error: any, options?: DegradedReportOptions): SentinelRiskReport {
+    return createDegradedReport(error, {
+      enforcementMode: this.mode === 'enforce' ? 'ENFORCE' : 'SHADOW',
+      policyVersion: this.policy?.version,
+      ...options
+    });
   }
 }
 
@@ -195,3 +386,10 @@ export function createSentinel(options: SentinelOptions = {}): Sentinel {
 }
 
 export const sentinel = new Sentinel();
+
+/**
+ * Standalone helper to resolve AI crawler GEO Markdown payloads and bandwidth savings directly.
+ */
+export function resolveGeoPayload(req: any, options?: GeoBaselineOptions): GeoResolutionResult | null {
+  return resolveGeoPayloadCore(req, options);
+}

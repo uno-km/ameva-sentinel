@@ -5,6 +5,7 @@ Supports tier-specific emergency local capacities, namespace isolation, strict i
 
 import time
 import math
+import threading
 from typing import Dict, Tuple
 from .budget_types import BudgetConsumeRequest, BudgetConsumeResult
 
@@ -26,14 +27,26 @@ def compute_emergency_capacity(
 
 
 class LocalEmergencyBudgetStore:
-    def __init__(self, default_capacity: int = 100, default_refill_rate: float = 1.66):
+    def __init__(self, default_capacity: int = 100, default_refill_rate: float = 1.66, max_buckets: int = 50000):
         if not isinstance(default_capacity, int) or default_capacity < 0:
             raise ValueError("default_capacity must be a non-negative integer")
         if not isinstance(default_refill_rate, (int, float)) or default_refill_rate < 0:
             raise ValueError("default_refill_rate must be a non-negative number")
+        if not isinstance(max_buckets, int) or max_buckets < 1:
+            raise ValueError("max_buckets must be a positive integer")
         self.default_capacity = default_capacity
         self.default_refill_rate = default_refill_rate
+        self.max_buckets = max_buckets
         self._buckets: Dict[str, Tuple[float, float]] = {}
+        self._lock = threading.Lock()
+
+    def _evict_oldest_if_needed(self) -> None:
+        if len(self._buckets) >= self.max_buckets:
+            # Python 3.7+ dict maintains insertion order. Evict the first key (oldest inserted).
+            oldest_key = next(iter(self._buckets), None)
+            if oldest_key is not None:
+                del self._buckets[oldest_key]
+
 
     def _resolve_key(self, request: BudgetConsumeRequest) -> str:
         tenant = f"tenant:{request.tenant_id}:" if request.tenant_id else ""
@@ -74,59 +87,73 @@ class LocalEmergencyBudgetStore:
         if refill_rate < 0:
             raise ValueError("refill_rate must be non-negative")
 
-        tokens, last_updated = self._buckets.get(key, (capacity, now))
-        elapsed = max(0.0, now - last_updated)
+        with self._lock:
+            if key in self._buckets:
+                # [AUDIT FIX] LRU refresh: pop and re-insert so key becomes most recently used
+                tokens, last_updated = self._buckets.pop(key)
+            else:
+                # [AUDIT FIX] Evict LRU (least recently used) bucket before inserting a new one
+                self._evict_oldest_if_needed()
+                tokens, last_updated = capacity, now
 
-        # Dynamic capacity clamp on tier downgrade
-        base_tokens = min(tokens, capacity)
-        tokens = min(capacity, base_tokens + (elapsed * refill_rate))
+            elapsed = max(0.0, now - last_updated)
 
-        if tokens >= cost:
-            tokens -= cost
-            self._buckets[key] = (tokens, now)
-            return BudgetConsumeResult(
-                allowed=True,
-                remaining_cost=int(tokens),
-                retry_after_seconds=0,
-                degraded=True,
-                store="local-emergency",
-                consistency="process-local",
-                reason="ALLOWED",
-            )
-        else:
-            missing = cost - tokens
-            retry_after = 0 if refill_rate == 0 else math.ceil(missing / refill_rate)
-            self._buckets[key] = (tokens, now)
-            return BudgetConsumeResult(
-                allowed=False,
-                remaining_cost=int(tokens),
-                retry_after_seconds=retry_after,
-                degraded=True,
-                store="local-emergency",
-                consistency="process-local",
-                reason="QUOTA_EXCEEDED",
-            )
+
+            # Dynamic capacity clamp on tier downgrade
+            base_tokens = min(tokens, capacity)
+            tokens = min(capacity, base_tokens + (elapsed * refill_rate))
+
+            if tokens >= cost:
+                tokens -= cost
+                self._buckets[key] = (tokens, now)
+                return BudgetConsumeResult(
+                    allowed=True,
+                    remaining_cost=int(tokens),
+                    retry_after_seconds=0,
+                    degraded=True,
+                    store="local-emergency",
+                    consistency="process-local",
+                    reason="ALLOWED",
+                )
+            else:
+                missing = cost - tokens
+                retry_after = 0 if refill_rate == 0 else math.ceil(missing / refill_rate)
+                self._buckets[key] = (tokens, now)
+                return BudgetConsumeResult(
+                    allowed=False,
+                    remaining_cost=int(tokens),
+                    retry_after_seconds=retry_after,
+                    degraded=True,
+                    store="local-emergency",
+                    consistency="process-local",
+                    reason="QUOTA_EXCEEDED",
+                )
 
     async def consume_async(self, request: BudgetConsumeRequest) -> BudgetConsumeResult:
         return self.consume(request)
 
     @property
     def size(self) -> int:
-        return len(self._buckets)
+        with self._lock:
+            return len(self._buckets)
 
     def delete(self, key: str) -> bool:
-        if key in self._buckets:
-            del self._buckets[key]
-            return True
-        return False
+        with self._lock:
+            if key in self._buckets:
+                del self._buckets[key]
+                return True
+            return False
 
     def prune(self, max_age_seconds: float = 3600.0) -> int:
         now = time.time()
-        keys_to_delete = [k for k, (_, last_updated) in self._buckets.items() if now - last_updated > max_age_seconds]
-        for k in keys_to_delete:
-            del self._buckets[k]
-        return len(keys_to_delete)
+        with self._lock:
+            keys_to_delete = [k for k, (_, last_updated) in self._buckets.items() if now - last_updated > max_age_seconds]
+            for k in keys_to_delete:
+                del self._buckets[k]
+            return len(keys_to_delete)
 
     def reset(self) -> None:
-        self._buckets.clear()
+        with self._lock:
+            self._buckets.clear()
+
 

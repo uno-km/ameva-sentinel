@@ -293,3 +293,32 @@ async def test_redis_failure_policy_modes():
     assert open_dec.reason_code == "FAIL_OPEN"
     assert open_dec.degraded is True
 
+
+@pytest.mark.asyncio
+async def test_max_buckets_bounded_eviction():
+    store = LocalEmergencyBudgetStore(default_capacity=100, default_refill_rate=1.0, max_buckets=3)
+    await store.consume_async(BudgetConsumeRequest(cost=1, route_key="GET:/1"))
+    await store.consume_async(BudgetConsumeRequest(cost=1, route_key="GET:/2"))
+    await store.consume_async(BudgetConsumeRequest(cost=1, route_key="GET:/3"))
+    assert store.size == 3
+    # 4th unique bucket evicts the oldest
+    await store.consume_async(BudgetConsumeRequest(cost=1, route_key="GET:/4"))
+    assert store.size == 3
+
+
+def test_resolve_tier_immutability():
+    registry = CostPolicyRegistry()
+    initial_name = registry.config.rate_limit_tiers["authenticated_key"].name
+
+    evaluator = SentinelCostGuardEvaluator(policy_registry=registry)
+    principal = VerifiedPrincipal(authenticated=True, tenant_id="t1", tier="authenticated_key")
+    ctx = RequestCostContext(method="GET", path="/test", principal=principal)
+
+    tier_name, resolved_tier = evaluator._resolve_tier(ctx)
+    assert tier_name == "authenticated_key"
+    assert resolved_tier.name == "authenticated_key"
+
+    # Verify original in registry was NOT modified/mutated
+    assert registry.config.rate_limit_tiers["authenticated_key"].name == initial_name
+
+

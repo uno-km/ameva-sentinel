@@ -118,6 +118,16 @@ export class RequestShapeGuard {
       });
     }
 
+    // Encoded forward slash (%2f)
+    if (/%2f/i.test(rawPath)) {
+      findings.push({
+        code: 'ENCODED_SLASH_IN_PATH',
+        severity: 'high',
+        message: 'Path contains encoded forward slash sequence (%2F).'
+      });
+    }
+
+
     return {
       acceptedByInspector: findings.length === 0,
       findings,

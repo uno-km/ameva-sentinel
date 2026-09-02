@@ -7,7 +7,10 @@ import {
   createSentinel,
   SentinelAction,
   MemoryCounterStore,
-  MemoryRiskEventStore
+  MemoryRiskEventStore,
+  createSentinelToken,
+  verifySentinelToken,
+  createDegradedReport
 } from '../packages/sentinel/dist/index.js';
 import { createBrowserTelemetry } from '../packages/browser-sdk/dist/index.js';
 
@@ -115,6 +118,114 @@ async function run() {
     assert.strictEqual(stored.length, 35);
     assert.strictEqual(stored[0].traceId, risk.traceId);
     assert.strictEqual(stored[0].action, SentinelAction.TEMPORARY_DENY);
+  });
+
+  // 4. verify() 3-Tier Attestation & Sanity Bounds Clamping Test
+  await it('verify() should clamp out-of-bounds telemetry and strictly validate token freshness & verifier', async () => {
+    let customVerifierCalled = false;
+    const sentinelWithVerifier = createSentinel({
+      maxTokenAgeMs: 60000, // 1 minute max age
+      tokenVerifier: async (token, signals) => {
+        customVerifierCalled = true;
+        return token === 'valid-cryptographic-token-123';
+      }
+    });
+
+    // Test A: Out of bounds telemetry clamp
+    const dirtySignals = {
+      webdriver: 1, // falsy/truthy non-boolean
+      observationDurationMs: -500, // negative duration
+      isTrustedEventsCount: 4.8, // float
+      burstCount10s: -10, // negative burst
+      tokenFreshnessMs: 30000,
+      tokenPresented: true
+    };
+    const verifiedA = await sentinelWithVerifier.verify(dirtySignals, 'valid-cryptographic-token-123');
+    assert.strictEqual(verifiedA.webdriver, true);
+    assert.strictEqual(verifiedA.observationDurationMs, 0);
+    assert.strictEqual(verifiedA.isTrustedEventsCount, 4);
+    assert.strictEqual(verifiedA.burstCount10s, 1);
+    assert.strictEqual(verifiedA.tokenVerified, true);
+    assert.strictEqual(customVerifierCalled, true);
+
+    // Test B: Expired token freshness (beyond maxTokenAgeMs)
+    const expiredSignals = {
+      tokenFreshnessMs: 90000, // 90s > 60s max
+      tokenPresented: true
+    };
+    const verifiedB = await sentinelWithVerifier.verify(expiredSignals, 'valid-cryptographic-token-123');
+    assert.strictEqual(verifiedB.tokenVerified, false, 'Expired token must fail verification');
+
+    // Test C: Invalid token payload rejected by tokenVerifier
+    const invalidTokenSignals = {
+      tokenFreshnessMs: 1000,
+      tokenPresented: true
+    };
+    const verifiedC = await sentinelWithVerifier.verify(invalidTokenSignals, 'forged-token-xyz');
+    assert.strictEqual(verifiedC.tokenVerified, false, 'Forged token must fail cryptographic verification');
+  });
+
+  // 5. Cryptographic HMAC-SHA256 Token Attestation & Tamper Defense Test
+  await it('verify() should cryptographically authenticate HMAC-SHA256 tokens and reject forged signatures', async () => {
+    const secretKey = 'super-secret-hmac-key-2026';
+    const sentinelWithHMAC = createSentinel({
+      secretKey,
+      maxTokenAgeMs: 300000 // 5 minutes
+    });
+
+    const validToken = createSentinelToken({
+      sessionId: 'test_session_abc',
+      timestamp: Date.now() - 5000, // 5 seconds old
+      signalsDigest: 'digest_123'
+    }, secretKey);
+
+    // Test A: Valid cryptographic token with authentic signature
+    const validSignals = {
+      webdriver: false,
+      tokenPresented: true,
+      observationDurationMs: 6000
+    };
+    const resultA = await sentinelWithHMAC.verify(validSignals, validToken);
+    assert.strictEqual(resultA.tokenVerified, true, 'Authentic token must pass HMAC verification');
+    assert.strictEqual(resultA.suspiciousUA, false);
+
+    // Test B: Forged/Tampered token signature
+    const forgedToken = validToken.substring(0, validToken.length - 8) + 'deadbeef';
+    const resultB = await sentinelWithHMAC.verify(validSignals, forgedToken);
+    assert.strictEqual(resultB.tokenVerified, false, 'Tampered token signature must fail verification');
+    assert.strictEqual(resultB.suspiciousUA, true, 'Tampered signature must flag suspicious threat indicator');
+
+    // Test C: Expired token timestamp (e.g. 10 minutes old)
+    const expiredToken = createSentinelToken({
+      sessionId: 'test_session_old',
+      timestamp: Date.now() - 600000 // 10 minutes old
+    }, secretKey);
+    const resultC = await sentinelWithHMAC.verify(validSignals, expiredToken);
+    assert.strictEqual(resultC.tokenVerified, false, 'Expired token must fail verification');
+  });
+
+  // 6. Fail-Open createDegradedReport() Official Factory & Defense against False-Clean Masking
+  await it('createDegradedReport() should stamp DEGRADED_ALLOW, 0 confidence, and system evidence without score=0/ALLOW masquerading', async () => {
+    const customErr = new Error('Database connection timeout during telemetry hydration');
+    const degradedReport = createDegradedReport(customErr, {
+      enforcementMode: 'SHADOW',
+      reason: 'Neon connection pool exhausted'
+    });
+
+    assert.strictEqual(degradedReport.action, SentinelAction.DEGRADED_ALLOW, 'Action must be DEGRADED_ALLOW, never plain ALLOW');
+    assert.strictEqual(degradedReport.recommendedAction, SentinelAction.OBSERVE);
+    assert.strictEqual(degradedReport.evidenceConfidence, 0.0);
+    assert.ok(degradedReport.traceId.startsWith('trc_'));
+    assert.strictEqual(degradedReport.evidence.length, 1);
+    assert.strictEqual(degradedReport.evidence[0].rule, 'system.evaluation_failure');
+    assert.strictEqual(degradedReport.evidence[0].attributes.failOpen, true);
+    assert.strictEqual(degradedReport.evidence[0].attributes.degraded, true);
+    assert.strictEqual(degradedReport.evidence[0].attributes.errorName, 'Error');
+
+    // Instance method test
+    const instanceReport = sentinel.createDegradedReport('Unhandled runtime panic');
+    assert.strictEqual(instanceReport.action, SentinelAction.DEGRADED_ALLOW);
+    assert.strictEqual(instanceReport.evidenceConfidence, 0.0);
   });
 
   console.log('\n------------------------------------------------');

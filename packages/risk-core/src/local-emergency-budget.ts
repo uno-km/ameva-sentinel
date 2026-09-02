@@ -64,13 +64,32 @@ function assertValidBucketConfig(capacity: number, refillRate: number): void {
 export class LocalEmergencyBudgetStore implements BudgetStore {
   private readonly defaultCapacity: number;
   private readonly defaultRefillRatePerSec: number;
+  private readonly maxBuckets: number;
   private readonly buckets = new Map<string, { tokens: number; lastUpdated: number }>();
 
-  constructor(defaultCapacity = 100, defaultRefillRatePerSec = 1.66) {
+  constructor(defaultCapacity = 100, defaultRefillRatePerSec = 1.66, maxBuckets = 50_000) {
     assertValidBucketConfig(defaultCapacity, defaultRefillRatePerSec);
+    if (typeof maxBuckets !== 'number' || !Number.isSafeInteger(maxBuckets) || maxBuckets < 1) {
+      throw new TypeError('maxBuckets must be a positive safe integer');
+    }
     this.defaultCapacity = defaultCapacity;
     this.defaultRefillRatePerSec = defaultRefillRatePerSec;
+    this.maxBuckets = maxBuckets;
   }
+
+  /**
+   * [AUDIT FIX] Evicts the oldest bucket entry when maxBuckets is reached.
+   * Prevents unbounded Map growth (OOM) during prolonged Redis outages.
+   */
+  private evictOldestIfNeeded(): void {
+    if (this.buckets.size < this.maxBuckets) return;
+    // Map iteration order is insertion order in JS; first key is oldest.
+    const oldestKey = this.buckets.keys().next().value;
+    if (oldestKey !== undefined) {
+      this.buckets.delete(oldestKey);
+    }
+  }
+
 
   private resolveKey(request: BudgetConsumeRequest): string {
     const tenant = request.tenantId ? `tenant:${request.tenantId}:` : '';
@@ -96,13 +115,22 @@ export class LocalEmergencyBudgetStore implements BudgetStore {
     const capacity = rawCap;
     const refillRate = rawRefill;
 
-    const state = this.buckets.get(key) || { tokens: capacity, lastUpdated: now };
+    const existingState = this.buckets.get(key);
+    if (existingState) {
+      // [AUDIT FIX] LRU refresh: delete and re-insert so key becomes most recently used
+      this.buckets.delete(key);
+    } else {
+      // [AUDIT FIX] Evict LRU (least recently used) bucket before inserting a new one
+      this.evictOldestIfNeeded();
+    }
+    const state = existingState || { tokens: capacity, lastUpdated: now };
     const elapsed = Math.max(0, now - state.lastUpdated);
     
     // Safety clamp: if emergency capacity was reduced, clamp current balance to min(capacity, previous_tokens)
     const baseTokens = Math.min(state.tokens, capacity);
     state.tokens = Math.min(capacity, baseTokens + elapsed * refillRate);
     state.lastUpdated = now;
+
 
     if (state.tokens >= cost) {
       state.tokens -= cost;

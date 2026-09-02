@@ -1,6 +1,6 @@
 {
   "name": "@ameva/sentinel-risk-core",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Deterministic rule evaluation engine and policy compiler for AMEVA Sentinel",
   "type": "module",
   "main": "./dist/index.js",

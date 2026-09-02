@@ -37,13 +37,15 @@ class SentinelASGIMiddleware:
 
         request_inspection = RequestShapeGuard.inspect_path(path)
 
-        # Extract headers dict from raw ASGI headers list [(b"name", b"val")]
         headers_dict = {}
         for k, v in scope.get("headers", []):
             try:
-                headers_dict[k.decode("latin1")] = v.decode("latin1")
-            except Exception:
-                pass
+                k_str = k.decode("latin1") if isinstance(k, (bytes, bytearray)) else str(k)
+                v_str = v.decode("latin1") if isinstance(v, (bytes, bytearray)) else str(v)
+                headers_dict[k_str] = v_str
+            except (UnicodeDecodeError, AttributeError):
+                continue
+
 
         client_info = scope.get("client")
         socket_ip = client_info[0] if client_info and len(client_info) > 0 else None

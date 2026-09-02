@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert';
+import assert from 'node:assert';
 import { test, describe } from 'node:test';
 import {
   createExpressSentinelObserver,
@@ -136,7 +136,16 @@ describe('Framework Observer & Explicit Enforcer Boundary Verification', () => {
     assert.strictEqual(res.status, 200);
     assert.ok(req.sentinel);
     assert.strictEqual(req.sentinel.decision.violationDetected, true);
+
+    // 2. Traversal path rejection: raw URL contains /.. but URL.pathname normalizes it away
+    const traversalReq = {
+      url: 'http://localhost/api/v1/../secret',
+      headers: new Headers()
+    };
+    await wrapped(traversalReq);
+    assert.strictEqual(traversalReq.sentinel.requestInspection.acceptedByInspector, false, 'Next.js observer must detect dot segment traversal from raw URL');
   });
+
 
   test('Explicit Enforcer: requires mandatory decide callback and terminates only when decided', async () => {
     // 1. Missing decide callback throws TypeError

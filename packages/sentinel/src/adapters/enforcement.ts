@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file enforcement.ts
  * Explicit consumer-controlled enforcement layer for AMEVA-Sentinel.
  * Strictly requires consumer decision callback; never applies default HTTP blocking or status codes.
@@ -147,7 +147,7 @@ export function createFastifySentinelEnforcer(options: FastifyEnforcerOptions) {
   const trustedProxyPolicy = options.trustedProxyPolicy;
   const decide = options.decide;
 
-  return async function fastifySentinelEnforcer(req: any, reply: any) {
+  return async function fastifySentinelEnforcer(req: any, reply: any, done?: any) {
     const rawPath = req.raw?.url ? req.raw.url.split('?')[0] : (req.url || '/');
     const requestInspection = RequestShapeGuard.inspectPath(rawPath);
 
@@ -220,6 +220,10 @@ export function createFastifySentinelEnforcer(options: FastifyEnforcerOptions) {
         return reply.code(status).send(outcome.body);
       }
       return reply.code(status).send();
+    }
+
+    if (typeof done === 'function') {
+      done();
     }
   };
 }

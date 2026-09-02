@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file index.ts
  * @ameva/sentinel-browser
  * Privacy-first browser environment & user interaction telemetry collector
@@ -35,7 +35,9 @@ export interface BrowserTelemetrySnapshot {
 }
 
 export function getLocalSessionId(persist = false): string {
-  if (typeof sessionStorage === 'undefined') return 'ephemeral_local_session';
+  if (typeof sessionStorage === 'undefined') {
+    return 'ephem_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+  }
   const key = 'ameva:sentinel:session-id';
   try {
     const existing = sessionStorage.getItem(key);
@@ -46,9 +48,11 @@ export function getLocalSessionId(persist = false): string {
     }
     return newId;
   } catch (e) {
-    return 'ephemeral_local_session';
+    return 'ephem_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
   }
 }
+
+
 
 export class BrowserTelemetryCollector {
   private startTime = Date.now();

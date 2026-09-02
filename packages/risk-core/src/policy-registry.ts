@@ -29,7 +29,15 @@ export class CostPolicyRegistry {
         const identity = computePolicyChecksum(this.config);
         this.checksum = identity.checksumSha256;
         this.displayChecksum = identity.displayChecksum;
-      } catch {
+      } catch (err: unknown) {
+        // [AUDIT FIX] Silent fallback removed. Operators must be notified when
+        // a supplied policy is rejected so they can diagnose deployment issues.
+        const reason = err instanceof Error ? err.message : String(err);
+        console.error(
+          `[ameva-sentinel] CostPolicyRegistry: supplied policy failed validation and was rejected. ` +
+          `Falling back to SAFE_FALLBACK_COST_POLICY. ` +
+          `Reason: ${reason}`
+        );
         this.config = SAFE_FALLBACK_COST_POLICY;
         const identity = computePolicyChecksum(this.config);
         this.checksum = identity.checksumSha256;

@@ -78,6 +78,9 @@ def test_request_shape_path_validation():
     assert RequestShapeGuard.validate_path("C:\\windows\\system32").message == "PATH_MUST_START_WITH_SLASH"
     assert RequestShapeGuard.validate_path("/api/v1/%5csecret").message == "BACKSLASH_IN_PATH"
     assert RequestShapeGuard.validate_path("/api/v1\\secret").message == "BACKSLASH_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/%2fsecret").message == "ENCODED_SLASH_IN_PATH"
+    assert RequestShapeGuard.validate_path("/api/v1/%2Fsecret").message == "ENCODED_SLASH_IN_PATH"
+
 
 
 def test_trusted_proxy_extraction():
@@ -138,6 +141,15 @@ def test_trusted_proxy_extraction():
             headers={"forwarded": "for=198.51.100.1", "x-forwarded-for": "198.51.100.2"},
             policy=pol,
         )
+
+    # Forwarded header IPv6 with port parsing
+    ipv6_res = extract_client_ip(
+        socket_remote_address="10.0.0.1",
+        headers={"forwarded": 'for="[2001:db8::1]:443"'},
+        policy=pol,
+    )
+    assert ipv6_res == "2001:db8::1"
+
 
 
 

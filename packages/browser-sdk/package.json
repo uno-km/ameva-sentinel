@@ -1,6 +1,6 @@
 {
   "name": "@ameva/sentinel-browser",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Privacy-first client-side interaction and environment telemetry collector",
   "type": "module",
   "main": "./dist/index.js",

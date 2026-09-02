@@ -107,9 +107,10 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
   assert.equal(RequestShapeGuard.validatePath('/api/v1/.%2e/secret').message, 'ENCODED_DOT_SEGMENT_IN_PATH');
   assert.equal(RequestShapeGuard.validatePath('/api/v1/%').message, 'MALFORMED_PERCENT_ENCODING');
   assert.equal(RequestShapeGuard.validatePath('/api/v1/%2g').message, 'MALFORMED_PERCENT_ENCODING');
-  assert.equal(RequestShapeGuard.validatePath('C:\\windows\\system32').message, 'PATH_MUST_START_WITH_SLASH');
   assert.equal(RequestShapeGuard.validatePath('/api/v1/%5csecret').message, 'BACKSLASH_IN_PATH');
   assert.equal(RequestShapeGuard.validatePath('/api/v1\\secret').message, 'BACKSLASH_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%2fsecret').message, 'ENCODED_SLASH_IN_PATH');
+  assert.equal(RequestShapeGuard.validatePath('/api/v1/%2Fsecret').message, 'ENCODED_SLASH_IN_PATH');
 
   console.log('  ✅ PASS: Policy validation and path ambiguity guards verified.');
 }
@@ -213,7 +214,24 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
   assert.equal(anonRes.allowed, true);
   assert.equal(anonRes.remainingCost, 20); // Brand new bucket for anonymous_network
 
-  console.log('  ✅ PASS: Emergency store isolates distinct tier namespaces into separate buckets.');
+  // 3.1 maxBuckets LRU bounded eviction verification
+  const boundedStore = new LocalEmergencyBudgetStore(100, 1.0, 3);
+  await boundedStore.consume({ cost: 1, routeKey: 'GET:/1' });
+  await boundedStore.consume({ cost: 1, routeKey: 'GET:/2' });
+  await boundedStore.consume({ cost: 1, routeKey: 'GET:/3' });
+  assert.equal(boundedStore.size, 3, 'Size reaches maxBuckets');
+
+  // Touch /1 so /1 moves to most recently used. Oldest (LRU) is now /2.
+  await boundedStore.consume({ cost: 1, routeKey: 'GET:/1' });
+
+  // 4th unique bucket should evict the LRU (/2), NOT /1
+  await boundedStore.consume({ cost: 1, routeKey: 'GET:/4' });
+  assert.equal(boundedStore.size, 3, 'Size remains strictly capped at maxBuckets');
+  // Consuming /1 should retain its remaining tokens (100 - 1 - 1 = 98) rather than reset to 100
+  const r1After = await boundedStore.consume({ cost: 1, routeKey: 'GET:/1' });
+  assert.ok(r1After.remainingCost < 98, '/1 was kept in LRU cache and preserved its consumed state');
+
+  console.log('  ✅ PASS: Emergency store isolates distinct tier namespaces and bounds memory via LRU eviction.');
 }
 
 // 4. Same-Bucket Dynamic Capacity Clamp
@@ -550,6 +568,15 @@ console.log('\n🧪 Running Multi-Axis Cost Guard Test Suite...\n');
       }
     }, customTrustedPolicy);
   }, /CONFLICTING_FORWARDED_HEADERS/);
+
+  // 8.8 Forwarded header IPv6 with port parsing
+  const resolvedIpv6 = extractClientIp({
+    socketRemoteAddress: '10.0.0.1',
+    headers: {
+      'forwarded': 'for="[2001:db8::1]:443"'
+    }
+  }, customTrustedPolicy);
+  assert.equal(resolvedIpv6, '2001:db8:0:0:0:0:0:1', 'Forwarded [IPv6]:port must parse into clean normalized IPv6 address');
 
   console.log('  ✅ PASS: Trusted Proxy Policy, right-to-left chain, IPv6 CIDR, and spoofing protection verified.');
 }

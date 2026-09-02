@@ -321,8 +321,12 @@ export class SentinelCostGuardEvaluator {
         degraded: isDegraded,
         enforced: !isShadow
       };
-    } catch {
+    } catch (err: unknown) {
       // Redis or Primary Store Failure Handling
+      const errMessage = err instanceof Error ? err.message : String(err);
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn(`[ameva-sentinel] Distributed budget store unavailable: ${errMessage}. Applying failure policy: ${this.failurePolicy.mode}`);
+      }
       const failureMode = this.failurePolicy.mode;
 
       if (policy.failure_mode === 'deny' || failureMode === 'fail-closed') {

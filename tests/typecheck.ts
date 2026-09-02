@@ -1,4 +1,4 @@
-﻿import {
+import {
   createSentinel,
   Sentinel,
   type SentinelOptions,
@@ -19,7 +19,17 @@
   evaluate,
   createTraceId,
   toStoredRiskEvent,
-  sanitizeSignals
+  sanitizeSignals,
+  resolveGeoPayload,
+  createSentinelToken,
+  verifySentinelToken,
+  timingSafeEqualHex,
+  createDegradedReport,
+  type GeoBaselineOptions,
+  type GeoResolutionResult,
+  type SentinelTokenPayload,
+  type TokenVerificationResult,
+  type DegradedReportOptions
 } from '../packages/sentinel/dist/index.js';
 
 import {
@@ -117,13 +127,25 @@ const altCounterStore: CounterStore = new MemoryCounterStore();
 const memoryEventStore: RiskEventStore = new MemoryRiskEventStore(storeOptions);
 const localEventStore: RiskEventStore = new LocalStorageRiskEventStore(storeOptions);
 
-// 6. Facade Options & Instance Contract
+// 6. Facade Options & Instance Contract with GEO Baseline & Token Verifier
+const geoBaselineConfig: GeoBaselineOptions = {
+  defaultBaselineBytes: 180000,
+  routeBaselines: {
+    '/': 210000,
+    '/lib/stt/': 95000,
+    '/robots.txt': 500
+  }
+};
+
 const sentinelOptions: SentinelOptions = {
   mode: 'shadow',
   policy: customPolicy,
   counterStore,
   eventStore: memoryEventStore,
-  rateKeyProvider: (req: any) => (req?.customUserId ? `user_${req.customUserId}` : null)
+  rateKeyProvider: (req: any) => (req?.customUserId ? `user_${req.customUserId}` : null),
+  geoBaseline: geoBaselineConfig,
+  maxTokenAgeMs: 300000,
+  tokenVerifier: async (token: string, sigs: TelemetrySignals) => token.length > 0 && !!sigs
 };
 
 const sentinel: Sentinel = createSentinel(sentinelOptions);
@@ -132,6 +154,42 @@ const sentinel: Sentinel = createSentinel(sentinelOptions);
 async function runFullTypeCheck(): Promise<void> {
   const reqMock = { signals, customUserId: 'dev-type-verifier' };
   const report: SentinelRiskReport = await sentinel.score(reqMock);
+
+  // GEO resolution type contracts
+  const crawlerReq = { headers: { 'user-agent': 'GPTBot/1.2' }, url: '/lib/stt/' };
+  const geoResult: GeoResolutionResult | null = sentinel.resolveGeoPayload(crawlerReq);
+  if (geoResult) {
+    const p: string = geoResult.payload;
+    const bName: string = geoResult.botName;
+    const bVendor: string = geoResult.botVendor;
+    const bCategory: string = geoResult.botCategory;
+    const bServed: number = geoResult.bytesServed;
+    const oBytes: number = geoResult.originalBytes;
+    const bSaved: number = geoResult.bytesSaved;
+    const sRatio: number = geoResult.savingsRatio;
+    const isSaved: boolean = geoResult.isBandwidthSaved;
+    const isBotMatch: boolean = geoResult.isBot;
+    void p; void bName; void bVendor; void bCategory; void bServed; void oBytes; void bSaved; void sRatio; void isSaved; void isBotMatch;
+  }
+
+  const standaloneGeoResult: GeoResolutionResult | null = resolveGeoPayload(crawlerReq, geoBaselineConfig);
+  void standaloneGeoResult;
+
+  // Token Attestation Type Contracts
+  const tokenPayload: SentinelTokenPayload = { sessionId: 'type-test-session', timestamp: Date.now() };
+  const generatedToken: string = createSentinelToken(tokenPayload, 'test-secret-key');
+  const verificationResult: TokenVerificationResult = verifySentinelToken(generatedToken, 'test-secret-key');
+  const isTimingSafe: boolean = timingSafeEqualHex('abcd', 'abcd');
+  void isTimingSafe;
+  if (!verificationResult.valid) {
+    throw new Error('Type validation failed: TokenVerificationResult contract check failed');
+  }
+
+  // Degraded Report Type Contracts
+  const degOpts: DegradedReportOptions = { reason: 'type-test-reason', enforcementMode: 'SHADOW' };
+  const degradedRep: SentinelRiskReport = createDegradedReport(new Error('test-err'), degOpts);
+  const instanceDegradedRep: SentinelRiskReport = sentinel.createDegradedReport('instance-error', degOpts);
+  void degradedRep; void instanceDegradedRep;
 
   const evalOptions: EvaluateOptions = {
     policy: defaultPolicy,

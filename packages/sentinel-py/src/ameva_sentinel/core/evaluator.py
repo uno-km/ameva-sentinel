@@ -3,6 +3,7 @@ Core SentinelCostGuardEvaluator for Python.
 Provides both Async and Sync evaluation methods with emergency fallback caps and verified principals.
 """
 
+import logging
 from typing import Optional, Union, Any, Tuple
 from .budget_types import (
     RequestCostContext,
@@ -17,6 +18,8 @@ from .policy_registry import CostPolicyRegistry
 from .guards import RequestShapeGuard
 from .local_store import LocalEmergencyBudgetStore, compute_emergency_capacity
 from .protocols import AsyncBudgetStore, SyncBudgetStore, ThreatAggregateStore
+
+logger = logging.getLogger("ameva_sentinel.evaluator")
 
 
 class SentinelCostGuardEvaluator:
@@ -40,26 +43,47 @@ class SentinelCostGuardEvaluator:
         tiers = self.registry.config.rate_limit_tiers
         principal = context.principal
         if principal and principal.authenticated and principal.tier and principal.tier in tiers:
-            t = tiers[principal.tier]
-            t.name = principal.tier
+            raw = tiers[principal.tier]
+            t = RateLimitTier(
+                name=principal.tier,
+                capacity=raw.capacity,
+                refill_tokens_per_minute=raw.refill_tokens_per_minute,
+                emergency_local_capacity=raw.emergency_local_capacity,
+            )
             return principal.tier, t
         if principal and principal.authenticated:
             if "authenticated_key" in tiers:
-                t = tiers["authenticated_key"]
-                t.name = "authenticated_key"
+                raw = tiers["authenticated_key"]
+                t = RateLimitTier(
+                    name="authenticated_key",
+                    capacity=raw.capacity,
+                    refill_tokens_per_minute=raw.refill_tokens_per_minute,
+                    emergency_local_capacity=raw.emergency_local_capacity,
+                )
                 return "authenticated_key", t
             return "authenticated_key", RateLimitTier(name="authenticated_key", capacity=2000, refill_tokens_per_minute=2000, emergency_local_capacity=200)
         if context.session_id:
             if "session" in tiers:
-                t = tiers["session"]
-                t.name = "session"
+                raw = tiers["session"]
+                t = RateLimitTier(
+                    name="session",
+                    capacity=raw.capacity,
+                    refill_tokens_per_minute=raw.refill_tokens_per_minute,
+                    emergency_local_capacity=raw.emergency_local_capacity,
+                )
                 return "session", t
             return "session", RateLimitTier(name="session", capacity=300, refill_tokens_per_minute=300, emergency_local_capacity=50)
         if "anonymous_network" in tiers:
-            t = tiers["anonymous_network"]
-            t.name = "anonymous_network"
+            raw = tiers["anonymous_network"]
+            t = RateLimitTier(
+                name="anonymous_network",
+                capacity=raw.capacity,
+                refill_tokens_per_minute=raw.refill_tokens_per_minute,
+                emergency_local_capacity=raw.emergency_local_capacity,
+            )
             return "anonymous_network", t
         return "anonymous_network", RateLimitTier(name="anonymous_network", capacity=100, refill_tokens_per_minute=100, emergency_local_capacity=30)
+
 
     def inspect_cost_request(self, context: RequestCostContext) -> Any:
         policy = self.registry.get_route_policy(context.method, context.path)
@@ -214,36 +238,34 @@ class SentinelCostGuardEvaluator:
         return None
 
     async def evaluate_async(self, context: RequestCostContext) -> CostGuardDecision:
-        early_decision = self._pre_evaluate(context)
-        if early_decision is not None:
-            return early_decision
+        insp = self.inspect_cost_request(context)
+        if insp["violation_detected"]:
+            is_shadow = insp["is_shadow"]
+            rec_action = insp["recommended_action"]
+            return CostGuardDecision(
+                allowed=is_shadow,
+                action="OBSERVE" if is_shadow else rec_action,
+                proposed_action=rec_action,
+                enforced_action="ALLOW" if is_shadow else rec_action,
+                violation_detected=True,
+                reason_code=insp["reason_code"],
+                policy_version=insp["policy_version"],
+                policy_checksum=insp["policy_checksum"],
+                display_checksum=insp["display_checksum"],
+                cost=insp["requested_cost"],
+                degraded=False,
+                enforced=not is_shadow,
+                message=insp.get("message"),
+            )
 
-        policy = self.registry.get_route_policy(context.method, context.path)
-        policy_version = self.registry.config.policy_version
-        policy_checksum = self.registry.checksum
-        display_checksum = self.registry.display_checksum
-        is_shadow = False if self.enforce_by_default else (policy.shadow_mode if policy.shadow_mode is not None else True)
-        tier_name, tier = self._resolve_tier(context)
-        route_key = f"{context.method.upper()}:{policy.path}"
-
-        principal = context.principal
-        is_authenticated = bool(principal and principal.authenticated)
-        trusted_tenant_id = principal.tenant_id if (is_authenticated and principal) else None
-        trusted_account_id = principal.account_id if (is_authenticated and principal) else None
-        trusted_api_key_id = principal.api_key_id if (is_authenticated and principal) else None
-
-        consume_req = BudgetConsumeRequest(
-            cost=policy.cost,
-            route_key=route_key,
-            tenant_id=trusted_tenant_id,
-            account_id=trusted_account_id,
-            api_key_id=trusted_api_key_id,
-            session_id=context.session_id,
-            network_key=context.pseudonymous_key,
-            tier=tier,
-            emergency_capacity=tier.emergency_local_capacity,
-            policy=policy,
-        )
+        policy = insp["policy"]
+        policy_version = insp["policy_version"]
+        policy_checksum = insp["policy_checksum"]
+        display_checksum = insp["display_checksum"]
+        is_shadow = insp["is_shadow"]
+        consume_req = insp["consume_request"]
+        tier = consume_req.tier
+        route_key = consume_req.route_key
 
         try:
             if hasattr(self.budget_store, "consume_async"):
@@ -298,8 +320,13 @@ class SentinelCostGuardEvaluator:
                 degraded=consume_res.degraded,
                 enforced=not is_shadow,
             )
-        except Exception:
+        except Exception as exc:
             failure_mode = self.failure_policy.mode
+            logger.warning(
+                "Distributed budget store unavailable (%s). Applying failure policy: %s",
+                exc,
+                failure_mode,
+            )
 
             if policy.failure_mode == "deny" or failure_mode == "fail-closed":
                 return CostGuardDecision(
@@ -388,36 +415,34 @@ class SentinelCostGuardEvaluator:
             )
 
     def evaluate_sync(self, context: RequestCostContext) -> CostGuardDecision:
-        early_decision = self._pre_evaluate(context)
-        if early_decision is not None:
-            return early_decision
+        insp = self.inspect_cost_request(context)
+        if insp["violation_detected"]:
+            is_shadow = insp["is_shadow"]
+            rec_action = insp["recommended_action"]
+            return CostGuardDecision(
+                allowed=is_shadow,
+                action="OBSERVE" if is_shadow else rec_action,
+                proposed_action=rec_action,
+                enforced_action="ALLOW" if is_shadow else rec_action,
+                violation_detected=True,
+                reason_code=insp["reason_code"],
+                policy_version=insp["policy_version"],
+                policy_checksum=insp["policy_checksum"],
+                display_checksum=insp["display_checksum"],
+                cost=insp["requested_cost"],
+                degraded=False,
+                enforced=not is_shadow,
+                message=insp.get("message"),
+            )
 
-        policy = self.registry.get_route_policy(context.method, context.path)
-        policy_version = self.registry.config.policy_version
-        policy_checksum = self.registry.checksum
-        display_checksum = self.registry.display_checksum
-        is_shadow = False if self.enforce_by_default else (policy.shadow_mode if policy.shadow_mode is not None else True)
-        tier_name, tier = self._resolve_tier(context)
-        route_key = f"{context.method.upper()}:{policy.path}"
-
-        principal = context.principal
-        is_authenticated = bool(principal and principal.authenticated)
-        trusted_tenant_id = principal.tenant_id if (is_authenticated and principal) else None
-        trusted_account_id = principal.account_id if (is_authenticated and principal) else None
-        trusted_api_key_id = principal.api_key_id if (is_authenticated and principal) else None
-
-        consume_req = BudgetConsumeRequest(
-            cost=policy.cost,
-            route_key=route_key,
-            tenant_id=trusted_tenant_id,
-            account_id=trusted_account_id,
-            api_key_id=trusted_api_key_id,
-            session_id=context.session_id,
-            network_key=context.pseudonymous_key,
-            tier=tier,
-            emergency_capacity=tier.emergency_local_capacity,
-            policy=policy,
-        )
+        policy = insp["policy"]
+        policy_version = insp["policy_version"]
+        policy_checksum = insp["policy_checksum"]
+        display_checksum = insp["display_checksum"]
+        is_shadow = insp["is_shadow"]
+        consume_req = insp["consume_request"]
+        tier = consume_req.tier
+        route_key = consume_req.route_key
 
         try:
             if hasattr(self.budget_store, "consume") and callable(self.budget_store.consume):
@@ -466,8 +491,13 @@ class SentinelCostGuardEvaluator:
                 degraded=consume_res.degraded,
                 enforced=not is_shadow,
             )
-        except Exception:
+        except Exception as exc:
             failure_mode = self.failure_policy.mode
+            logger.warning(
+                "Distributed budget store unavailable (%s). Applying failure policy: %s",
+                exc,
+                failure_mode,
+            )
 
             if policy.failure_mode == "deny" or failure_mode == "fail-closed":
                 return CostGuardDecision(
@@ -554,3 +584,4 @@ class SentinelCostGuardEvaluator:
                 enforced=not is_shadow,
                 message="Distributed budget store unavailable; operating under bounded emergency local cap.",
             )
+

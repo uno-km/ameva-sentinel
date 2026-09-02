@@ -80,8 +80,7 @@ def parse_forwarded_header_strictly(header_name: str, raw_value: str) -> List[st
         for entry in raw_value.split(","):
             m = re.search(r'for="?([^";,\s]+)"?', entry.strip(), re.IGNORECASE)
             if m and m.group(1):
-                cleaned = m.group(1).replace("[", "").replace("]", "")
-                norm = parse_and_validate_ip(cleaned)
+                norm = parse_and_validate_ip(m.group(1))
                 if norm:
                     ips.append(norm)
         return ips

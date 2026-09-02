@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file next.ts
  * Next.js Edge / Node Middleware Observer Adapter for AMEVA-Sentinel.
  * Observes request, runs pure inspection and cost evaluation, attaches results to request context,
@@ -36,8 +36,12 @@ export function createNextCostGuard(options: NextObserverOptions = {}) {
   const onAssessment = options.onAssessment;
 
   return async function sentinelNextObserver(req: any) {
+    const rawPath = typeof req.url === 'string'
+      ? req.url.replace(/^https?:\/\/[^\/]+/, '').split('?')[0] || '/'
+      : (req.nextUrl?.pathname || '/');
+    const requestInspection = RequestShapeGuard.inspectPath(rawPath);
     const url = new URL(req.url, 'http://localhost');
-    const requestInspection = RequestShapeGuard.inspectPath(url.pathname);
+
 
     const headersObj: Record<string, string> = {};
     if (req.headers && typeof req.headers.forEach === 'function') {
@@ -80,7 +84,7 @@ export function createNextCostGuard(options: NextObserverOptions = {}) {
 
     const requestContext: RequestCostContext = {
       method: req.method || 'GET',
-      path: url.pathname,
+      path: rawPath,
       pageSize,
       seriesCount,
       timeBuckets,

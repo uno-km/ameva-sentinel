@@ -3,7 +3,7 @@ AMEVA-Sentinel Python SDK.
 Privacy-first Automation Risk Observation & Multi-Axis Cost Guardrails.
 """
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 
 from .core.budget_types import (
     RouteCostPolicy,
@@ -45,6 +45,17 @@ from .core.geo_registry import (
     resolve_country,
     resolve_geo_coordinates,
 )
+from .core.geo_resolver import (
+    GeoBotPattern,
+    AI_BOT_PATTERNS,
+    GeoBaselineOptions,
+    GeoResolutionResult,
+    measure_utf8_bytes,
+    calculate_bandwidth_savings,
+    match_route_baseline,
+    match_bot_pattern,
+    resolve_geo_payload,
+)
 
 from .privacy import mask_ip_address, normalize_target_type
 from .trusted_proxy import (
@@ -56,7 +67,7 @@ from .trusted_proxy import (
     is_ip_in_any_cidr,
 )
 from .providers import resolve_provider_adapter, EdgeClientInfo
-from .observability import Sentinel, ActorClaim, Assessment
+from .observability import Sentinel, ActorClaim, Assessment, create_degraded_assessment
 from .adapters.asgi import SentinelASGIMiddleware, SentinelASGIObserver
 from .adapters.wsgi import SentinelWSGIMiddleware, SentinelWSGIObserver
 from .adapters.fastapi import create_fastapi_cost_guard, create_fastapi_observer
@@ -117,6 +128,15 @@ __all__ = [
     "ISO_COUNTRIES",
     "resolve_country",
     "resolve_geo_coordinates",
+    "GeoBotPattern",
+    "AI_BOT_PATTERNS",
+    "GeoBaselineOptions",
+    "GeoResolutionResult",
+    "measure_utf8_bytes",
+    "calculate_bandwidth_savings",
+    "match_route_baseline",
+    "match_bot_pattern",
+    "resolve_geo_payload",
     "mask_ip_address",
     "normalize_target_type",
     "resolve_provider_adapter",
@@ -124,4 +144,5 @@ __all__ = [
     "get_sentinel_dashboard_html",
     "mount_fastapi_dashboard",
     "mount_flask_dashboard",
+    "create_degraded_assessment",
 ]

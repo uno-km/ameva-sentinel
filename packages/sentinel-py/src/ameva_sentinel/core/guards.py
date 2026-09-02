@@ -137,6 +137,17 @@ class RequestShapeGuard:
                 )
             )
 
+        # Encoded forward slash (%2f)
+        if "%2f" in raw_path.lower():
+            findings.append(
+                RequestFinding(
+                    code="ENCODED_SLASH_IN_PATH",
+                    severity="high",
+                    message="Path contains encoded forward slash sequence (%2F).",
+                )
+            )
+
+
         return RequestInspection(
             accepted_by_inspector=len(findings) == 0,
             findings=findings,
