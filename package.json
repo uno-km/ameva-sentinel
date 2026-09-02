@@ -11,6 +11,7 @@
     "node": ">=20 <25"
   },
   "scripts": {
+    "clean": "node -e \"const fs=require('fs'); ['dist','dist-python','dist-tarballs','packages/browser-sdk/dist','packages/risk-core/dist','packages/sentinel/dist','packages/sentinel-py/dist','packages/store-redis/dist'].forEach(p=>{if(fs.existsSync(p))fs.rmSync(p,{recursive:true,force:true})})\"",
     "build": "npm run --workspaces build",
     "serve:test": "npx --no-install http-server . -p 4173 -c-1",
     "test:types": "tsc --noEmit tests/typecheck.ts --target es2022 --module NodeNext --moduleResolution NodeNext",

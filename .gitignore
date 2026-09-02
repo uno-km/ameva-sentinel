@@ -9,10 +9,15 @@ node_modules/
 
 # Build Artifacts & Distributions
 dist/
-dist-tarballs/
+**/dist/
+dist-*/
+**/dist-*/
 build/
+**/build/
 out/
+**/out/
 .tsbuildinfo
+**/.tsbuildinfo
 
 # Logs & Diagnostics
 logs/
