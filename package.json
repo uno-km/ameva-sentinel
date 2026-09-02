@@ -41,8 +41,5 @@
     "bot-defense",
     "fraud-detection"
   ],
-  "license": "Apache-2.0",
-  "dependencies": {
-    "cminhouse-api-gateway-nodejs": "^999.0.0"
-  }
+  "license": "Apache-2.0"
 }
