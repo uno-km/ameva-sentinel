@@ -1,4 +1,4 @@
-# 🛡️ AMEVA Sentinel v2.2 Architecture Specification
+# AMEVA Sentinel v2.2 Architecture Specification
 # Data Trust Boundaries & Security Model (Canonical Spec)
 
 > **Document Version**: `2.2.0-RFC`  
@@ -9,9 +9,9 @@
 
 ---
 
-## 1. 🎯 Foundational Philosophy & Threat Model
+## 1. Foundational Philosophy & Threat Model
 
-> **"Browser telemetry represents software-observed signals, not unforgeable hardware proofs."**  
+> **"Browser telemetry represents software-observed signals, subject to client-side instrumentation limits rather than cryptographic hardware attestation."**  
 > *(A client running inside user-controlled memory can forge JavaScript variables, but cannot forge server-held cryptographic proofs or replay expired nonces against synchronized server clocks.)*
 
 In the AMEVA Sentinel ecosystem, zero trust is placed on raw client-supplied claims. Security observability is achieved by strictly isolating **untrusted client inputs**, **short-lived cryptographic token envelopes**, and **server-side verification**.
@@ -47,7 +47,7 @@ In the AMEVA Sentinel ecosystem, zero trust is placed on raw client-supplied cla
 
 ---
 
-## 2. 🧱 The 6 Data Trust Boundary Categories
+## 2. The 6 Data Trust Boundary Categories
 
 Every field and signal processed by Sentinel must belong to exactly one of the six trust tiers:
 
@@ -62,7 +62,7 @@ Every field and signal processed by Sentinel must belong to exactly one of the s
 
 ---
 
-## 3. 🔐 Cryptographic Token & Replay Defense Specification
+## 3. Cryptographic Token & Replay Defense Specification
 
 ### 3.1 Versioned Envelope Token Format (`sv1`)
 Collection tokens must follow the deterministic format:
@@ -117,7 +117,7 @@ When the Collector receives a token:
 
 ---
 
-## 4. 📡 Collector API Schema Specification (v0.6 RFC)
+## 4. Collector API Schema Specification (v0.6 RFC)
 
 ### 4.1 Endpoint Contract
 * **Method**: `POST`
@@ -174,7 +174,7 @@ When the Collector receives a token:
 
 ---
 
-## 5. 🌐 Trusted Proxy & Client IP Extraction
+## 5. Trusted Proxy & Client IP Extraction
 
 Collector endpoints running behind reverse proxies (Cloudflare, AWS ALB, NGINX) must enforce:
 1. `trustedProxies` CIDR whitelist (e.g. `10.0.0.0/8`, `172.16.0.0/12`, Cloudflare IP ranges).
@@ -183,7 +183,7 @@ Collector endpoints running behind reverse proxies (Cloudflare, AWS ALB, NGINX) 
 
 ---
 
-## 6. 🗄️ Distributed Storage Adapter Interface
+## 6. Distributed Storage Adapter Interface
 
 ### 6.1 Distributed Counter Store (`DistributedCounterStore`)
 ```typescript
